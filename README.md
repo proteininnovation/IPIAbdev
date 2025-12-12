@@ -43,7 +43,7 @@ python predict_developability.py --predict data/new_lib.xlsx --target sec_filter
 # Train final CNN
 python predict_developability.py --train --target psr_filter --lm antiberta2 --model cnn
 
-# 10-fold CV with your beautiful CNN
+# 10-fold CV with CNN
 python predict_developability.py --kfold 10 --target sec_filter --lm antiberta2 --model cnn
 
 # Predict on test set
