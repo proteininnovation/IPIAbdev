@@ -24,6 +24,7 @@ pip install -r requirements.txt
 
 # Generate embeddings
 python predict_developability.py --build-embedding data/test.xlsx --lm all
+
 python predict_developability.py --build-embedding data/test.xlsx --lm ablang
 
 # Xgboost evaluation with k-fold validation
@@ -39,8 +40,8 @@ python predict_developability.py --train --target sec_filter --lm antiberta2 --m
 python predict_developability.py --predict data/new_lib.xlsx --target sec_filter --lm antiberta2
 
 
-### TEST CNN
-# Train final CNN
+
+# Train PSR with CNN
 python predict_developability.py --train --target psr_filter --lm antiberta2 --model cnn
 
 # 10-fold CV with CNN
@@ -49,5 +50,5 @@ python predict_developability.py --kfold 10 --target sec_filter --lm antiberta2 
 # Predict on test set
 python predict_developability.py --predict data/test.xlsx --target sec_filter --lm ablang --model cnn
 
-
+ML architecture amd design: Hoan Nguyen, PhD
 Contact: {Hoan.Nguyen, Andre.Teixeira}@proteininnovation.org 
