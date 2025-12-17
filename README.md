@@ -1,7 +1,7 @@
 WELLCOME TO IPI AL-ML Framework!
 
 
-1. Download IPIPred
+1. Download IPIAbDev
 
 1. Create a new environment with Python 3.11 or 3.12
  
