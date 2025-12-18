@@ -1,20 +1,19 @@
 WELLCOME TO IPI Antibody Developability Machine Learning Framework
 IPIAbDev is a highly flexible AI-ML Framework, open-source Python package (Python 3.11) designed for high-throughput prediction of antibody biophysical properties, with a primary focus on polyreactivity (PSR) and SEC developability, while being extensible to additional liabilities. It integrates multiple antibody-specific protein language models (AbLang2, AntiBERTy, AntiBERTa2, AntiBERTa2-CSSP) for embedding generation and supports a diverse set of classifiers, including XGBoost, Random Forest, 1D-CNN with residual blocks, and Transformer architectures. Key features include automated embedding generation, HCDR3-cluster-stratified k-fold cross-validation to prevent data leakage, model training and prediction for binary classification tasks, and built-in interpretability via Integrated Gradients for residue-level attribution. The package also provides publication-ready visualization of ROC curves, performance metrics (AUC, accuracy, F1, precision, recall), and attribution heatmaps
 
-1. Download and install of IPIAbDev package 
-# git clone
+# Download and install: IPIAbDev package 
+
 git clone https://github.com/proteininnovation/IPIAbdev.git
   
 #Create a new environment with Python 3.11 or 3.12
 conda create -n ml python=3.11 -y
-# Activate it
 conda activate ml
 
 #python package install
 conda install -c bioconda anarci
 pip install -r requirements.txt
 
-2. How to use IPIAbDev
+# How to use IPIAbDev
 # prepare train set
 
    filename:         your_trainset_name.xlsx 
