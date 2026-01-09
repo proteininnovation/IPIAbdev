@@ -45,9 +45,11 @@ python predict_developability.py --kfold 10 --target sec_filter --lm onehot --mo
 
 # Train final  model with full dataset
 #SEC trainning
+
 python predict_developability.py --train --target sec_filter --lm antiberta2 --model xgboost --db data/ipi_antibody.xlsx
 
 #PSR trainning
+
 python predict_developability.py --train --target sec_filter --lm antiberta2 --model xgboost --db data/ipi_antibody.xlsx
 
 #  Predict instantly
