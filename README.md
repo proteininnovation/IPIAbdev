@@ -46,6 +46,6 @@ python predict_developability.py --kfold 10 --target sec_filter --lm antiberta2 
 # Predict on test set
 python predict_developability.py --predict data/test.xlsx --target sec_filter --lm ablang --model cnn
 
-ML architecture amd design: Hoan Nguyen, PhD
+
 
 Contact: {Hoan.Nguyen, Andre.Teixeira}@proteininnovation.org 
