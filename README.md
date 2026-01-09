@@ -25,14 +25,26 @@ python predict_developability.py --build-embedding data/test.xlsx --lm all
 
 python predict_developability.py --build-embedding data/test.xlsx --lm ablang
 
-# Xgboost evaluation with k-fold validation
-python predict_developability.py --kfold 10 --target sec_filter --lm antiberta2 --model xgboost
+# Xgboost trainning evaluation with k-fold validation
+python predict_developability.py --kfold 10 --target sec_filter --lm antiberta2 --model xgboost --db data/ipi_antibody.xlsx
 
-# Randomforest evaluation with k-fold validation
-python predict_developability.py --kfold 5 --target sec_filter --lm antiberty --model rf
+# Randomforest training evaluation with k-fold validation
+python predict_developability.py --kfold 10 --target sec_filter --lm antiberty --model rf --db data/ipi_antibody.xlsx
+
+
+# CNN trainning evaluation with k-fold validation
+python predict_developability.py --kfold 10 --target sec_filter --lm antiberta2 --model cnn --db data/ipi_antibody.xlsx
+
+# Transformer trainning evaluation with k-fold validation
+python predict_developability.py --kfold 10 --target sec_filter --lm antiberty --model transformer_lm --db data/ipi_antibody.xlsx
+
+# Transformer with one hot encoding trainning evaluation with k-fold validation
+python predict_developability.py --kfold 10 --target sec_filter --lm onehot --model transformer_onehot --db data/ipi_antibody.xlsx
+
+
 
 # Train final  model with full dataset
-python predict_developability.py --train --target sec_filter --lm antiberta2 --model xgboost
+python predict_developability.py --train --target sec_filter --lm antiberta2 --model xgboost --db data/ipi_antibody.xlsx
 
 #  Predict instantly
 python predict_developability.py --predict data/new_lib.xlsx --target sec_filter --lm antiberta2
