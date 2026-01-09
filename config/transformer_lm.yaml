@@ -1,0 +1,21 @@
+# config/transformer_lm.yaml
+# Transformer LM Configuration for Antibody Polyreactivity Prediction
+
+model:
+  hidden_dim: 128
+  num_heads: 8
+  num_layers: 6
+  dim_feedforward: 512
+  dropout: 0.3
+
+
+training:
+  epochs: 20
+  batch_size: 16
+  lr: 0.00001
+  weight_decay: 0.001
+
+scheduler:
+  mode: min
+  factor: 0.5
+  patience: 3

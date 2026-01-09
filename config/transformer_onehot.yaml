@@ -1,0 +1,31 @@
+# config/transformer_onehot.yaml
+# Transformer One-Hot Configuration
+
+# config/transformer_onehot.yaml
+# Transformer One-Hot Configuration for Antibody Polyreactivity Prediction
+
+model:
+  hidden_dim: 128
+  num_heads: 8
+  num_layers: 6
+  dim_feedforward: 512
+  dropout: 0.2
+
+sequence_lengths:
+  max_vh_len: 135      # Maximum length of VH sequence (after padding)
+  max_vl_len: 135      # Maximum length of VL sequence
+  max_hcdr3_len: 25    # Maximum length of HCDR3
+
+training:
+  epochs: 20
+  batch_size: 16
+  lr: 0.0001
+  weight_decay: 1e-5
+  val_split: 0.0       # Fraction for validation (0.0 = full training, 0.2 = 80/20 split)
+
+mutagenesis:
+  amino_acids: "ACDEFGHIKLMNPQRSTVWY"  # Amino acids for in silico mutagenesis
+
+interpretability:
+  ig_n_steps: 50       # Number of steps for Integrated Gradients
+  top_features: 60     # Number of top features for global attribution plot
