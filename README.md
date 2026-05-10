@@ -1,11 +1,8 @@
 
-![Alt text](SEC/models_final/IPIAbDevOverview.png)
-
 DELPHI (Deep End-to-end Learning Platform with High Interpretability)is a unified interpretable machine learning framework that enables any laboratory to flexibly build sequence-based predictive models for biophysical properties. It combines multiple classifier architectures, protein language models, automated trainset denoising, data-adaptive hyperparameter configuration, automated threshold optimization, and multi-resolution interpretability within a single Python pipeline. 
 
 Offical version will be available on very soon.
 
-<img width="5173" height="60" alt="image" src="https://github.com/user-attachments/assets/bf1f2133-427f-49b9-87fd-d062de82f57d" />
 
 
 This open source software was developed at The Antibody Platform, Institut for Protein Innovation,Boston, USA
