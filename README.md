@@ -7,7 +7,6 @@ Official code and tutorial documentation available very soon at github.com/prote
 
 This open source software was developed at The Antibody Platform, Institut for Protein Innovation,Boston, USA
 
-Machine Learning Architect and Designer: [Hoan Nguyen, PhD](https://www.linkedin.com/in/hoan-nguyen-82549420/)
 
 Authors and Contact: Hoan.Nguyen@proteininnovation.org or [Andre.Teixeira](https://www.linkedin.com/in/andr%C3%A9-a-r-teixeira-6155857/)@proteininnovation.org
 
