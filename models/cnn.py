@@ -1,8 +1,24 @@
 # models/cnn.py
-# 1D-CNN for PLM Embeddings (ablang, antiberty, antiberta2, antiberta2-cssp)
-# IPI Antibody Developability Prediction Platform — Production Version DEC-2025
+# ══════════════════════════════════════════════════════════════════════════════
+# DELPHI — Deep End-to-end Learning Platform for antibody developability
+#          with High Interpretability
 #
-# ── Compatibility contract with predict_developability.py ──────────────────────
+# Module      : cnn.py
+# Description : 1D convolutional neural network classifier for antibody
+#               developability prediction. Takes pre-computed PLM embeddings
+#               (e.g. IgBERT, ABlang2) as input and applies stacked Conv1D
+#               layers with residual connections to capture local sequence
+#               patterns. Lightweight and fast relative to Transformer models;
+#               best suited for medium-sized datasets (5k-50k) where spatial
+#               locality in the embedding dimension is informative.
+# Author      : Hoan Nguyen, PhD
+# Company     : Institute for Protein Innovation (IPI)
+# Date        : 2026-05
+# Version     : 1.0.0
+# ══════════════════════════════════════════════════════════════════════════════
+
+#
+# ── Compatibility contract with delphi.py ──────────────────────
 #
 #  TRAIN path:
 #    model = CNNModel()
