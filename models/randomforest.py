@@ -1,9 +1,25 @@
 # models/randomforest.py
-# Random Forest — Classification & Regression
-# MLAbDev · IPI Antibody Developability Prediction Platform
-# Supports: embedding | k-mer | biophysical features (combinable)
-# Interpretation: SHAP (TreeExplainer) for k-mer + biophysical
-# Updated: full rewrite — DEC-2025
+# ══════════════════════════════════════════════════════════════════════════════
+# DELPHI — Deep End-to-end Learning Platform for antibody developability
+#          with High Interpretability
+#
+# Module      : random_forest.py
+# Description : Random Forest classifier for antibody developability
+#               prediction. Supports multiple feature representations:
+#               biophysical descriptors (charge, pI, hydrophobicity),
+#               k-mer amino acid frequencies, one-hot sequence encoding,
+#               and PLM embeddings. Includes SHAP-based global and
+#               per-sample interpretability and CDR3 in silico mutagenesis.
+#               Recommended as a fast, interpretable baseline requiring no
+#               GPU and no pre-computed embeddings.
+#               Applicable to any binary (1/0) antibody property label 
+#               (PSR, SEC, HIC, AC-SINS, viscosity, expression, ...).
+# Author      : Hoan Nguyen, PhD
+# Company     : Institute for Protein Innovation (IPI)
+# Date        : 2026-05
+# Version     : 1.0.0
+# ══════════════════════════════════════════════════════════════════════════════
+
 
 import os, sys, copy, logging, warnings, datetime
 warnings.filterwarnings('ignore')
