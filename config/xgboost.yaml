@@ -1,8 +1,51 @@
 # ══════════════════════════════════════════════════════════════════════════════
-# xgboost.yaml — XGBoostModel configuration
-# MLAbDev · IPI Antibody Developability Prediction Platform
+# DELPHI — Configuration
+#
+# File    : config/xgboost.yaml
+# Purpose : Hyperparameters for XGBoostModel (models/xgboost.py)
+#           Edit this file to tune training without modifying source code.
+#           Applicable to any binary antibody property label
+#           (PSR, SEC, HIC, AC-SINS, viscosity, expression, ...).
+#
+# Data-Adaptive Hyperparameter Configuration
+#   Class weights (scale_pos_weight) are automatically derived from
+#   class balance at runtime. All other hyperparameters are used
+#   exactly as written below.
+#
+#   mode: auto    — n_estimators, max_depth, learning_rate, colsample_bytree,
+#                   and min_child_weight are derived from n and positive rate.
+#   mode: manual  — all values used exactly as written below.
+#
+# Project : Institute for Protein Innovation (IPI)
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PARAMETER TUNING GUIDE
 # ══════════════════════════════════════════════════════════════════════════════
 #
+# Step 1 — Run RandomizedSearchCV ONCE to find best params for your dataset:
+#   python delphi.py --kfold 10 \
+#       --target psr_filter --lm biophysical --model xgboost \
+#       --db data/ipi_psr_trainset.xlsx
+#   With:  training.use_random_search: true (in yaml)
+#
+# Step 2 — Note the best params from the log file:
+#   [train] best CV AUC = 0.8234
+#   XGBClassifier(n_estimators=4200, max_depth=7, learning_rate=0.018, ...)
+#
+# Step 3 — Paste into model section above and set use_random_search: false
+#   model:
+#     n_estimators: 4200
+#     max_depth: 7
+#     learning_rate: 0.018
+#
+# Step 4 — All future runs use these fixed params (fast, reproducible)
+#
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+
 # XGBoost-specific differences vs random_forest.yaml:
 #   colsample_bytree  instead of  max_features
 #   scale_pos_weight  instead of  class_weight='balanced'  (auto-computed)
@@ -10,6 +53,8 @@
 #   no oob_score                  use val AUC instead
 #   use_random_search             RandomizedSearchCV (default: false)
 #
+
+
 # ── Mode ──────────────────────────────────────────────────────────────────────
 mode: manual          # 'auto' | 'manual'
                       # auto   → derives params from data (n, pos_rate, n_features)
@@ -42,7 +87,7 @@ features:
 
 # ── k-mer settings ────────────────────────────────────────────────────────────
 kmer:
-  k: [1, 2,3]           # k values — [1,2] recommended (3-mers too sparse for <10k)
+  k: [1, 2, 3]          # k values — [1,2] recommended (3-mers too sparse for <10k)
   sequence: both      # 'CDR3' | 'VH' | 'both'
   normalize: true     # normalise counts to frequencies
 
@@ -138,8 +183,9 @@ training:
   # Set to true for first-time tuning on a new dataset.
   # Workflow: run once with use_random_search=true → note best params →
   #           paste into model section above → set back to false
-  use_random_search: true
+  use_random_search: false
   n_iter:              30       # RandomizedSearchCV iterations (used if above=true)
+  search_strategy: pre_search 
   cv:                   5       # inner CV folds for RandomizedSearchCV
 
   # Original IPI RandomizedSearchCV distributions (used when use_random_search=true)
@@ -258,41 +304,3 @@ mutagenesis:
   format:      tiff           # 'tiff' | 'jpeg' | 'png'
   make_ppt:    true           # assemble heatmaps into .pptx
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PARAMETER TUNING GUIDE
-# ══════════════════════════════════════════════════════════════════════════════
-#
-# Step 1 — Run RandomizedSearchCV ONCE to find best params for your dataset:
-#   python predict_developability.py --kfold 10 \
-#       --target psr_filter --lm biophysical --model xgboost \
-#       --db data/ipi_psr_trainset.xlsx
-#   With:  training.use_random_search: true
-#
-# Step 2 — Note the best params from the log file:
-#   [train] best CV AUC = 0.8234
-#   XGBClassifier(n_estimators=4200, max_depth=7, learning_rate=0.018, ...)
-#
-# Step 3 — Paste into model section above and set use_random_search: false
-#   model:
-#     n_estimators: 4200
-#     max_depth: 7
-#     learning_rate: 0.018
-#
-# Step 4 — All future runs use these fixed params (fast, reproducible)
-#
-# ══════════════════════════════════════════════════════════════════════════════
-# COMPARISON WITH RANDOM FOREST DEFAULTS (random_forest.yaml)
-# ══════════════════════════════════════════════════════════════════════════════
-#
-#   Parameter            RF            XGBoost      Notes
-#   ─────────────────────────────────────────────────────────────────────────
-#   n_estimators         1000          3000         XGB additive needs more trees
-#   max_depth            15            6            XGB shallow wins (bias-var tradeoff)
-#   feature_fraction     max_features  colsample    same concept, different API
-#   class imbalance      class_weight  scale_pos_w  auto-computed from label counts
-#   learning_rate        n/a           0.01         XGB-specific shrinkage
-#   regularisation       min_samples   gamma+reg    XGB has L1+L2 natively
-#   internal validation  oob_score     early_stop   different mechanism, same purpose
-#   SHAP                 TreeExplainer TreeExplainer identical API
-#
-# ══════════════════════════════════════════════════════════════════════════════

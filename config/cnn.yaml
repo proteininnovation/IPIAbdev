@@ -1,59 +1,53 @@
-# config/cnn.yaml
-# ═══════════════════════════════════════════════════════════════════
-#  1D-CNN Configuration
-#  IPI Antibody Developability Prediction Platform
-# ═══════════════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════════════
+# DELPHI — Configuration
 #
-#  ADAPTIVE BY DEFAULT — set auto_scale: true and never touch this file.
-#  The model configures itself for any dataset × any language model.
+# File    : config/cnn.yaml
+# Purpose : Hyperparameters for CNNModel (models/cnn.py)
+#           Edit this file to tune training without modifying source code.
+#           Applicable to any binary antibody property label
+#           (PSR, SEC, HIC, AC-SINS, viscosity, expression, ...).
 #
-# ── Two-axis continuous scaling ────────────────────────────────────
+# Data-Adaptive Hyperparameter Configuration
+#   DELPHI automatically derives model architecture and training settings
+#   from dataset size and embedding dimensionality at runtime (auto_scale: true).
+#   No manual tuning is required for new datasets or language models.
 #
-#  Axis 1  n_norm = log10(n/500) / log10(1000)
-#    Controls batch_size, epochs, lr.
+#   auto_scale: true  — uses two-axis continuous scaling:
+#                       Axis 1 (n_norm): controls batch size, epochs, lr.
+#                       Axis 2 (d_norm = n/emb): controls hidden_dim and dropout.
+#                       CNN-specific ceiling: hidden_dim=256, dropout=0.45.
+#   auto_scale: false — all values used exactly as written below.
 #
-#  Axis 2  d_norm = log10((n/emb)/5) / log10(100)
-#    Controls hidden_dim (FC head) and dropout.
+# Project : Institute for Protein Innovation (IPI)
+# ══════════════════════════════════════════════════════════════════════════════
 #
-#  CNN-specific differences from transformer_lm:
-#    • hidden_dim ceiling = 256  (vs 512)  — head only, not attention
-#    • dropout ceiling    = 0.45 (vs 0.50) — BatchNorm regularises internally
-#    • batch_size ceiling = 128  (vs 256)  — CNN heavier per sample
-#    • lr base            = 1e-4 (vs 1e-5) — CNNs converge faster
-#    • epochs base        = 50→10 (vs 60→10)
+# PARAMETER TUNING GUIDE
+# ──────────────────────────────────────────────────────────────────────────────
+# Recommended workflow:
+#   Step 1 — Pre-compute embeddings once:
+#     python delphi.py --build-embedding data/ipi_psr_trainset.xlsx --lm igbert
 #
-#  Architecture (fixed — not scaled):
-#    ResidualBlock(1→128,   kernel=5, dilation=1)
-#    ResidualBlock(128→256, kernel=5, dilation=2)
-#    ResidualBlock(256→256, kernel=5, dilation=4)
-#    AdaptiveMaxPool1d(1)
-#    Linear(256→hidden_dim) + BatchNorm + GELU + Dropout
-#    Linear(hidden_dim→2)
+#   Step 2 — Run kfold to validate AUC:
+#     python delphi.py --kfold 10 \
+#         --target psr_filter --lm igbert --model cnn \
+#         --db data/ipi_psr_trainset.xlsx
 #
-# ── Verified outputs — all 4 LMs × your 3 datasets ────────────────
+#   Step 3 — Train on full dataset:
+#     python delphi.py --train \
+#         --target psr_filter --lm igbert --model cnn \
+#         --db data/ipi_psr_trainset.xlsx
 #
-#  IPI_SEC (8k, 21% Fail)
-#    ablang(480)           n/emb=16.7  hd=128 dr=0.33 bs=32  ep=38
-#    antiberty(512)        n/emb=15.7  hd=128 dr=0.33 bs=32  ep=38
-#    antiberta2(1024)      n/emb= 7.8  hd= 64 dr=0.37 bs=32  ep=38  ← floor
-#    antiberta2-cssp(1024) n/emb= 7.8  hd= 64 dr=0.37 bs=32  ep=38  ← floor
+# Alternatively, register a best-fold checkpoint from kfold directly
+# in config/model_registry.yaml if validation shows it performs better.
 #
-#  IPI_PSR (12k, 52/48%)
-#    ablang(480)           n/emb=25.0  hd=128 dr=0.30 bs=32  ep=33
-#    antiberty(512)        n/emb=23.5  hd=128 dr=0.30 bs=32  ep=33
-#    antiberta2(1024)      n/emb=11.7  hd= 64 dr=0.34 bs=32  ep=37  ← floor
-#    antiberta2-cssp(1024) n/emb=11.7  hd= 64 dr=0.34 bs=32  ep=37  ← floor
-#
-#  DS1 (245k, 53/47%)
-#    ablang(480)           n/emb=510   hd=256 dr=0.12 bs=128 ep=10
-#    antiberty(512)        n/emb=479   hd=256 dr=0.12 bs=128 ep=10
-#    antiberta2(1024)      n/emb=239   hd=192 dr=0.14 bs=128 ep=10
-#    antiberta2-cssp(1024) n/emb=239   hd=192 dr=0.14 bs=128 ep=10
-#
-#  Note: CNN hidden_dim floor = max(64, min(128, emb/16))
-#    antiberta2(1024): floor = max(64, min(128, 64)) = 64
-#    ablang(480):      floor = max(64, min(128, 30)) = 64  (formula wins)
-# ═══════════════════════════════════════════════════════════════════
+# Quick settings reference:
+#   New dataset (unknown size):    auto_scale: true
+#   Overfitting:                   dropout += 0.05, weight_decay *= 2
+#   Underfitting:                  dropout -= 0.05
+#   Imbalanced data (15-30%):      loss.type: focal, focal_gamma: 1.5
+#   Severe imbalance (< 15%):      loss.type: focal, focal_gamma: 2.0
+#   GPU available:                 amp: true  (2-4x speedup)
+# ══════════════════════════════════════════════════════════════════════════════
 
 auto_scale: false    # recommended: two-axis adaptive scaling
 amp: false          # set true for CUDA GPU (2–4x speedup)

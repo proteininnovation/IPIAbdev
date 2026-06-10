@@ -1,7 +1,46 @@
 # ══════════════════════════════════════════════════════════════════════════════
-# random_forest.yaml — RandomForestModel configuration
-# MLAbDev · IPI Antibody Developability Prediction Platform
+# DELPHI — Configuration
+#
+# File    : config/random_forest.yaml
+# Purpose : Hyperparameters for RandomForestModel (models/random_forest.py)
+#           Edit this file to tune training without modifying source code.
+#           Applicable to any binary antibody property label
+#           (PSR, SEC, HIC, AC-SINS, viscosity, expression, ...).
+#
+# Data-Adaptive Hyperparameter Configuration
+#   Class weights are automatically derived from class balance at runtime.
+#   All other hyperparameters are used exactly as written below.
+#
+#   mode: auto    — runs RandomizedSearchCV to derive n_estimators, max_depth,
+#                   max_features, and min_samples_leaf from dataset size (n)
+#                   and class balance (positive rate). No manual tuning needed.
+#   mode: manual  — all values used exactly as written below.
+#                   Set training.hyperparam_search: true to run
+#                   RandomizedSearchCV on top of manual parameters.
+#
+# Project : Institute for Protein Innovation (IPI)
 # ══════════════════════════════════════════════════════════════════════════════
+#
+# PARAMETER TUNING GUIDE
+# ──────────────────────────────────────────────────────────────────────────────
+# Step 1 — Run RandomizedSearchCV ONCE to find best params for your dataset:
+#   python delphi.py --kfold 10 \
+#       --target psr_filter --lm biophysical --model rf \
+#       --db data/ipi_psr_trainset.xlsx
+#   With:  training.hyperparam_search: true
+#
+# Step 2 — Note the best params from the log file:
+#   [train] best CV AUC = 0.8634
+#   RandomForestClassifier(n_estimators=800, max_depth=20, ...)
+#
+# Step 3 — Paste into model section below and set hyperparam_search: false
+#   model:
+#     n_estimators: 800
+#     max_depth: 20
+#
+# Step 4 — All future runs use these fixed params (fast, reproducible)
+# ══════════════════════════════════════════════════════════════════════════════
+
 
 # ── Mode ──────────────────────────────────────────────────────────────────────
 mode: manual          # 'auto' | 'manual'
@@ -38,7 +77,7 @@ features:
 
 # ── k-mer settings (used when features.kmer=true) ────────────────────────────
 kmer:
-  k: [1, 2,3]           # k values — [1,2] recommended (3-mers too sparse for <10k)
+  k: [1, 2, 3]          # k values — [1,2] recommended (3-mers too sparse for <10k)
   sequence: VH      # 'CDR3' | 'VH' | 'both'
   normalize: true     # normalise counts to frequencies (sum to 1 per sequence)
 
@@ -231,7 +270,9 @@ lm_profiles:
 # ── Training ──────────────────────────────────────────────────────────────────
 training:
   class_weight:      balanced     # 'balanced' | null  (classification only)
-  hyperparam_search: true        # true → RandomizedSearchCV (slow but optimal)
+  hyperparam_search: false        # false → use manual params above (default)
+                                  # true  → RandomizedSearchCV (slow but optimal)
+                                  # set to true for first-time tuning on a new dataset
 
 # ── SHAP interpretability ─────────────────────────────────────────────────────
 # Runs automatically after train() on train + val sets.

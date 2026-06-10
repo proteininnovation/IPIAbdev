@@ -1,52 +1,56 @@
-# config/transformer_lm.yaml
-# ═══════════════════════════════════════════════════════════════════
-#  TransformerLM Configuration
-#  IPI Antibody Developability Prediction Platform
-# ═══════════════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════════════
+# DELPHI — Configuration
 #
-#  ADAPTIVE BY DEFAULT — set auto_scale: true and never touch this file.
-#  The model configures itself for any dataset × any language model.
+# File    : config/transformer_lm.yaml
+# Purpose : Hyperparameters for TransformerLMModel (models/transformer_lm.py)
+#           Edit this file to tune training without modifying source code.
+#           Applicable to any binary antibody property label
+#           (PSR, SEC, HIC, AC-SINS, viscosity, expression, ...).
 #
-# ── Two-axis continuous scaling ────────────────────────────────────
+# Data-Adaptive Hyperparameter Configuration
+#   DELPHI automatically derives model architecture and training settings
+#   from dataset size and embedding dimensionality at runtime (auto_scale: true).
+#   No manual tuning is required for new datasets or language models.
 #
-#  Axis 1  n_norm = log10(n/500) / log10(1000)
-#    Controls depth, batch, epochs, lr.
-#    Identical regardless of which LM you use.
+#   auto_scale: true  — uses two-axis continuous scaling:
+#                       Axis 1 (n_norm): controls depth, batch size, epochs, lr.
+#                       Axis 2 (d_norm = n/emb): controls hidden_dim and dropout,
+#                       adapting to both dataset size and embedding dimensionality.
+#                       This means a larger PLM (1024-dim) on a small dataset
+#                       gets a smaller model with heavier regularisation than
+#                       a compact PLM (480-dim) on the same dataset.
+#   auto_scale: false — all values used exactly as written below.
 #
-#  Axis 2  d_norm = log10((n/emb)/5) / log10(100)
-#    = samples per embedding dimension
-#    Controls hidden_dim and dropout.
-#    THIS is why LM choice matters:
+# Project : Institute for Protein Innovation (IPI)
+# ══════════════════════════════════════════════════════════════════════════════
 #
-#    antiberta2(1024) on 8k samples → n/emb = 7.8  (data-starved)
-#      → hd=128, dropout=0.40  (small model, heavy regularisation)
-#    ablang(480) on same 8k samples → n/emb = 16.7
-#      → hd=192, dropout=0.37  (larger model, less regularisation)
-#    ablang(480) on 245k samples    → n/emb = 510
-#      → hd=512, dropout=0.12  (maximum model, minimal regularisation)
+# PARAMETER TUNING GUIDE
+# ──────────────────────────────────────────────────────────────────────────────
+# Recommended workflow:
+#   Step 1 — Pre-compute embeddings once (reused across all runs):
+#     python delphi.py --build-embedding data/ipi_psr_trainset.xlsx --lm igbert
 #
-#  Verified outputs — all 4 LMs × your 3 datasets:
+#   Step 2 — Run kfold to find best epoch and validate AUC:
+#     python delphi.py --kfold 10 \
+#         --target psr_filter --lm igbert --model transformer_lm \
+#         --db data/ipi_psr_trainset.xlsx
 #
-#  IPI_SEC (8k, 21% Fail)
-#    ablang(480)          n/emb=16.7  hd=192 nl=3 dr=0.37 bs=32  ep=40
-#    antiberty(512)       n/emb=15.7  hd=192 nl=3 dr=0.37 bs=32  ep=40
-#    antiberta2(1024)     n/emb= 7.8  hd=128 nl=3 dr=0.40 bs=32  ep=40  ← smaller!
-#    antiberta2-cssp(1024)n/emb= 7.8  hd=128 nl=3 dr=0.40 bs=32  ep=40
+#   Step 3 — Set training.epochs to mean best epoch from kfold, then train:
+#     python delphi.py --train \
+#         --target psr_filter --lm igbert --model transformer_lm \
+#         --db data/ipi_psr_trainset.xlsx
 #
-#  IPI_PSR (12k, 52/48%)
-#    ablang(480)          n/emb=25.0  hd=192 nl=3 dr=0.34 bs=32  ep=37
-#    antiberty(512)       n/emb=23.5  hd=192 nl=3 dr=0.34 bs=32  ep=37
-#    antiberta2(1024)     n/emb=11.7  hd=128 nl=3 dr=0.37 bs=32  ep=37  ← smaller!
-#    antiberta2-cssp(1024)n/emb=11.7  hd=128 nl=3 dr=0.37 bs=32  ep=37
+# Alternatively, register a best-fold checkpoint from kfold directly
+# in config/model_registry.yaml if validation shows it performs better.
 #
-#  DS1 (245k, 53/47%)
-#    ablang(480)          n/emb=510   hd=512 nl=5 dr=0.12 bs=128 ep=15
-#    antiberty(512)       n/emb=479   hd=512 nl=5 dr=0.12 bs=128 ep=15
-#    antiberta2(1024)     n/emb=239   hd=448 nl=5 dr=0.15 bs=128 ep=15  ← slightly smaller
-#    antiberta2-cssp(1024)n/emb=239   hd=448 nl=5 dr=0.15 bs=128 ep=15
-#
-#  Future LMs with any embedding size will also work automatically.
-# ═══════════════════════════════════════════════════════════════════
+# Quick settings reference:
+#   New dataset (unknown size):    auto_scale: true
+#   Overfitting:                   dropout += 0.05, weight_decay *= 2
+#   Underfitting:                  dropout -= 0.05, num_layers += 1
+#   Imbalanced data (15-30%):      loss.type: focal, focal_gamma: 1.5
+#   Severe imbalance (< 15%):      loss.type: focal, focal_gamma: 2.0
+#   GPU available:                 amp: true  (2-4x speedup)
+# ══════════════════════════════════════════════════════════════════════════════
 
 auto_scale: false     # recommended: two-axis adaptive scaling
 amp: false          # set true for CUDA GPU (2–4x speedup)
@@ -64,13 +68,13 @@ training:
   epochs:       55
   batch_size:   32
   lr:         0.00001
-  weight_decay: 0.001 #0.0005 for 245k sequences like DS1)  # IPI PSR data 0.001 #0.001 ()
+  weight_decay: 0.001
 
 # ── LR scheduler ──────────────────────────────────────────────────
 scheduler:
   mode:    min
   factor:  0.5
-  patience: 7  #5 for DS1  # 7 for IPI dataset
+  patience: 7
 
 # ── loss function ─────────────────────────────────────────────────
 # type: auto  (recommended — selects from class distribution + n)
@@ -83,12 +87,12 @@ scheduler:
 #   ≥ 30%  (balanced)     ≤ 50 000      weighted_ce
 #
 loss:
-  type:            auto #DS1=label_smooth   # ce for small IPI set         #auto
-  focal_gamma:     2.0        # overrides auto γ when type: focal
+  type:           ce            # ce | weighted_ce | label_smooth | focal | auto
+  focal_gamma:    2.0           # overrides auto gamma when type: focal
   label_smoothing: 0.05       # overrides auto ε when type: label_smooth
 
 
-# How tp use loss type: 
+# How to use loss type: 
 #   ce    Balanced data (40–60%) —  PSR case 
 #   weighted_ce     Mildly imbalanced (20–40%)
 #   label_smoothBalanced + want calibrated probabilities
@@ -123,20 +127,3 @@ loss:
 # model: {hidden_dim: 448, num_heads: 8, num_layers: 5, dropout: 0.15}
 # training: {epochs: 15, batch_size: 128, lr: 0.0000283, weight_decay: 0.0005}
 # loss: {type: label_smooth, label_smoothing: 0.10}
-
-#Final recommended configs for transformer_lm.py (✓ indicates best model for each dataset):
-
-#Dataset          emb          n      n/emb   hd  l   dr    bs  ep   wd      pat.  lr
-#────────────────────────────────────────────────────────────────────────────────
-#IPI SEC          ablang    8,000    16.7    128  2  0.37  32  42  0.001    7       0.00005
-#IPI SEC          antiberta2 8,000    7.8    128  2  0.42  32  42  0.001    7       0.00005
-#IPI PSR          ablang   11,000    22.9    128  2  0.35  32  40  0.001    7.      0.00005 
-#IPI PSR          antiberty 11,000   21.5    128  2  0.36  32  40  0.001    7       0.00005
-#IPI PSR          antiberta2 11,000  10.7    128  2  0.40  32  40  0.001    7  ✓    0.00005
-#DS1              ablang  240,000   500.0    128  3  0.15  32  20  0.0005   5  ✓.   0.00005
-#DS1              antiberty 240,000 468.8    128  3  0.15  32  20  0.0005   5  ✓.   0.00005
-#DS1              antiberta2 240,000 234.4   128  3  0.20  32  20  0.0005   5       0.00005
-#large(500k)      ablang  500,000  1041.7    128  3  0.15  32  15  0.0005   5       0.00005
-#large(500k)      antiberty 500,000 976.6    128  3  0.15  32  15  0.0005   5       0.00005
-#large(500k)      antiberta2 500,000 488.3   128  3  0.15  32  15  0.0005   5       0.00005   
-

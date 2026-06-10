@@ -1,60 +1,55 @@
-# config/transformer_onehot.yaml
-# ─────────────────────────────────────────────────────────────────────────────
-# MODE
-# ─────────────────────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# DELPHI — Configuration
 #
-#   mode: manual  (default)
-#     Every value below is used exactly as written.
+# File    : transformer_onehot.yaml
+# Purpose : Hyperparameters for TransformerOneHotModel (models/transformer_onehot.py)
+#           Edit this file to tune training without modifying source code.
+#           Applicable to any binary antibody property label
+#           (PSR, SEC, HIC, AC-SINS, viscosity, expression, ...).
 #
-#   mode: auto
-#     At the start of train() or kfold_validation(), the model reads n and
-#     pos_rate from the actual data and derives ALL model + training settings
-#     automatically. Every value under [model] and [training] below is IGNORED.
-#     Just change mode to auto — no other edits needed.
+# Data-Adaptive Hyperparameter Configuration
+#   DELPHI automatically derives model architecture and training settings
+#   from dataset size and class balance at runtime (mode: auto).
+#   No manual tuning is required for new datasets or assay types.
 #
-#     The following sections are ALWAYS read from this file regardless of mode:
-#       • sequence_lengths   — must match your actual sequences
-#       • interpretability   — speed/quality tradeoff, not data-dependent
-#       • mutagenesis        — amino acid alphabet, never changes
-#       • training.epochs    — treated as a hard cap in auto mode
+#   mode: auto    — hidden_dim, num_layers, batch size, learning rate,
+#                   loss function, and dropout are derived from n and
+#                   positive rate using predefined size and balance tiers.
+#                   sequence_lengths, interpretability, and mutagenesis
+#                   sections are always respected from this file.
+#   mode: manual  — all values used exactly as written below.
 #
-#     Auto size tiers (derived from n):
-#       xs  n < 5k     hidden=64,  layers=4, ffn=256,  dropout=0.40, batch=16,  patience=12, lr=5e-5
-#       sm  5k–20k     hidden=64,  layers=4, ffn=256,  dropout=0.30, batch=64,  patience=5,  lr=1e-4
-#       md  20k–80k    hidden=192, layers=6, ffn=768,  dropout=0.20, batch=64,  patience=8,  lr=2e-4
-#       lg  80k–200k   hidden=256, layers=8, ffn=1024, dropout=0.15, batch=128, patience=7,  lr=4e-4
-#       xl  >200k      hidden=256, layers=8, ffn=1024, dropout=0.10, batch=256, patience=7,  lr=8e-4
+# Project : Institute for Protein Innovation (IPI)
+# ══════════════════════════════════════════════════════════════════════════════
 #
-#     Auto balance tiers (derived from pos_rate):
-#       balanced   40–60%       → loss: ce
-#       mild       20–40%       → loss: weighted_ce
-#       moderate   10–20%       → loss: weighted_ce
-#       severe     <10%         → loss: focal  (+warning at <5%)
-#       large+imb  n>80k, <40%  → loss: focal  (overrides weighted_ce)
+# PARAMETER TUNING GUIDE
+# ──────────────────────────────────────────────────────────────────────────────
+# Step 1 — Run kfold_validation() to measure true generalisation AUC:
+#   python delphi.py --kfold 10 \
+#       --target psr_filter --lm onehot --model transformer_onehot \
+#       --db data/ipi_psr_trainset.xlsx
 #
-# ─────────────────────────────────────────────────────────────────────────────
+# Step 2 — Read mean best epoch from the per-fold loss curve plots.
+#   Set training.epochs to that value below.
 #
-# WORKFLOW: kfold first, then full-data train
-# ───────────────────────────────────────────
-#   Step 1 — kfold_validation()
-#     • Measures true generalisation AUC (what you report)
-#     • Read mean best epoch from the per-fold loss curve plots
+# Step 3 — Run train() on the full dataset:
+#   python delphi.py --train \
+#       --target psr_filter --lm onehot --model transformer_onehot \
+#       --db data/ipi_psr_trainset.xlsx
 #
-#   Step 2 — train() on full dataset
-#     • Set epochs = mean best epoch from Step 1  (see training.epochs below)
-#     • No early stopping — epoch count is fixed from kfold results
-#     • This is the model you deploy for screening
+# Alternatively, register a best-fold checkpoint from kfold directly
+# in config/model_registry.yaml if validation shows it performs better.
 #
-#   Why not deploy the kfold best-fold model directly?
-#     It was trained on only ~89% of data (1 fold held out).
-#     The full-data model is strictly better for production use.
-#
-#   Why not skip kfold and just train()?
-#     No honest AUC estimate. Train AUC on full data is always inflated.
-#
-# ─────────────────────────────────────────────────────────────────────────────
+# Quick settings reference:
+#   Faster dev/debug:   hidden_dim=64, num_heads=4, num_layers=4, ffn=256
+#   Overfitting:        dropout=0.5, weight_decay=0.005
+#   Underfitting:       dropout=0.2, lr=0.0003, weight_decay=0.0001
+#   Imbalanced data:    loss_type: weighted_label_smooth
+#   Severe imbalance:   loss_type: focal
+#   Different dataset:  mode: auto
+# ══════════════════════════════════════════════════════════════════════════════
 
-mode: manual   # 'manual' | 'auto'
+
 
 
 # ── Model architecture ────────────────────────────────────────────────────────
@@ -62,15 +57,11 @@ mode: manual   # 'manual' | 'auto'
 # head_dim = hidden_dim / num_heads = 128 / 8 = 16  ✓
 # Estimated runtime: ~30 min for 9-fold CV (50 ep cap, early stopping ~ep 20–25)
 model:
-  hidden_dim: 128        # 2.36M params — best accuracy config for 12k
+  hidden_dim: 128
   num_heads: 8           # 128 / 8 = 16 per head  ✓
   num_layers: 4          # 4 layers per branch (2 branches total = 8 transformer layers)
   dim_feedforward: 512   # 4× hidden_dim — standard ratio
-  # [FIX-C] raised 0.3 → 0.4
-  #   params:samples at hidden=128, n=12k ≈ 143:1 — high memorisation risk
-  #   for one-hot models (no biochemical prior).  0.4 is the standard
-  #   recommendation for this regime.  Lower to 0.2 only when n > 50k.
-  dropout: 0.38 # IPI=0.4
+  dropout: 0.38
 
 
 # ── Sequence lengths ──────────────────────────────────────────────────────────
@@ -86,7 +77,7 @@ sequence_lengths:
 # These values are used in manual mode only — EXCEPT training.epochs,
 # which is always respected as a hard cap even in auto mode.
 training:
-  epochs: 35             # 50 for small dataset Hard cap for kfold_validation() — fold 6 needed ep24.
+  epochs: 40             # 50 for small dataset Hard cap for kfold_validation() — fold 6 needed ep24.
                          # ── IMPORTANT for final train() ──────────────────
                          # After kfold completes, read the mean best epoch
                          # from your per-fold loss curve plots, then set:
@@ -94,41 +85,24 @@ training:
                          # and re-run train() on the full dataset.
                          # No early stopping — the epoch count is fixed.
 
-  batch_size: 32         # 32 for IPI 10k antibodies, 158 gradient steps/epoch at n=12k
-                         # Keep at 64 — larger model benefits from more
-                         # gradient updates per epoch, not fewer
+  batch_size: 32
 
-  lr: 0.00005   #IPI=0.00001 #0.00005 for DS1            # Conservative for h=128 — larger model needs
-                         # lower LR to stabilise than h=64
+  lr: 0.00001
 
-  # [FIX-C] raised 1e-4 → 1e-3
-  #   L2 regularisation must be strong at params:samples ≈ 143:1.
-  #   1e-4 was the correct default for n > 100k; 1e-3 is appropriate for n ≈ 10–20k.
-  #   Reduce to 1e-4 only when n > 50k.
   weight_decay: 0.001
 
-  # [FIX-C] changed ce → label_smooth for balanced data
-  #   'ce' provides no calibration penalty — the model can grow arbitrarily
-  #   confident on training sequences.  'label_smooth' (ε=0.1) prevents this
-  #   and acts as a soft regulariser on the output distribution.
-  #   For PSR at pos_rate ≈ 52 % this is the correct default.
-  #
-  #   ┌──────────────────────────┬────────────────┬───────────────────────────────┐
-  #   │ Your dataset             │ min_class_rate │ loss_type to use              │
-  #   ├──────────────────────────┼────────────────┼───────────────────────────────┤
-  #   │ PSR 12k balanced         │ ≥ 40%          │ label_smooth   ← best F1/Acc  │
-  #   │ SEC 8k (21% fail)        │ 20–40%         │ weighted_label_smooth         │
-  #   │ Any imbalanced dataset   │ 10–20%         │ weighted_label_smooth         │
-  #   │ Severely imbalanced      │ < 10%          │ focal                         │
-  #   └──────────────────────────┴────────────────┴───────────────────────────────┘
-  loss_type:  auto  # IPI= ce  ##label_smooth for DS1
+  # Loss type guide:
+  #   ce                    balanced data (40–60%)
+  #   weighted_ce           mildly imbalanced (20–40%)
+  #   label_smooth          balanced + calibrated probabilities
+  #   weighted_label_smooth imbalanced + calibration
+  #   focal                 severe imbalance (< 10% minority)
+  loss_type:  weighted_ce
   label_smoothing: 0.1         # ε for label_smooth / weighted_label_smooth (range: 0.05–0.15)
   focal_gamma: 2.0             # focal only
   focal_alpha: 0.25            # focal only
 
-  patience: 7     #10     # ↑ raised from 7 — label_smooth converges slower
-                         # than ce; model needs more epochs for probs to spread
-                         # from 0.5 before early stopping fires
+  patience: 7
 
 
 # ── Scheduler ────────────────────────────────────────────────────────────────
@@ -148,16 +122,14 @@ training:
 scheduler:
   mode: min        # min = step on v_loss (smooth, matches transformer_lm)
                    # DO NOT change to max — v_auc is too noisy with StratifiedGroupKFold
-  patience: 5 #3      # safe with v_loss; was dangerous when stepping on v_auc
+  patience: 5
   factor: 0.5
 
 
 # ── Interpretability ─────────────────────────────────────────────────────────
 # Always used — in both manual and auto mode.
 interpretability:
-  ig_n_steps: 200        #  50  → fast dev/debugging
-                         # 200  → good accuracy, ~5× faster  (recommended daily use)
-                         # 1000 → publication-quality attributions (final run only)
+  ig_n_steps: 200        # 50=fast debug, 200=daily use, 1000=publication quality
   top_features: 60       # positions shown in global IG bar chart
 
 
@@ -247,5 +219,5 @@ mutagenesis:
 #   Tip: for large datasets (n > 80k) dropout regularisation alone is sufficient;
 #        set both to 0.0 and rely on dropout + weight_decay.
 augmentation:
-  pos_drop_p: 0.0 #0.05   # set to 0.0 to disable position dropout
-  aa_sub_p:   0.0 #0.05   # set to 0.0 to disable AA substitution
+  pos_drop_p: 0.0        # set to 0.0 to disable position dropout
+  aa_sub_p:   0.0        # set to 0.0 to disable AA substitution
