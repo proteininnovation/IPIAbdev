@@ -1,0 +1,157 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# DELPHI — Model Registry
+#
+# File    : model_registry.yaml
+# Purpose : Central registry of all trained DELPHI models.
+#           Maps model_id labels to model files and metadata.
+#           Used by delphi --predict for automatic model resolution.
+#
+# WHO WRITES THIS FILE
+# ──────────────────────────────────────────────────────────────────────────────
+#   delphi --train    auto-appends a new entry (type: full_train)
+#   you (manually)    add best_fold entries, rename model_id, edit notes
+#
+# ENTRY TYPES
+# ──────────────────────────────────────────────────────────────────────────────
+#   full_train   Full-data model from --train.  Auto-added by delphi.
+#                Model file named FINAL_*.pt by delphi.
+#   best_fold    Best fold checkpoint from --kfold.  Added manually after
+#                reviewing kfold results.  --kfold never writes here.
+#
+# REQUIRED FIELDS  (delphi cannot load the model without these)
+# ──────────────────────────────────────────────────────────────────────────────
+#   model_id     unique key — used by --model_id for direct lookup.
+#                Default: filename of model_path (set by delphi --train).
+#                Can be shortened or renamed freely. Must be unique.
+#   trainset     path to the training database
+#   target       label column (psr_filter, sec_filter, ...)
+#   lm           embedding (onehot, igbert, biophysical, ...)
+#   model        architecture (transformer_onehot, transformer_lm, rf, ...)
+#   model_path   actual .pt/.pkl file delphi loads.
+#                Independent of model_id — can point to any checkpoint.
+#
+# OPTIONAL FIELDS  (add as many or as few as you like)
+# ──────────────────────────────────────────────────────────────────────────────
+#   type             full_train | best_fold
+#   trained_at       timestamp
+#   kfold_auc        mean AUC from --kfold
+#   kfold_std        AUC std across folds
+#   kfold_folds      number of folds
+#   kfold_best_fold  fold with highest AUC
+#   threshold        classification threshold (omit to use default 0.5)
+#   epochs           epochs used for --train
+#   notes            free text — delphi never overwrites this field
+#
+# LOOKUP ORDER during  delphi --predict
+# ──────────────────────────────────────────────────────────────────────────────
+#   1. --model_path                  use directly, skip registry
+#   2. --model_id NAME               find entry by model_id, load its model_path
+#   3. --db + target + lm + model    most recent entry for that trainset
+#   4. target + lm + model           most recent entry across all trainsets
+#   5. nothing found                 error: run --train or add entry manually
+#
+# USAGE EXAMPLES
+# ──────────────────────────────────────────────────────────────────────────────
+#   # List all registered models
+#   python delphi.py --list-models
+#
+#   # List models filtered by target
+#   python delphi.py --list-models --target psr_filter
+#
+#   # Predict using registry auto-lookup (no --db needed)
+#   python delphi.py --predict data/new_cohort.xlsx \
+#       --target psr_filter --lm onehot --model transformer_onehot
+#
+#   # Predict using a specific model_id
+#   python delphi.py --predict data/new_cohort.xlsx \
+#       --model_id FINAL_psr_filter_onehot_transformer_onehot_ipi_psr.pt
+#
+#   # Predict using explicit path (bypasses registry entirely)
+#   python delphi.py --predict data/new_cohort.xlsx \
+#       --model_path build/pretrained_models/FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt
+#
+# Project : Institute for Protein Innovation (IPI)
+# ══════════════════════════════════════════════════════════════════════════════
+
+models:
+
+  # ── Example 1: minimal entry (required fields only) ───────────────────────
+  # Registered manually — just enough for delphi to load and predict.
+  FINAL_psr_filter_biophysical_rf_ipi_psr.pt:
+    trainset:    data/ipi_psr_trainset.xlsx
+    target:      psr_filter
+    lm:          biophysical
+    model:       rf
+    model_path:  build/pretrained_models/FINAL_psr_filter_biophysical_rf_ipi_psr_trainset.pt
+
+  # ── Example 2: full_train with complete metadata ───────────────────────────
+  # Auto-added by delphi --train, then user added notes.
+  FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt:
+    trainset:        data/ipi_psr_trainset.xlsx
+    target:          psr_filter
+    lm:              onehot
+    model:           transformer_onehot
+    model_path:      build/pretrained_models/FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt
+    type:            full_train
+    trained_at:      "2026-05-18 14:23:00"
+    kfold_auc:       0.8821
+    kfold_std:       0.0312
+    kfold_folds:     10
+    kfold_best_fold: 3
+    threshold:       0.4812
+    epochs:          32
+    notes:           ""
+
+  # ── Example 3: user shortened the model_id for convenience ────────────────
+  # model_id is shorter than the filename — both are valid.
+  FINAL_psr_igbert_lm.pt:
+    trainset:        data/ipi_psr_trainset.xlsx
+    target:          psr_filter
+    lm:              igbert
+    model:           transformer_lm
+    model_path:      build/pretrained_models/FINAL_psr_filter_igbert_transformer_lm_ipi_psr_trainset.pt
+    type:            full_train
+    trained_at:      "2026-05-19 16:45:00"
+    kfold_auc:       0.9102
+    kfold_std:       0.0198
+    kfold_folds:     10
+    kfold_best_fold: 2
+    threshold:       0.4621
+    epochs:          28
+    notes:           "LoRA fine-tuned on GPU"
+
+  # ── Example 4: best_fold entry — model_id and model_path differ ───────────
+  # User reviewed kfold results and decided fold 1 outperforms full_train.
+  # model_id keeps the FINAL_ naming convention for consistency.
+  # model_path points to the actual BEST_*.pt checkpoint file.
+  FINAL_sec_filter_igbert_transformer_lm_ipi_sec.pt:
+    trainset:        data/ipi_sec_trainset.xlsx
+    target:          sec_filter
+    lm:              igbert
+    model:           transformer_lm
+    model_path:      build/pretrained_models/BEST_sec_filter_igbert_transformer_lm_ipi_sec_trainset_k10_fold1.pt
+    type:            best_fold
+    kfold_auc:       0.9210
+    kfold_std:       0.0201
+    kfold_folds:     10
+    kfold_best_fold: 1
+    threshold:       0.4730
+    notes:           "fold 1 outperforms full_train on external validation cohort GDPa3"
+
+  # ── Example 5: older model kept for audit trail ───────────────────────────
+  # Renamed by user from auto-generated id to something descriptive.
+  psr_onehot_april_baseline:
+    trainset:        data/ipi_psr_trainset.xlsx
+    target:          psr_filter
+    lm:              onehot
+    model:           transformer_onehot
+    model_path:      build/pretrained_models/FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset_20260410.pt
+    type:            full_train
+    trained_at:      "2026-04-10 09:15:00"
+    kfold_auc:       0.8634
+    kfold_std:       0.0401
+    kfold_folds:     10
+    kfold_best_fold: 7
+    threshold:       0.4950
+    epochs:          28
+    notes:           "April baseline — before May data refresh and CDR3 prefix fix"
