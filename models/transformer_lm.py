@@ -1,9 +1,28 @@
 # models/transformer_lm.py
-# Transformer for LM Embeddings (ablang, antiberty, antiberta2, antiberta2-cssp)
-# IPI Antibody Developability Prediction Platform — Production Version DEC-2025
+# ══════════════════════════════════════════════════════════════════════════════
+# DELPHI — Deep End-to-end Learning Platform for antibody developability
+#          with High Interpretability
+#
+# Module      : transformer_lm.py
+# Description : Dual-branch Transformer classifier operating on pre-trained
+#               protein language model (PLM) embeddings. Branch 1 encodes
+#               the full VH+VL sequence via frozen or fine-tuned PLM
+#               representations (IgBERT, ABlang2, AntiBERTa2, AntiBERTy).
+#               Branch 2 encodes HCDR3 independently. CDR3-guided cross-
+#               attention fuses both branches for the final classification.
+#               Supports frozen embeddings, layer unfreezing, and LoRA
+#               parameter-efficient fine-tuning. Achieves the highest AUC
+#               in DELPHI benchmarks (mean AUC 0.957 PSR, 0.934 SEC).
+#               Applicable to any binary (1/0) antibody property label 
+#               (PSR, SEC, HIC, AC-SINS, viscosity, expression, ...).
+# Developer      : Hoan Nguyen, PhD
+# Company     : Institute for Protein Innovation (IPI)
+# Date        : 2026-05
+# Version     : 1.0.0
+# ══════════════════════════════════════════════════════════════════════════════
 #
 # ══════════════════════════════════════════════════════════════════════════════
-# QUICK START — Three training modes, one predict_developability.py command
+# QUICK START — Three training modes, one delphi.py command
 # ══════════════════════════════════════════════════════════════════════════════
 #
 # ── MODE 1 · Frozen embeddings (DEFAULT — recommended for most users) ─────────
@@ -14,28 +33,28 @@
 #   Accuracy  : ρ_OVA = −0.66 (ablang, GDPa3, n=80)
 #
 #   STEP 1 — Train
-#   python predict_developability.py --train \
+#   python delphi --train \
 #       --target psr_filter --lm ablang --model transformer_lm \
 #       --db data/ipi_psr_trainset.xlsx
 #   → FINAL_psr_filter_ablang_transformer_lm_ipi_psr_trainset.pt
 #   → ipi_psr_trainset.xlsx.ablang.emb.csv  (auto-generated if missing)
 #
 #   STEP 2 — K-fold validation (optional, recommended before final train)
-#   python predict_developability.py --kfold 10 \
+#   python delphi.py --kfold 10 \
 #       --target psr_filter --lm ablang --model transformer_lm \
 #       --db data/ipi_psr_trainset.xlsx
 #   → prints mean AUC ± std across 10 folds
 #   → recommended threshold embedded in BEST_*.pt checkpoint
 #
 #   STEP 3 — Predict on new data
-#   python predict_developability.py --predict data/new_cohort.xlsx \
+#   python delphi.py --predict data/new_cohort.xlsx \
 #       --target psr_filter --lm ablang --model transformer_lm \
 #       --db data/ipi_psr_trainset.xlsx
 #   → new_cohort_pred_psr_filter_ablang_transformer_lm_ipi_psr_trainset.xlsx
 #   → SHAP waterfall plots, ROC, KDE, histogram
 #
 #   STEP 4 — Mutagenesis (optional, in-silico CDR3 scanning)
-#   python predict_developability.py --predict data/new_cohort.xlsx \
+#   python delphi.py --predict data/new_cohort.xlsx \
 #       --target psr_filter --lm ablang --model transformer_lm \
 #       --db data/ipi_psr_trainset.xlsx --mutagenesis 50
 #   → heatmaps for first 50 antibodies
@@ -47,7 +66,7 @@
 #   Speed     : slow (2–4 hours on GPU, days on CPU)
 #   Sequences : NO pre-computed .emb.csv needed — sequences processed in batches
 #
-#   python predict_developability.py --train --finetune_plm \
+#   python delphi.py --train --finetune_plm \
 #       --target psr_filter --lm igbert --model transformer_lm \
 #       --db data/ipi_psr_trainset.xlsx \
 #       --freeze_plm_layers 10 \   # freeze first 10/12 IgBERT layers
@@ -68,7 +87,7 @@
 #   Speed     : medium (30–60 min on CPU for 11k samples)
 #   Sequences : NO pre-computed .emb.csv needed
 #
-#   python predict_developability.py --train --finetune_plm \
+#   python delphi.py --train --finetune_plm \
 #       --target psr_filter --lm igbert --model transformer_lm \
 #       --db data/ipi_psr_trainset.xlsx \
 #       --peft lora \              # enable LoRA
@@ -90,7 +109,7 @@
 #   Collaborator downloads MLAbDev + installs PLM (ablang2/transformers)
 #   Loads YOUR pretrained .pt, fine-tunes on THEIR 300 antibodies
 #
-#   python predict_developability.py --finetune \
+#   python delphi.py --finetune \
 #       --pretrained FINAL_psr_filter_ablang_transformer_lm_ipi_psr_trainset.pt \
 #       --target psr_filter --lm ablang --model transformer_lm \
 #       --finetune_db their_300_antibodies.xlsx \
@@ -143,7 +162,7 @@
 #
 # ── JAN-2026 updates (style-aligned with transformer_onehot_new.py) ──────────
 # [UPD-1] kfold_validation(): db_stem replaces dbname for naming consistency.
-#         cluster_col now passed from predict_developability.py via --cluster arg,
+#         cluster_col now passed from delphi.py via --cluster arg,
 #         supporting any CDR3 identity threshold (0.8, 0.9, …).
 # [UPD-2] Per-fold prediction CSVs saved immediately after each fold evaluation
 #         (not only in the combined all_records CSV at the end).
@@ -156,9 +175,9 @@
 # [UPD-5] run_full_threshold_pipeline() called with model_name, db_tag, kfold
 #         so threshold_optimizer.py writes correctly named files directly.
 # [UPD-6] Leakage check printed per fold (mirrors transformer_onehot_new.py).
-# [UPD-7] predict_developability.py passes db_stem (not dbname) and cluster_col.
+# [UPD-7] delphi.py passes db_stem (not dbname) and cluster_col.
 #
-# ── Compatibility contract with predict_developability.py ──────────────────────
+# ── Compatibility contract with delphi.py ──────────────────────
 #
 #  TRAIN path:
 #    model = TransformerLMModel()
@@ -195,10 +214,10 @@
 #  auto_kfold()         3/5/10 folds from dataset size.
 #  auto_select_loss()   focal/label_smooth/weighted_ce from imbalance+size.
 #
-#  Threshold optimisation — ZERO changes needed to predict_developability.py
+#  Threshold optimisation — ZERO changes needed to delphi.py
 #    kfold_validation() automatically calls run_full_threshold_pipeline() when
 #    it finishes. The recommended_threshold is embedded into BEST_*.pt.
-#    predict_developability.py reads it via payload.get('recommended_threshold', 0.5).
+#    delphi.py reads it via payload.get('recommended_threshold', 0.5).
 #    Soft dependency: if utils/threshold_optimizer.py is absent, kfold still
 #    completes and a warning is printed. threshold defaults to 0.5.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1127,7 +1146,7 @@ _DEFAULT_CONFIG = {
 
 class TransformerLMModel:
     """
-    Framework wrapper.  All public method signatures match predict_developability.py.
+    Framework wrapper.  All public method signatures match delphi.py.
 
     Typical usage:
         # train
@@ -1739,7 +1758,7 @@ class TransformerLMModel:
         if target is None:
             raise ValueError(
                 "kfold_validation() requires target= to be passed explicitly.\n"
-                "Check that predict_developability.py passes args.target."
+                "Check that delphi.py passes args.target."
             )
 
         # Store lm name on instance so train() log filenames are consistent
@@ -2208,7 +2227,7 @@ def evaluate_sample_size_effect(
             + "".join(f"    {c}\n" for c in _candidates) +
             f"  Skipping evaluate_sample_size_effect.\n"
             f"  Generate embeddings first:\n"
-            f"    python predict_developability.py --build-embedding {db_path} "
+            f"    python delphi.py --build-embedding {db_path} "
             f"--lm {lm}"
         )
         return None

@@ -1,8 +1,25 @@
 # models/transformer_onehot.py
-# Transformer with One-Hot Encoding + HCDR3 Attention
-# IPI Antibody Developability Prediction Platform
-# Created by Hoan Nguyen | Final Production Version — DEC-2025
-# Updated: All fixes applied — see [FIX] and [MOD] comments
+# ══════════════════════════════════════════════════════════════════════════════
+# DELPHI — Deep End-to-end Learning Platform for antibody developability
+#          with High Interpretability
+#
+# Module      : transformer_onehot.py
+# Description : Dual-branch Transformer classifier operating directly on
+#               one-hot encoded antibody sequences. Branch 1 encodes the
+#               full VH+VL sequence (270 × 20) or VH alone (135 × 20).
+#               Branch 2 encodes HCDR3 (25 × 20). CDR3-guided cross-
+#               attention fuses both branches for the final classification.
+#               Requires no PLM installation or GPU for embedding generation;
+#               all sequence information is encoded from raw amino acid input.
+#               Integrated Gradients (Captum) provide position-level and
+#               CDR3 residue-level interpretability.
+#               Applicable to any binary (1/0) antibody property label 
+#               (PSR, SEC, HIC, AC-SINS, viscosity, expression, ...).
+# Author      : Hoan Nguyen, PhD
+# Company     : Institute for Protein Innovation (IPI)
+# Date        : 2026-05
+# Version     : 1.0.0
+# ══════════════════════════════════════════════════════════════════════════════
 
 import os
 import sys
@@ -809,7 +826,9 @@ class TransformerOneHotModel:
     # ── train ─────────────────────────────────────────────────────────────────
 
     def train(self, X, y, val_X=None, val_y=None, epochs=None, batch_size=None,
-              target: str = "model", save_plot: bool = True):
+              target: str = "model", save_plot: bool = True,
+              db_stem: str = "", cluster_col: str = "HCDR3_CLUSTER_0.8",
+              no_aug: bool = False):
         """
         Full training loop with per-epoch logging and training curve plot.
 
@@ -1042,7 +1061,8 @@ class TransformerOneHotModel:
             plt.tight_layout()
 
             os.makedirs(MODEL_DIR, exist_ok=True)
-            plot_path = os.path.join(MODEL_DIR, f"train_curve_{target}_onehot.png")
+            _db_tag   = f"_{db_stem}" if db_stem else ""
+            plot_path = os.path.join(MODEL_DIR, f"train_curve_{target}{_db_tag}_onehot.png")
             plt.savefig(plot_path, dpi=150)
             plt.close()
             print(f"[train] curve → {plot_path}")
