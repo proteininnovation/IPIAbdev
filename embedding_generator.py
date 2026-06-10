@@ -1,14 +1,13 @@
 """
-IPI Antibody Developability Prediction Platform
+DELPHI-IPI Antibody Developability Prediction Platform
 Final Production Version — DEC-2025 / Updated APR-2026
-Supports 7 PLMs:
+Supports 5 PLMs:
   ablang          → 480 columns    (ablang2, paired VH+VL)
   antiberty       → 512 columns    (AntiBERTy, mean pool)
   antiberta2      → 1024 columns   (alchemab/antiberta2)
   antiberta2-cssp → 1024 columns   (alchemab/antiberta2-cssp)
   igbert          → 1024 columns   (Exscientia/IgBert, ProtBert backbone, paired)
-  igt5            → 1024 columns   (Exscientia/IgT5, ProtT5-XL backbone, paired)
-  abmap           → auto-dim       (rs239/abmap, ESM-2+CDR mutagenesis, ANARCI required)
+
 
 Installation for new PLMs:
   pip install transformers       # igbert, igt5 (already needed for antiberta2)
@@ -484,8 +483,7 @@ PLM summary
   antiberta2      1024-dim  alchemab/antiberta2
   antiberta2-cssp 1024-dim  alchemab/antiberta2-cssp
   igbert          1024-dim  Exscientia/IgBert (PLOS CB 2024)
-  igt5            1024-dim  Exscientia/IgT5   (PLOS CB 2024)
-  abmap           auto-dim  rs239/abmap (PNAS 2025, needs ANARCI)
+
 
 Installation (new PLMs only):
   pip install transformers     # already needed for antiberta2
@@ -497,7 +495,7 @@ Installation (new PLMs only):
     parser.add_argument("--input", required=True, help="Input CSV/Excel file")
     parser.add_argument("--lm", default="antiberta2",
                         choices=["ablang", "antiberty", "antiberta2", "antiberta2-cssp",
-                                 "igbert", "igt5", "abmap"])
+                                 "igbert"])
     parser.add_argument("--mode", default="VHVL", choices=["VHVL", "VH"],
                         help="VHVL=paired VH+VL (default), VH=heavy chain only")
     parser.add_argument("--batch_size", type=int, default=64)
