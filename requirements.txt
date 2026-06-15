@@ -1,29 +1,50 @@
-captum
-xgboost==2.1.1
-scikit-learn
-pandas
-openpyxl
-torch
-transformers
-tqdm
-ablang2
-antiberty
-joblib
-scipy
+# ══════════════════════════════════════════════════════════════════════════════
+# DELPHI — Requirements
+# Institute for Protein Innovation (IPI)
+#
+# Install all dependencies:
+#   pip install -r requirements.txt
+#
+# Note: ANARCI and HMMER must be installed via conda (hmmer is installed explicitly
+#       to guarantee it is present, as conda dependency resolution is not always reliable):
+#   conda install -c bioconda hmmer anarci
+#
+# Note: IgBERT weights are downloaded automatically from HuggingFace Hub
+#   (Exscientia/IgBert) on first use — no separate install needed.
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ── Data handling ─────────────────────────────────────────────────────────────
 numpy
+pandas
+scipy
+openpyxl
+pyyaml
+
+# ── ML frameworks ─────────────────────────────────────────────────────────────
+torch
+scikit-learn
+xgboost==2.1.1
+joblib
+
+# ── Interpretability ──────────────────────────────────────────────────────────
+captum
+shap
+
+# ── Visualisation ─────────────────────────────────────────────────────────────
 matplotlib
 seaborn
-mlflow
-Levenshtein
-rjieba
-openpyxl
-abmap
-shap
-tf-keras
 python-pptx
-gradient
+
+# ── Sequence utilities ────────────────────────────────────────────────────────
+Levenshtein
+tqdm
+
+# ── Protein language models ───────────────────────────────────────────────────
+ablang2
+antiberty
+transformers
 peft
+tf-keras
 
-
-
-
+# ── Experiment tracking ───────────────────────────────────────────────────────
+mlflow

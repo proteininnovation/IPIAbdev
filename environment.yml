@@ -1,0 +1,64 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# DELPHI — Conda Environment
+# Institute for Protein Innovation (IPI)
+#
+# Create environment:
+#   conda env create -f environment.yml
+#   conda activate delphi
+#
+# Update existing environment:
+#   conda env update -f environment.yml --prune
+# ══════════════════════════════════════════════════════════════════════════════
+
+name: delphi
+
+channels:
+  - bioconda        # for anarci + hmmer
+  - conda-forge     # for up-to-date packages
+  - defaults
+
+dependencies:
+  - python=3.11
+  - pip
+
+  # ── ANARCI + HMMER (installed explicitly to guarantee hmmer is present) ────
+  - bioconda::hmmer      # HMM-based sequence alignment (required by ANARCI)
+  - bioconda::anarci     # CDR numbering (depends on hmmer)
+
+  # ── All pip packages ────────────────────────────────────────────────────────
+  - pip:
+    # Data handling
+    - numpy
+    - pandas
+    - scipy
+    - openpyxl
+    - pyyaml
+
+    # ML frameworks
+    - torch
+    - scikit-learn
+    - xgboost==2.1.1
+    - joblib
+
+    # Interpretability
+    - captum
+    - shap
+
+    # Visualisation
+    - matplotlib
+    - seaborn
+    - python-pptx
+
+    # Sequence utilities
+    - Levenshtein
+    - tqdm
+
+    # Protein language models
+    - ablang2
+    - antiberty
+    - transformers
+    - peft
+    - tf-keras
+
+    # Experiment tracking
+    - mlflow
