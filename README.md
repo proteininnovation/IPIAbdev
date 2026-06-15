@@ -50,104 +50,59 @@ Applicable to any binary antibody property label including PSR (polyreactivity),
   <img src="images/Interpretability.png" alt="DELPHI interpretability" width="700"/>
 </p>
 
-DELPHI addresses four core challenges in antibody developability prediction:
+DELPHI is a unified interpretable machine learning platform for sequence-based prediction of antibody biophysical properties. It integrates five complementary capabilities within a single Python pipeline:
 
-| Challenge | DELPHI Solution |
+| Capability | Description |
 |---|---|
-| Noisy training labels | Automated training set curation via `--build-dataset` |
-| Hyperparameter tuning burden | Data-adaptive configuration (`mode: auto` in YAML configs) |
-| Model deployment complexity | Model registry (`config/model_registry.yaml`) |
-| Interpretability | SHAP (RF, XGBoost) and Integrated Gradients (Transformer) |
+| **Multiple ML architectures** | Transformer (one-hot and PLM), Random Forest, XGBoost, CNN — all in one CLI |
+| **Multiple embeddings** | One-hot, biophysical descriptors, ABlang2, AntiBERTy, AntiBERTa2, IgBERT |
+| **Training set curation** | Automated denoising via CDR3 clustering and OOF confidence filtering |
+| **Data-adaptive configuration** | Model architecture and hyperparameters derived automatically from dataset size and class balance |
+| **Multi-resolution interpretability** | SHAP (RF, XGBoost) and Integrated Gradients (Transformer) with per-residue CDR3 attribution |
 
-**Two main entry points:**
+**Two entry points:**
 
 ```
 delphi.py                    — train, predict, correlate, build-dataset
-delphi_interpretability.py   — publication-quality interpretability figures
+delphi_interpretability.py   — publication-quality interpretability figures (Nature Biotechnology style)
 ```
 
 ---
 
 ## Installation
 
+**Recommended: use the install script** — creates a dedicated `delphi` conda environment,
+installs all dependencies (including HMMER, ANARCI, all PLMs), and pre-downloads IgBERT weights.
+
 ```bash
-# Clone the repository
+git clone https://github.com/proteininnovation/delphi.git
+cd delphi
+chmod +x install.sh
+./install.sh
+conda activate delphi
+```
+
+**Manual installation** (if you prefer step-by-step):
+
+```bash
+# 1. Clone
 git clone https://github.com/proteininnovation/delphi.git
 cd delphi
 
-# Create a Python 3.11 or 3.12 environment
+# 2. Create conda environment
 conda create -n delphi python=3.11 -y
 conda activate delphi
 
-# Install ANARCI (for CDR annotation)
-conda install -c bioconda anarci
+# 3. Install HMMER + ANARCI (explicit — do not rely on conda dependency resolution)
+conda install -c bioconda hmmer anarci -y
 
-# Install all Python dependencies
+# 4. Install all Python dependencies (includes all PLMs)
 pip install -r requirements.txt
 ```
 
-**Optional: protein language model packages**
-
-Install only the PLMs you intend to use:
-
-```bash
-pip install ablang2          # ABlang2 (480-dim)
-pip install antiberty        # AntiBERTy (512-dim)
-pip install transformers     # AntiBERTa2 / IgBERT (1024-dim)
-```
-
----
-
-## Using IPI Pretrained Models
-
-The fastest way to get started is with IPI's pretrained models. No training data or GPU required.
-
-**Step 1: Discover available models**
-
-```bash
-python delphi.py --list-models
-```
-
-**Step 2: Predict on your antibodies**
-
-```bash
-# Predict PSR (polyreactivity) using registry auto-lookup
-python delphi.py --predict data/my_cohort.xlsx \
-    --model_id FINAL_psr_filter_onehot_transformer_onehot_ipi_psr.pt
-
-# Predict SEC (size exclusion) 
-python delphi.py --predict data/my_cohort.xlsx \
-    --model_id FINAL_sec_filter_onehot_transformer_onehot_ipi_sec.pt
-
-# Predict both PSR and SEC in one command
-python delphi.py --predict data/my_cohort.xlsx \
-    --model_id FINAL_psr_filter_onehot_transformer_onehot_ipi_psr.pt
-python delphi.py --predict data/my_cohort.xlsx \
-    --model_id FINAL_sec_filter_onehot_transformer_onehot_ipi_sec.pt
-```
-
-**Step 3: Correlate predictions with your experimental data (optional)**
-
-```bash
-python delphi.py --correlate data/my_cohort_pred.xlsx \
-    --target psr_filter --assay your_assay_column \
-    --outdir results/correlation
-```
-
-**Step 4: Interpretability figures (optional)**
-
-```bash
-python delphi_interpretability.py \
-    --target psr_filter \
-    --model_id FINAL_psr_filter_onehot_transformer_onehot_ipi_psr.pt \
-    --db data/my_cohort.xlsx \
-    --outdir outputs/interp_psr
-```
-
-> **IPI pretrained models** are available for PSR, SEC, HIC, and AC-SINS filters.
-> Download from the [releases page](https://github.com/proteininnovation/delphi/releases)
-> and place in `build/pretrained_models/`. The `config/model_registry.yaml` shipped
-> with DELPHI already contains entries for all IPI models.
+> **IgBERT** does not require a separate pip install. Its weights are downloaded
+> automatically from HuggingFace Hub (`Exscientia/IgBert`) on first use.
+> The install script pre-downloads them so tests run without internet access.
 
 ---
 
@@ -155,56 +110,161 @@ python delphi_interpretability.py \
 
 ```
 delphi/
-├── delphi.py                        # Main CLI: train, predict, correlate, build-dataset
-├── delphi_interpretability.py       # Interpretability figure generator
+├── delphi.py                         # Main CLI: train, predict, correlate, build-dataset
+├── delphi_interpretability.py        # Interpretability figure generator
 ├── config/
-│   ├── model_registry.yaml          # Trained model registry (auto-updated by --train)
-│   ├── transformer_onehot.yaml      # Hyperparameters for TransformerOneHot
-│   ├── transformer_lm.yaml          # Hyperparameters for TransformerLM
-│   ├── random_forest.yaml           # Hyperparameters for Random Forest
-│   ├── xgboost.yaml                 # Hyperparameters for XGBoost
-│   └── cnn.yaml                     # Hyperparameters for CNN
+│   ├── model_registry.yaml           # Trained model registry (auto-updated by --train)
+│   ├── transformer_onehot.yaml       # Hyperparameters for TransformerOneHot
+│   ├── transformer_lm.yaml           # Hyperparameters for TransformerLM
+│   ├── random_forest.yaml            # Hyperparameters for Random Forest
+│   ├── xgboost.yaml                  # Hyperparameters for XGBoost
+│   └── cnn.yaml                      # Hyperparameters for CNN
 ├── models/
-│   ├── transformer_onehot.py        # Dual-branch Transformer + one-hot encoding
-│   ├── transformer_lm.py            # Dual-branch Transformer + PLM embeddings
-│   ├── random_forest.py             # Random Forest + SHAP interpretability
-│   ├── xgboost.py                   # XGBoost + SHAP interpretability
-│   └── cnn.py                       # 1D CNN + PLM embeddings
+│   ├── transformer_onehot.py         # Dual-branch Transformer + one-hot encoding
+│   ├── transformer_lm.py             # Dual-branch Transformer + PLM embeddings
+│   ├── random_forest.py              # Random Forest + SHAP interpretability
+│   ├── xgboost.py                    # XGBoost + SHAP interpretability
+│   └── cnn.py                        # 1D CNN + PLM embeddings
 ├── utils/
-│   ├── build_balanced_dataset_v4.py # Training set curation
+│   ├── build_balanced_dataset_v4.py  # Training set curation
 │   ├── developability_correlation.py # Assay correlation analysis
 │   └── ...
-├── data/                            # Training databases
-├── build/pretrained_models/         # Saved model checkpoints
+├── data/                             # Training databases
+├── build/pretrained_models/          # Saved model checkpoints
 └── requirements.txt
 ```
 
 ---
 
-## Quick Start
+## Using IPI Pretrained Models
+
+The fastest way to get started — no training data or GPU required.
+IPI provides pretrained models for PSR, SEC, HIC, and AC-SINS.
+
+**Download pretrained models** from the
+[releases page](https://github.com/proteininnovation/delphi/releases)
+and place them in `build/pretrained_models/`.
+The `config/model_registry.yaml` shipped with DELPHI already contains
+registry entries for all IPI models.
+
+---
+
+### Tutorial Step 1: Prepare your antibody file
+
+Your input file must be an Excel (`.xlsx`) or CSV with these columns:
+
+| Column | Description | Required |
+|---|---|---|
+| `BARCODE` | Unique antibody identifier | Yes |
+| `HSEQ` | Full VH amino acid sequence | Yes |
+| `LSEQ` | Full VL amino acid sequence | Yes |
+| `CDR3` | HCDR3 sequence | Yes |
+
+> **CDR3 convention:** CDR3 starts at the germline anchor (e.g. `AR...`),
+> not the leading cysteine. Example: `ARGGPGYAVFDY`.
+
+---
+
+### Tutorial Step 2: Discover available models
 
 ```bash
-# Optional: build a balanced training set (recommended for noisy or imbalanced data)
-python delphi.py --build-dataset data/my_antibodies.xlsx \
-    --target psr_filter --strategy combined
-
-# Cross-validate
-python delphi.py --kfold 10 \
-    --target psr_filter --lm onehot --model transformer_onehot \
-    --db data/my_antibodies.xlsx
-
-# Train
-python delphi.py --train \
-    --target psr_filter --lm onehot --model transformer_onehot \
-    --db data/my_antibodies.xlsx
-
-# Predict
-python delphi.py --predict data/new_cohort.xlsx \
-    --target psr_filter --lm onehot --model transformer_onehot
-
-# List registered models
+# List all registered IPI pretrained models
 python delphi.py --list-models
+
+# Filter by target property
+python delphi.py --list-models --target psr_filter
+python delphi.py --list-models --target sec_filter
 ```
+
+Example output:
+
+```
+model_id                                                     target       lm       model                type        trained_at
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+FINAL_psr_filter_onehot_transformer_onehot_ipi_psr.pt       psr_filter   onehot   transformer_onehot   full_train   2026-05-18
+FINAL_psr_filter_biophysical_rf_ipi_psr.pt                  psr_filter   biophs.  rf                   full_train   2026-05-18
+FINAL_psr_filter_biophysical_xgboost_ipi_psr.pt             psr_filter   biophs.  xgboost              full_train   2026-05-18
+FINAL_sec_filter_onehot_transformer_onehot_ipi_sec.pt       sec_filter   onehot   transformer_onehot   full_train   2026-05-20
+FINAL_sec_filter_biophysical_rf_ipi_sec.pt                  sec_filter   biophs.  rf                   full_train   2026-05-20
+FINAL_sec_filter_biophysical_xgboost_ipi_sec.pt             sec_filter   biophs.  xgboost              full_train   2026-05-20
+```
+
+---
+
+### Tutorial Step 3: Predict on your antibodies
+
+```bash
+# Predict PSR (polyreactivity) — Transformer onehot model
+python delphi.py --predict data/my_cohort.xlsx \
+    --model_id FINAL_psr_filter_onehot_transformer_onehot_ipi_psr.pt \
+    --outdir results/psr
+
+# Predict SEC (size exclusion) — Transformer onehot model
+python delphi.py --predict data/my_cohort.xlsx \
+    --model_id FINAL_sec_filter_onehot_transformer_onehot_ipi_sec.pt \
+    --outdir results/sec
+
+# Predict PSR using RF model instead
+python delphi.py --predict data/my_cohort.xlsx \
+    --model_id FINAL_psr_filter_biophysical_rf_ipi_psr.pt \
+    --outdir results/psr_rf
+```
+
+Output files written to `--outdir`:
+```
+results/psr/
+    my_cohort_psr_filter_predictions.xlsx    # BARCODE, score, label (PASS/FAIL)
+    my_cohort_psr_filter_predictions.csv
+```
+
+---
+
+### Tutorial Step 4: Correlate with experimental assays (optional)
+
+Compare DELPHI scores against your own experimental measurements:
+
+```bash
+# Discover score columns in the prediction file
+python delphi.py --correlate results/psr/my_cohort_psr_filter_predictions.xlsx \
+    --target psr_filter --list-scores
+
+# Correlate against a single assay
+python delphi.py --correlate results/psr/my_cohort_psr_filter_predictions.xlsx \
+    --target psr_filter --assay my_psr_score \
+    --outdir results/psr_correlation
+
+# Correlate against multiple assays
+python delphi.py --correlate results/psr/my_cohort_psr_filter_predictions.xlsx \
+    --target psr_filter \
+    --assay psr_norm_dna psr_norm_avidin psr_norm_smp \
+    --outdir results/psr_correlation
+```
+
+---
+
+### Tutorial Step 5: Interpretability analysis (optional)
+
+Understand which CDR3 residues and sequence regions drive each prediction:
+
+```bash
+# Single model, single filter
+python delphi_interpretability.py \
+    --target psr_filter \
+    --model_id FINAL_psr_filter_onehot_transformer_onehot_ipi_psr.pt \
+    --db data/my_cohort.xlsx \
+    --outdir outputs/interp_psr
+
+# Full analysis — all three models, PSR + SEC
+python delphi_interpretability.py \
+    --target psr_filter --target2 sec_filter \
+    --db  data/my_cohort.xlsx \
+    --db2 data/my_cohort.xlsx \
+    --outdir outputs/interp_psr_sec
+```
+
+Output includes SHAP bar charts (RF, XGBoost), Integrated Gradients position
+plots, HCDR3 residue heatmaps, and CDR3 in silico mutagenesis — all in
+300 DPI TIFF/PDF/PNG format.
 
 ---
 
@@ -536,7 +596,7 @@ FINAL_psr_filter_onehot_transformer_onehot_my_antibodies.pt:
 | ABlang2 | `ablang` | 480 | `pip install ablang2` |
 | AntiBERTy | `antiberty` | 512 | `pip install antiberty` |
 | AntiBERTa2 | `antiberta2` | 1,024 | `pip install transformers` |
-| IgBERT | `igbert` | 1,024 | `pip install transformers` |
+| IgBERT | `igbert` | 1,024 | `pip install transformers` (weights from HuggingFace Hub) |
 
 ---
 
