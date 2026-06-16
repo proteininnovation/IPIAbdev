@@ -5740,6 +5740,10 @@ examples:
 
     # ── Model IDs for filter 1 ────────────────────────────────────────────
     grp1 = ap.add_argument_group('model IDs — filter 1 (--target)')
+    grp1.add_argument('--model_id',      default=None, metavar='ID',
+                      help="Shortcut: sets --tr-model-id (Transformer onehot). "
+                           "Use when running with a single model. "
+                           "Example: --model_id FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt")
     grp1.add_argument('--rf-model-id',   default=None, metavar='ID',
                       help="Registry model_id for the RF model (filter 1). "
                            "Overrides registry auto-lookup.")
@@ -5825,6 +5829,15 @@ examples:
                             "If omitted, --predict is used for both filters.")
 
     args = ap.parse_args()
+
+    # --model_id is a shortcut for --tr-model-id
+    if args.model_id and not args.tr_model_id:
+        args.tr_model_id = args.model_id
+        # Default to transformer_onehot only when --model_id shortcut is used
+        if not args.models or args.models == ['rf', 'xgboost', 'transformer_onehot']:
+            args.models = ['transformer_onehot']
+        print(f"[model_id] --model_id → --tr-model-id={args.tr_model_id}  "
+              f"models={args.models}")
 
     # ── Validate: need at least --db or --input or --predict ─────────────
     if not args.db and not getattr(args, 'input_file', None) and not args.predict \
