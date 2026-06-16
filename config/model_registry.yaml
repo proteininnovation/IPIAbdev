@@ -206,7 +206,7 @@ models:
     type: full_train
     notes: ''
 
-  FINAL_psr_filter_igbert_transformer_lm_ipi_psr.pt:
+  FINAL_psr_filter_igbert_transformer_lm_ipi_psr_trainset.pt:
     trainset: data/ipi_psr_trainset.xlsx
     target: psr_filter
     lm: igbert
