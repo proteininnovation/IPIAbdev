@@ -180,9 +180,19 @@ def check_import(pkg, name, optional=False):
     elif r.returncode == -7:   # SIGBUS
         tag = "WARN   " if optional else "BUS ERR"
         print(f"  {tag} {name}  ← Bus error at import (CUDA init issue)")
-        return optional        # optional packages don't fail the check
+        return optional
     else:
-        print(f"  MISSING {name}")
+        if not optional:
+            print(f"  MISSING {name}  — installing...")
+            r2 = subprocess.run([sys.executable, "-m", "pip", "install", pkg],
+                                capture_output=True, env=env)
+            if r2.returncode == 0:
+                print(f"  OK      {name}  (just installed)")
+                return True
+            else:
+                print(f"  FAIL    {name}  — pip install {pkg} failed")
+        else:
+            print(f"  MISSING {name}")
         return False
 
 ok = True
@@ -219,17 +229,26 @@ plms = [
 for pkg, name in plms:
     check_import(pkg, name, optional=True)
 
-# ANARCI — check as command-line tool with full conda PATH
+# ANARCI — check as command-line tool, auto-install if missing
 print()
 anarci_path = subprocess.run(["which", "anarci"], capture_output=True,
                               text=True, env=env).stdout.strip()
 if anarci_path:
-    r = subprocess.run(["anarci", "--help"], capture_output=True,
-                       text=True, env=env)
     print(f"  OK      ANARCI  ({anarci_path})")
 else:
-    print("  MISSING ANARCI — run: conda install -c bioconda hmmer anarci")
-    ok = False
+    print("  MISSING ANARCI — installing automatically...")
+    r = subprocess.run(
+        ["conda", "install", "-c", "bioconda", "hmmer", "anarci", "-y"],
+        env=env
+    )
+    if r.returncode == 0:
+        anarci_path = subprocess.run(["which", "anarci"], capture_output=True,
+                                     text=True, env=env).stdout.strip()
+        print(f"  OK      ANARCI installed  ({anarci_path})")
+    else:
+        print("  FAIL    ANARCI install failed — run manually:")
+        print("          conda install -c bioconda hmmer anarci")
+        ok = False
 
 # CUDA check
 r = subprocess.run(
