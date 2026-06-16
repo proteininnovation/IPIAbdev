@@ -50,9 +50,6 @@ Applicable to any binary antibody property label including PSR (polyreactivity),
 
 ## Overview
 
-<p align="center">
-  <img src="images/Interpretability.png" alt="DELPHI interpretability" width="700"/>
-</p>
 
 DELPHI is a unified interpretable machine learning platform for sequence-based prediction of antibody biophysical properties. It integrates five complementary capabilities within a single Python pipeline:
 
