@@ -44,7 +44,7 @@ tqdm
 # ── Protein language models ───────────────────────────────────────────────────
 ablang2
 antiberty
-transformers
+transformers>=4.30.0,<5.0.0  # antiberty incompatible with transformers 5.x (all_tied_weights_keys removed)
 rjieba                      # required by some HuggingFace tokenizers (IgBERT, AntiBERTa2)
 peft
 tf-keras
