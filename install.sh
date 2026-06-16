@@ -94,6 +94,13 @@ else
 fi
 
 echo "  Platform  : $TORCH_NOTE"
+
+# Purge any existing PyTorch (conda or pip) to avoid libtorch_cpu.so conflicts
+echo "  Removing any existing PyTorch installation..."
+conda remove pytorch torchvision torchaudio torchtriton \
+    pytorch-cuda pytorch-mutex --force -y 2>/dev/null || true
+pip uninstall torch torchvision torchaudio triton -y 2>/dev/null || true
+
 if [ -n "$TORCH_URL" ]; then
     echo "  Wheel URL : $TORCH_URL"
     pip install torch torchvision torchaudio --index-url "$TORCH_URL"
