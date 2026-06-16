@@ -3,8 +3,11 @@
 # DELPHI — Installation Script
 # Institute for Protein Innovation (IPI)
 #
-# Creates a dedicated conda environment and installs all dependencies.
-# Automatically detects GPU and installs the correct PyTorch version.
+# Works on all platforms:
+#   Linux   + NVIDIA GPU (CUDA 11 or 12)
+#   Linux   + CPU only
+#   macOS   + Apple Silicon (MPS)
+#   macOS   + Intel (CPU)
 #
 # Usage:
 #   chmod +x install.sh
@@ -31,75 +34,96 @@ if ! command -v conda &>/dev/null; then
     echo "  Install Miniconda: https://docs.conda.io/en/latest/miniconda.html"
     exit 1
 fi
-echo "  conda: $(conda --version)"
+echo "  conda   : $(conda --version)"
+echo "  OS      : $(uname -s) $(uname -m)"
 
 # ── Create environment ────────────────────────────────────────────────────────
 echo ""
 echo "── Step 1: Create conda environment ($ENV_NAME, Python $PYTHON_VERSION) ─"
 if conda env list | grep -q "^$ENV_NAME "; then
-    echo "  Environment '$ENV_NAME' already exists — skipping"
+    echo "  Environment '$ENV_NAME' already exists — skipping creation"
 else
     conda create -n $ENV_NAME python=$PYTHON_VERSION -y
     echo "  Environment '$ENV_NAME' created"
 fi
 
-# Activate environment for this script session
+# Activate environment
 source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate $ENV_NAME
-echo "  Activated: $ENV_NAME"
+echo "  Activated : $ENV_NAME  (Python $(python3 --version))"
 
-# ── Detect GPU and install correct PyTorch ────────────────────────────────────
+# ── Detect platform and install PyTorch ──────────────────────────────────────
 echo ""
-echo "── Step 2: Install PyTorch (GPU-aware, via pip wheel) ──────────"
+echo "── Step 2: Install PyTorch (platform-aware, via pip wheel) ─────"
+echo "   Using pip wheels avoids Intel MKL conflicts on Linux GPU machines."
 
-# Use pip wheels from pytorch.org — avoids Intel MKL iJIT_NotifyEvent
-# conflict that occurs when installing PyTorch via conda channel.
-CUDA_VER=""
-if command -v nvidia-smi &>/dev/null; then
-    CUDA_VER=$(nvidia-smi | grep "CUDA Version" | awk '{print $9}' | cut -d. -f1)
-    echo "  GPU detected  |  CUDA $CUDA_VER"
+OS=$(uname -s)
+ARCH=$(uname -m)
+TORCH_URL=""
+TORCH_NOTE=""
+
+if [ "$OS" = "Darwin" ]; then
+    # macOS: pip install without --index-url (supports both Intel + Apple Silicon MPS)
+    TORCH_URL=""
+    TORCH_NOTE="macOS (Apple Silicon MPS / Intel CPU)"
+
+elif [ "$OS" = "Linux" ]; then
+    # Linux: detect CUDA version
+    CUDA_VER=""
+    if command -v nvidia-smi &>/dev/null; then
+        CUDA_VER=$(nvidia-smi 2>/dev/null | grep -oP "CUDA Version: \K[0-9]+" | head -1)
+    fi
+
+    if [ -z "$CUDA_VER" ]; then
+        TORCH_URL="https://download.pytorch.org/whl/cpu"
+        TORCH_NOTE="Linux CPU-only"
+    elif [ "$CUDA_VER" -ge 12 ] 2>/dev/null; then
+        TORCH_URL="https://download.pytorch.org/whl/cu121"
+        TORCH_NOTE="Linux + CUDA $CUDA_VER (using cu121 wheel)"
+    elif [ "$CUDA_VER" -ge 11 ] 2>/dev/null; then
+        TORCH_URL="https://download.pytorch.org/whl/cu118"
+        TORCH_NOTE="Linux + CUDA $CUDA_VER (using cu118 wheel)"
+    else
+        TORCH_URL="https://download.pytorch.org/whl/cpu"
+        TORCH_NOTE="Linux CPU (CUDA $CUDA_VER not supported)"
+    fi
 else
-    echo "  No GPU detected — installing CPU PyTorch"
+    # Windows or other
+    TORCH_URL=""
+    TORCH_NOTE="Unknown OS — installing default PyTorch"
 fi
 
-if [ -n "$CUDA_VER" ] && [ "$CUDA_VER" -ge 12 ] 2>/dev/null; then
-    echo "  Installing PyTorch with CUDA 12.x support (pip)..."
-    pip install torch torchvision torchaudio \
-        --index-url https://download.pytorch.org/whl/cu121
-elif [ -n "$CUDA_VER" ] && [ "$CUDA_VER" -ge 11 ] 2>/dev/null; then
-    echo "  Installing PyTorch with CUDA 11.8 support (pip)..."
-    pip install torch torchvision torchaudio \
-        --index-url https://download.pytorch.org/whl/cu118
+echo "  Platform  : $TORCH_NOTE"
+if [ -n "$TORCH_URL" ]; then
+    echo "  Wheel URL : $TORCH_URL"
+    pip install torch torchvision torchaudio --index-url "$TORCH_URL"
 else
-    echo "  Installing CPU-only PyTorch (pip)..."
-    pip install torch torchvision torchaudio \
-        --index-url https://download.pytorch.org/whl/cpu
+    pip install torch torchvision torchaudio
 fi
 
-# Verify PyTorch works
-python3 -c "
+# Verify PyTorch
+python3 - << 'PYEOF'
 import torch
-print(f'  PyTorch {torch.__version__}')
+print(f"  PyTorch   : {torch.__version__}")
 if torch.cuda.is_available():
-    print(f'  CUDA available: {torch.cuda.get_device_name(0)}')
+    print(f"  CUDA GPU  : {torch.cuda.get_device_name(0)}")
+elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+    print(f"  MPS (Apple Silicon): available")
 else:
-    print('  CUDA: not available (CPU mode)')
-"
-echo "  PyTorch installed OK"
+    print(f"  Compute   : CPU only")
+PYEOF
 
-# ── HMMER + ANARCI ────────────────────────────────────────────────────────────
+# ── HMMER + ANARCI via conda ──────────────────────────────────────────────────
 echo ""
 echo "── Step 3: Install HMMER + ANARCI ──────────────────────────────"
 conda install -c bioconda hmmer anarci -y
 echo "  HMMER + ANARCI installed"
 
-# ── All pip packages (excluding torch — already installed via conda) ───────────
+# ── All pip packages (torch already installed above) ─────────────────────────
 echo ""
-echo "── Step 4: Install pip packages ───────────────────────────────"
-# Install requirements but skip torch (already installed via conda)
-grep -v "^torch$\|^torch==\|^torchvision\|^torchaudio" requirements.txt \
-    | pip install -r /dev/stdin
-echo "  All pip packages installed"
+echo "── Step 4: Install pip packages ────────────────────────────────"
+pip install -r requirements.txt
+echo "  All packages installed"
 
 # ── Pre-download IgBERT weights ───────────────────────────────────────────────
 echo ""
@@ -113,10 +137,10 @@ try:
     print("  IgBERT weights cached")
 except Exception as e:
     print(f"  WARNING: IgBERT download failed: {e}")
-    print("  Run manually after install: python -c \"from transformers import AutoModel; AutoModel.from_pretrained('Exscientia/IgBert')\"")
+    print("  Run manually: python -c \"from transformers import AutoModel; AutoModel.from_pretrained('Exscientia/IgBert')\"")
 PYEOF
 
-# ── Verify installation ───────────────────────────────────────────────────────
+# ── Verify all imports ────────────────────────────────────────────────────────
 echo ""
 echo "── Step 6: Verify installation ─────────────────────────────────"
 python3 - << 'PYEOF'
@@ -150,17 +174,16 @@ for pkg, name in packages:
         ok = False
 
 import subprocess
-result = subprocess.run(["anarci", "--help"], capture_output=True, text=True)
-if result.returncode == 0:
-    print("  OK      ANARCI")
-else:
-    print("  MISSING ANARCI — conda install -c bioconda hmmer anarci")
+r = subprocess.run(["anarci", "--help"], capture_output=True, text=True)
+print("  OK      ANARCI" if r.returncode == 0 else "  MISSING ANARCI")
+if r.returncode != 0:
     ok = False
 
 import torch
-print(f"\n  PyTorch {torch.__version__}  |  CUDA: {torch.cuda.is_available()}")
-if torch.cuda.is_available():
-    print(f"  GPU: {torch.cuda.get_device_name(0)}")
+cuda_ok = torch.cuda.is_available()
+mps_ok  = hasattr(torch.backends, 'mps') and torch.backends.mps.is_available()
+accel   = torch.cuda.get_device_name(0) if cuda_ok else ("MPS" if mps_ok else "CPU only")
+print(f"\n  PyTorch {torch.__version__}  |  Accelerator: {accel}")
 
 if not ok:
     sys.exit(1)
@@ -170,8 +193,7 @@ echo ""
 echo "══════════════════════════════════════════════════════════════════"
 echo "  Installation complete."
 echo ""
-echo "  Activate the environment:"
-echo "    conda activate $ENV_NAME"
+echo "  Activate:   conda activate $ENV_NAME"
 echo ""
 echo "  Next steps:"
 echo "    python utils/download_zenodo.py   # download pretrained models"
