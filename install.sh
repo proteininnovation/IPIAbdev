@@ -135,7 +135,14 @@ echo "  All packages installed"
 # ── Pre-download IgBERT weights ───────────────────────────────────────────────
 echo ""
 echo "── Step 5: Pre-download IgBERT weights ─────────────────────────"
-python3 - << 'PYEOF'
+
+# Test torch import first — Bus error here means PyTorch is still broken
+if ! python3 -c "import torch" 2>/dev/null; then
+    echo "  WARNING: torch import failed — skipping IgBERT download"
+    echo "  Fix torch first, then run manually:"
+    echo "    python -c \"from transformers import AutoModel; AutoModel.from_pretrained('Exscientia/IgBert')\""
+else
+    python3 - << 'PYEOF' || echo "  WARNING: IgBERT download failed — will download automatically on first use"
 try:
     from transformers import AutoTokenizer, AutoModel
     print("  Downloading Exscientia/IgBert...")
@@ -146,6 +153,7 @@ except Exception as e:
     print(f"  WARNING: IgBERT download failed: {e}")
     print("  Run manually: python -c \"from transformers import AutoModel; AutoModel.from_pretrained('Exscientia/IgBert')\"")
 PYEOF
+fi
 
 # ── Verify all imports ────────────────────────────────────────────────────────
 echo ""
