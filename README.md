@@ -25,6 +25,10 @@ Applicable to any binary antibody property label including PSR (polyreactivity),
 
 - [Overview](#overview)
 - [Installation](#installation)
+- [Quick Start: Three Essential Steps](#quick-start-three-essential-steps)
+  - [Step 1: Install Python environment and clone DELPHI](#step-1-install-python-environment-and-clone-delphi)
+  - [Step 2: Download IPI pretrained models from Zenodo](#step-2-download-ipi-pretrained-models-from-zenodo)
+  - [Step 3: Run the integration test suite](#step-3-run-the-integration-test-suite)
 - [Using IPI Pretrained Models](#using-ipi-pretrained-models)
 - [Training Your Own Models](#training-your-own-models)
   - [Step 0: Prepare your training set](#step-0-prepare-your-training-set)
@@ -110,28 +114,148 @@ pip install -r requirements.txt
 
 ```
 delphi/
-├── delphi.py                         # Main CLI: train, predict, correlate, build-dataset
-├── delphi_interpretability.py        # Interpretability figure generator
+├── delphi.py                          # Main CLI: train, predict, correlate, build-dataset
+├── delphi_interpretability.py         # Interpretability figure generator
+├── install.sh                         # One-command environment setup
+├── requirements.txt                   # All Python dependencies
 ├── config/
-│   ├── model_registry.yaml           # Trained model registry (auto-updated by --train)
-│   ├── transformer_onehot.yaml       # Hyperparameters for TransformerOneHot
-│   ├── transformer_lm.yaml           # Hyperparameters for TransformerLM
-│   ├── random_forest.yaml            # Hyperparameters for Random Forest
-│   ├── xgboost.yaml                  # Hyperparameters for XGBoost
-│   └── cnn.yaml                      # Hyperparameters for CNN
+│   ├── model_registry.yaml            # Model registry (auto-updated by --train)
+│   ├── transformer_onehot.yaml        # Hyperparameters for TransformerOneHot
+│   ├── transformer_lm.yaml            # Hyperparameters for TransformerLM
+│   ├── random_forest.yaml             # Hyperparameters for Random Forest
+│   ├── xgboost.yaml                   # Hyperparameters for XGBoost
+│   └── cnn.yaml                       # Hyperparameters for CNN
 ├── models/
-│   ├── transformer_onehot.py         # Dual-branch Transformer + one-hot encoding
-│   ├── transformer_lm.py             # Dual-branch Transformer + PLM embeddings
-│   ├── random_forest.py              # Random Forest + SHAP interpretability
-│   ├── xgboost.py                    # XGBoost + SHAP interpretability
-│   └── cnn.py                        # 1D CNN + PLM embeddings
+│   ├── transformer_onehot.py          # Dual-branch Transformer + one-hot encoding
+│   ├── transformer_lm.py              # Dual-branch Transformer + PLM embeddings
+│   ├── random_forest.py               # Random Forest + SHAP interpretability
+│   ├── xgboost.py                     # XGBoost + SHAP interpretability
+│   └── cnn.py                         # 1D CNN + PLM embeddings
 ├── utils/
-│   ├── build_balanced_dataset_v4.py  # Training set curation
-│   ├── developability_correlation.py # Assay correlation analysis
-│   └── ...
-├── data/                             # Training databases
-├── build/pretrained_models/          # Saved model checkpoints
-└── requirements.txt
+│   ├── build_balanced_dataset_v4.py   # Training set curation
+│   ├── developability_correlation.py  # Assay correlation analysis
+│   ├── download_zenodo.py             # Download pretrained models from Zenodo
+│   ├── download_ds1_dataset.py        # Download and process DS1 public dataset
+│   └── create_subsets.py              # Create CDR3-diverse balanced subsets
+├── tests/
+│   ├── test_delphi.py                 # Integration test suite  ← Step 3
+│   ├── DS1_psr_500.xlsx               # Test data — 500 PSR antibodies (committed)
+│   └── DS1_psr_5000.xlsx              # Larger test subset (committed)
+├── data/                              # Training databases (gitignored)
+└── pretrained_202605/                 # IPI pretrained models — download via Step 2
+```
+
+---
+
+## Quick Start: Three Essential Steps
+
+These three steps verify that DELPHI is correctly installed and all
+pretrained models and interpretability tools are working.
+
+---
+
+### Step 1: Install Python environment and clone DELPHI
+
+```bash
+# Clone the repository
+git clone https://github.com/proteininnovation/delphi.git
+cd delphi
+
+# Create a dedicated conda environment (Python 3.11)
+# and install all dependencies including HMMER, ANARCI and all PLMs
+chmod +x install.sh
+./install.sh
+
+# Activate the environment
+conda activate delphi
+```
+
+The install script:
+- Creates a `delphi` conda environment with Python 3.11
+- Installs HMMER and ANARCI via conda (`conda install -c bioconda hmmer anarci`)
+- Installs all Python packages via `pip install -r requirements.txt`
+- Pre-downloads IgBERT weights from HuggingFace (`Exscientia/IgBert`)
+- Prints `PASS` or `MISSING` for every required package
+
+After `./install.sh` completes, your environment is fully ready.
+
+---
+
+### Step 2: Download IPI pretrained models from Zenodo
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20648372.svg)](https://doi.org/10.5281/zenodo.20648372)
+
+```bash
+# Download all IPI pretrained models to pretrained_202605/
+python utils/download_zenodo.py
+
+# Preview what will be downloaded first (recommended)
+python utils/download_zenodo.py --dry-run
+
+# Download only PSR models
+python utils/download_zenodo.py --filter psr_filter
+
+# Download only SEC models
+python utils/download_zenodo.py --filter sec_filter
+```
+
+This downloads all pretrained model files (`.pt` and `.pkl`) to
+`pretrained_202605/`. The `config/model_registry.yaml` already
+contains registry entries for all models pointing to this folder.
+
+> Models are trained on proprietary IPI antibody datasets.
+> Training sequences cannot be shared. Model weights are provided for
+> inference only.
+
+---
+
+### Step 3: Run the integration test suite
+
+```bash
+# Full test suite (recommended)
+python tests/test_delphi.py
+
+# Fast mode — skips kfold (Test 4) and training (Test 5)
+python tests/test_delphi.py --fast
+
+# Run a single section
+python tests/test_delphi.py --section 0   # package imports only
+python tests/test_delphi.py --section 3   # prediction only
+python tests/test_delphi.py --section 6   # interpretability only
+```
+
+The test data (`tests/DS1_psr_500.xlsx`, 500 antibodies from
+Chen et al. 2024, MIT License) is committed to the repository —
+no additional download needed.
+
+**Test sections:**
+
+| Section | What is tested |
+|---|---|
+| 0 | Package imports: PyTorch, SHAP, Captum, all PLMs |
+| 1 | Test data: `DS1_psr_500.xlsx` — 500 antibodies, balanced 50-50 |
+| 2 | Embedding generation: ABlang2, AntiBERTy, AntiBERTa2, IgBERT |
+| 3 | PSR + SEC prediction using IPI pretrained models via `--model_id` |
+| 4 | 10-fold cross-validation: transformer, RF, XGBoost |
+| 5 | Train final models and verify model registry entry |
+| 6 | Interpretability: SHAP + Integrated Gradients + per-antibody waterfall + CDR3 mutagenesis |
+
+**Expected output when all tests pass:**
+
+```
+══════════════════════════════════════════════════════════════════
+  SUMMARY
+──────────────────────────────────────────────────────────────────
+  PASS  Test 0: Package imports
+  PASS  Test 1: Data file (DS1_psr_500.xlsx)
+  PASS  Test 2: Embedding generation  (5 PLMs)
+  PASS  Test 3: PSR + SEC prediction  (12 pretrained models)
+  PASS  Test 4: 10-fold cross-validation  (4 models)
+  PASS  Test 5: Build final models  (4 models)
+  PASS  Test 6: Interpretability  (psr_filter, 500 samples)
+──────────────────────────────────────────────────────────────────
+  7 passed   0 failed
+══════════════════════════════════════════════════════════════════
 ```
 
 ---
@@ -143,7 +267,7 @@ IPI provides pretrained models for PSR, SEC, HIC, and AC-SINS.
 
 **Download pretrained models** from the
 [releases page](https://github.com/proteininnovation/delphi/releases)
-and place them in `build/pretrained_models/`.
+and place them in `pretrained_202605/`.
 The `config/model_registry.yaml` shipped with DELPHI already contains
 registry entries for all IPI models.
 
@@ -430,7 +554,7 @@ python delphi.py --predict data/new_cohort.xlsx \
 
 # Specify explicit path
 python delphi.py --predict data/new_cohort.xlsx \
-    --model_path build/pretrained_models/FINAL_psr_filter_onehot_transformer_onehot_my_antibodies.pt
+    --model_path pretrained_202605/FINAL_psr_filter_onehot_transformer_onehot_my_antibodies.pt
 ```
 
 ---
@@ -560,7 +684,7 @@ FINAL_psr_filter_onehot_transformer_onehot_my_antibodies.pt:
   target:          psr_filter
   lm:              onehot
   model:           transformer_onehot
-  model_path:      build/pretrained_models/FINAL_psr_filter_onehot_transformer_onehot_my_antibodies.pt
+  model_path:      pretrained_202605/FINAL_psr_filter_onehot_transformer_onehot_my_antibodies.pt
   type:            full_train
   trained_at:      "2026-05-18 14:23:00"
   kfold_auc:       0.9341
