@@ -32,11 +32,11 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 
-RECORD_ID = "20648372"
+RECORD_ID  = "20648372"
 ZENODO_DOI = "10.5281/zenodo.20648372"
 ZENODO_URL = f"https://zenodo.org/records/{RECORD_ID}"
-_ROOT     = Path(__file__).resolve().parent.parent
-OUT_DIR   = _ROOT   # download to project root by default
+_ROOT      = Path(__file__).resolve().parent.parent
+OUT_DIR    = _ROOT / "pretrained_202605"   # default: save IPI models here
 
 # API endpoints
 API_DEPOSIT = "https://zenodo.org/api/deposit/depositions/{record_id}"
@@ -195,7 +195,7 @@ def main():
                     help="Personal access token (required for preview/unpublished records). "
                          "Generate at: https://zenodo.org/account/settings/applications/tokens/new/")
     ap.add_argument("--outdir",  default=str(OUT_DIR),
-                    help="Output directory (default: project root)")
+                    help="Output directory (default: pretrained_202605/)")
     ap.add_argument("--dry-run", action="store_true",
                     help="List files without downloading")
     ap.add_argument("--filter",  default=None,
