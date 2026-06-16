@@ -65,7 +65,7 @@ DELPHI is a unified interpretable machine learning platform for sequence-based p
 
 ```
 delphi.py                    — train, predict, correlate, build-dataset
-delphi_interpretability.py   — publication-quality interpretability figures (Nature Biotechnology style)
+delphi_interpretability.py   —  interpretability 
 ```
 
 ---
