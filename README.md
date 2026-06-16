@@ -771,16 +771,14 @@ If you use DELPHI in your research, please cite:
 Hoan Nguyen, Andre Teixeira et al.
 DELPHI: a unified interpretable ML platform for multi-objective antibody
 developability prediction.
-Nature Biotechnology, 2026 (in preparation).
+,2026 (in preparation).
 ```
 
 ---
 
 ## Contact
 
-**Hoan Nguyen, PhD** — [Hoan.Nguyen@proteininnovation.org](mailto:Hoan.Nguyen@proteininnovation.org)
-
-**Andre Teixeira** — [Andre.Teixeira@proteininnovation.org](mailto:Andre.Teixeira@proteininnovation.org)
+**Hoan Nguyen, PhD** — [Hoan.Nguyen@proteininnovation.org](mailto:Hoan.Nguyen@proteininnovation.org) **Andre Teixeira** — [Andre.Teixeira@proteininnovation.org](mailto:Andre.Teixeira@proteininnovation.org)
 
 Institute for Protein Innovation (IPI), Boston, MA, USA
 
