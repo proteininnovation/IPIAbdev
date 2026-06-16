@@ -65,7 +65,7 @@ DELPHI is a unified interpretable machine learning platform for sequence-based p
 
 ```
 delphi.py                    — train, predict, correlate, build-dataset
-delphi_interpretability.py   — interpretability 
+delphi_interpretability.py   — publication-quality interpretability figures (SHAP, IG, CDR3 mutagenesis) 
 ```
 
 ---
@@ -265,11 +265,16 @@ no additional download needed.
 The fastest way to get started — no training data or GPU required.
 IPI provides pretrained models for PSR, SEC, HIC, and AC-SINS.
 
-**Download pretrained models** from the
-[releases page](https://github.com/proteininnovation/delphi/releases)
-and place them in `pretrained_202605/`.
-The `config/model_registry.yaml` shipped with DELPHI already contains
-registry entries for all IPI models.
+**Download pretrained models** from Zenodo:
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20648372.svg)](https://doi.org/10.5281/zenodo.20648372)
+
+```bash
+python utils/download_zenodo.py
+```
+
+Files download to `pretrained_202605/`. The `config/model_registry.yaml`
+already contains registry entries for all models.
 
 ---
 
@@ -303,14 +308,16 @@ python delphi.py --list-models --target sec_filter
 Example output:
 
 ```
-model_id                                                     target       lm       model                type        trained_at
-───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-FINAL_psr_filter_onehot_transformer_onehot_ipi_psr.pt       psr_filter   onehot   transformer_onehot   full_train   2026-05-18
-FINAL_psr_filter_biophysical_rf_ipi_psr.pt                  psr_filter   biophs.  rf                   full_train   2026-05-18
-FINAL_psr_filter_biophysical_xgboost_ipi_psr.pt             psr_filter   biophs.  xgboost              full_train   2026-05-18
-FINAL_sec_filter_onehot_transformer_onehot_ipi_sec.pt       sec_filter   onehot   transformer_onehot   full_train   2026-05-20
-FINAL_sec_filter_biophysical_rf_ipi_sec.pt                  sec_filter   biophs.  rf                   full_train   2026-05-20
-FINAL_sec_filter_biophysical_xgboost_ipi_sec.pt             sec_filter   biophs.  xgboost              full_train   2026-05-20
+model_id                                                               target       lm         model                type
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt        psr_filter   onehot     transformer_onehot   full_train
+FINAL_psr_filter_igbert_transformer_lm_ipi_psr_trainset.pt            psr_filter   igbert     transformer_lm       full_train
+FINAL_psr_filter_biophysical_rf_ipi_psr_trainset.pkl                  psr_filter   biophs.    rf                   full_train
+FINAL_psr_filter_biophysical_xgboost_ipi_psr_trainset.pkl             psr_filter   biophs.    xgboost              full_train
+FINAL_sec_filter_onehot_transformer_onehot_ipi_sec_5000.pt            sec_filter   onehot     transformer_onehot   full_train
+FINAL_sec_filter_igbert_transformer_lm_ipi_sec_5000.pt                sec_filter   igbert     transformer_lm       full_train
+FINAL_sec_filter_biophysical_rf_ipi_sec_5000.pkl                      sec_filter   biophs.    rf                   full_train
+FINAL_sec_filter_biophysical_xgboost_ipi_sec_5000.pkl                 sec_filter   biophs.    xgboost              full_train
 ```
 
 ---
@@ -320,17 +327,17 @@ FINAL_sec_filter_biophysical_xgboost_ipi_sec.pt             sec_filter   biophs.
 ```bash
 # Predict PSR (polyreactivity) — Transformer onehot model
 python delphi.py --predict tests/DS1_psr_500.xlsx \
-    --model_id FINAL_psr_filter_onehot_transformer_onehot_ipi_psr.pt \
+    --model_id FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt \
     --outdir results/psr
 
 # Predict SEC (size exclusion) — Transformer onehot model
 python delphi.py --predict tests/DS1_psr_500.xlsx \
-    --model_id FINAL_sec_filter_onehot_transformer_onehot_ipi_sec.pt \
+    --model_id FINAL_sec_filter_onehot_transformer_onehot_ipi_sec_5000.pt \
     --outdir results/sec
 
 # Predict PSR using RF model instead
 python delphi.py --predict tests/DS1_psr_500.xlsx \
-    --model_id FINAL_psr_filter_biophysical_rf_ipi_psr.pt \
+    --model_id FINAL_psr_filter_biophysical_rf_ipi_psr_trainset.pkl \
     --outdir results/psr_rf
 ```
 
@@ -346,13 +353,15 @@ tests/predictions/
 
 ### Tutorial Step 4: Interpretability analysis
 
-Understand which CDR3 residues and sequence regions drive each prediction:
+`delphi_interpretability.py` runs prediction internally — no separate
+`--predict` step needed. One command loads the model, predicts, and
+generates all figures.
 
 ```bash
-# Single model, single filter
+# Single model, single filter — one command does everything
 python delphi_interpretability.py \
     --target psr_filter \
-    --model_id FINAL_psr_filter_onehot_transformer_onehot_ipi_psr.pt \
+    --model_id FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt \
     --db tests/DS1_psr_500.xlsx \
     --outdir outputs/interp_psr
 
@@ -367,6 +376,9 @@ python delphi_interpretability.py \
 Output includes SHAP bar charts (RF, XGBoost), Integrated Gradients position
 plots, HCDR3 residue heatmaps, and CDR3 in silico mutagenesis — all in
 300 DPI TIFF/PDF/PNG format.
+
+> `delphi.py --predict` is only needed when you want a standalone
+> predictions file (CSV/Excel) to share or run `--correlate` against.
 
 ---
 
@@ -439,9 +451,9 @@ python delphi.py --build-dataset tests/DS1_psr_500.xlsx \
 
 **Output files** (if you ran `--build-dataset`):
 ```
-tests/DS1_psr_500.xlsx        # balanced training set
-tests/DS1_psr_500.xlsx # imbalanced (natural ratio)
-tests/DS1_psr_500_majority_rejected.xlsx
+tests/DS1_psr_500_psr_filter_balanced.xlsx        # balanced training set
+tests/DS1_psr_500_psr_filter_imbalanced.xlsx       # imbalanced (natural ratio)
+tests/DS1_psr_500_psr_filter_majority_rejected.xlsx
 ```
 
 > If you skip this step, use your original file (`tests/DS1_psr_500.xlsx`) as `--db` in all subsequent commands.
@@ -777,6 +789,9 @@ Nature Biotechnology, 2026 (in preparation).
 
 ## Contact
 
+**Hoan Nguyen, PhD** — [Hoan.Nguyen@proteininnovation.org](mailto:Hoan.Nguyen@proteininnovation.org)
+
+**Andre Teixeira** — [Andre.Teixeira@proteininnovation.org](mailto:Andre.Teixeira@proteininnovation.org)
 
 Institute for Protein Innovation (IPI), Boston, MA, USA
 
