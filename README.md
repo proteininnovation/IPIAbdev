@@ -50,6 +50,9 @@ Applicable to any binary antibody property label including PSR (polyreactivity),
 
 ## Overview
 
+<p align="center">
+  <img src="images/Interpretability.png" alt="DELPHI interpretability" width="700"/>
+</p>
 
 DELPHI is a unified interpretable machine learning platform for sequence-based prediction of antibody biophysical properties. It integrates five complementary capabilities within a single Python pipeline:
 
@@ -65,7 +68,7 @@ DELPHI is a unified interpretable machine learning platform for sequence-based p
 
 ```
 delphi.py                    — train, predict, correlate, build-dataset
-delphi_interpretability.py   —  interpretability 
+delphi_interpretability.py   — publication-quality interpretability figures (Nature Biotechnology style)
 ```
 
 ---
@@ -129,9 +132,12 @@ delphi/
 │   ├── xgboost.py                     # XGBoost + SHAP interpretability
 │   └── cnn.py                         # 1D CNN + PLM embeddings
 ├── utils/
-│   ├── build_balanced_dataset_v4.py   # Training set curation
-│   ├── developability_correlation.py  # Assay correlation analysis
-│   ├── download_zenodo.py             # Download pretrained models from Zenodo
+│   ├── build_balanced_dataset_v4.py   # Training set curation (CDR3 clustering + OOF filtering)
+│   ├── threshold_optimizer.py         # Optimal classification threshold selection
+│   ├── developability_correlation.py  # Assay correlation analysis and figures
+│   ├── clustering.py                  # CDR3 Levenshtein clustering
+│   ├── embedding_generator.py         # PLM embedding generation (ABlang2, AntiBERTy, IgBERT...)
+│   ├── download_zenodo.py             # Download pretrained models from Zenodo  ← Step 2
 │   ├── download_ds1_dataset.py        # Download and process DS1 public dataset
 │   └── create_subsets.py              # Create CDR3-diverse balanced subsets
 ├── tests/
