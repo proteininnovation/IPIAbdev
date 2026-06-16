@@ -1,10 +1,10 @@
 """
-IPIAbDev — Figure 3: t-SNE PLM Embedding Quality (Nature Biotechnology format)
+Delphi — Figure 3: t-SNE PLM Embedding Quality (Nature Biotechnology format)
 ================================================================================
 Generates Figure 3: t-SNE visualizations of IPI PSR antibody embeddings
 colored by VH germline (top row, panels a–e) and VL germline (bottom row,
 panels f–j) for five PLMs:
-    AbLang2 | AntiBERTy | AntiBERTa2 | AntiBERTa2-CSSP | IgBert
+    AbLang2 | IgBert | AntiBERTy | AntiBERTa2 | AntiBERTa2-CSSP
 
 Layout  : 2 rows × 5 columns = 10 panels
 Width   : double column (183 mm)
@@ -136,17 +136,17 @@ def load_ipi_elisa_dataset(main_path: str, data_file: str = DATA_FILE) -> pd.Dat
       - ID2 > 8700
     """
     data = pd.read_excel(os.path.join(main_path, data_file))
-    data = data[
-        pd.notna(data["psr_norm_insulin"]) &
-        pd.notna(data["psr_norm_dna"])     &
-        pd.notna(data["psr_norm_smp"])     &
-        pd.notna(data["psr_norm_avidin"])
-    ]
+    #data = data[
+    #    pd.notna(data["psr_norm_insulin"]) &
+    #    pd.notna(data["psr_norm_dna"])     &
+    #    pd.notna(data["psr_norm_smp"])     &
+    #    pd.notna(data["psr_norm_avidin"])
+    #]
     data = data[pd.notna(data["psr_filter"])]
-    data = data[data["psr_filter"] == data["psr_rf_elisa"]]
-    data = data[~data["antigen"].str.contains("test", na=False, case=False)]
-    data = data[data["ID2"] > 8700]
-    data = data.reset_index(drop=True)
+    #data = data[data["psr_filter"] == data["psr_rf_elisa"]]
+    #data = data[~data["antigen"].str.contains("test", na=False, case=False)]
+    #data = data[data["ID2"] > 8700]
+    #data = data.reset_index(drop=True)
     print(f"  Loaded {len(data):,} antibodies after denoising filters")
     return data
 
@@ -343,18 +343,18 @@ def generate_figure3(
 
     Top row    (a–e) : colored by VH germline
     Bottom row (f–j) : colored by VL germline
-    Columns: AbLang2 | AntiBERTy | AntiBERTa2 | AntiBERTa2-CSSP | IgBert
+    Columns: AbLang2 | IgBert | AntiBERTy | AntiBERTa2 | AntiBERTa2-CSSP
 
     Parameters
     ----------
     main_path     : root data path
     data_file     : relative path to data Excel/CSV file from main_path
     plm_names     : list of PLM embedding file suffixes
-                    Default: ["ablang","antiberty","antiberta2",
-                              "antiberta2-cssp","igbert"]
+                    Default: ["ablang","igbert","antiberty",
+                              "antiberta2","antiberta2-cssp"]
     plm_labels    : display names for column headers
-                    Default: ["AbLang2","AntiBERTy","AntiBERTa2",
-                              "AntiBERTa2-CSSP","IgBert"]
+                    Default: ["AbLang2","IgBert","AntiBERTy",
+                              "AntiBERTa2","AntiBERTa2-CSSP"]
     vh_col        : DataFrame column name for VH germline annotation
     vl_col        : DataFrame column name for VL germline annotation
     tsne_params   : dict of t-SNE parameters (see compute_tsne defaults)
@@ -362,21 +362,22 @@ def generate_figure3(
     dpi           : output resolution (300 submit, 600 final)
     """
     # ── CHANGES 1 & 2: default PLM lists now include igbert ──────────────────
+    # Column order (left → right): AbLang2 | IgBert | AntiBERTy | AntiBERTa2 | AntiBERTa2-CSSP
     if plm_names is None:
         plm_names = [
             "ablang",
+            "igbert",
             "antiberty",
             "antiberta2",
             "antiberta2-cssp",
-            "igbert",           # NEW
         ]
     if plm_labels is None:
         plm_labels = [
             "AbLang2",
+            "IgBert",
             "AntiBERTy",
             "AntiBERTa2",
             "AntiBERTa2-CSSP",
-            "IgBert",           # NEW
         ]
     if tsne_params is None:
         tsne_params = {}
@@ -527,8 +528,14 @@ def generate_figure3(
 def _save_figure(fig, prefix: str, dpi: int = DPI_SUBMIT):
     tiff_path = OUT_DIR / f"{prefix}.tiff"
     pdf_path  = OUT_DIR / f"{prefix}.pdf"
-    fig.savefig(tiff_path, dpi=dpi, format="tiff",
-                bbox_inches="tight", pad_inches=0.05)
+    # LZW-compressed TIFF: lossless, accepted by Nature Biotech, and avoids the
+    # Classic TIFF 4 GB IFD-offset overflow (struct 'L' pack error) that occurs
+    # when the uncompressed bitmap from savefig exceeds ~4 GB at submission DPI.
+    fig.savefig(
+        tiff_path, dpi=dpi, format="tiff",
+        bbox_inches="tight", pad_inches=0.05,
+        pil_kwargs={"compression": "tiff_lzw"},
+    )
     fig.savefig(pdf_path,  dpi=dpi, format="pdf",
                 bbox_inches="tight", pad_inches=0.05)
     print(f"\n  Saved: {tiff_path}  ({tiff_path.stat().st_size // 1024} KB)")
@@ -562,7 +569,7 @@ Required embedding files:
 Panel layout (10 panels total):
   Top row    : a   b   c   d   e     ← VH germline
   Bottom row : f   g   h   i   j     ← VL germline
-  Columns    : AbLang2 | AntiBERTy | AntiBERTa2 | AntiBERTa2-CSSP | IgBert
+  Columns    : AbLang2 | IgBert | AntiBERTy | AntiBERTa2 | AntiBERTa2-CSSP
 """
 
 

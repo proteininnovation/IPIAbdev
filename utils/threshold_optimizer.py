@@ -31,6 +31,12 @@
 # ── Integration ───────────────────────────────────────────────────────────────
 #   Called after kfold_validation() with fold_preds CSV, or after .predict_proba().
 #   Adds a 'recommended_threshold' field to the BEST_*.pt checkpoint metadata.
+#
+# ── JAN-2026 update ───────────────────────────────────────────────────────────
+# [FIX-1] run_full_threshold_pipeline() now accepts model_name, db_tag, kfold
+#         kwargs passed by transformer_lm.py (UPD-5).  These are resolved to
+#         the existing model / db_stem params so all output filenames are
+#         consistent.  No behaviour change for existing callers.
 # ─────────────────────────────────────────────────────────────────────────────
 
 import os
@@ -770,6 +776,14 @@ def run_full_threshold_pipeline(
     output_dir:      str   = None,
     cost_fp:         float = 1.0,
     cost_fn:         float = 3.0,
+    # ── [FIX-1] Extra kwargs passed by transformer_lm.py (UPD-5) ─────────────
+    # model_name : alias for 'model'  (transformer_lm passes model_name=)
+    # db_tag     : alias for db_stem  (arrives as "_ipiab0426_..." with leading _)
+    # kfold      : informational only — not used internally, accepted to avoid
+    #              the "unexpected keyword argument" TypeError
+    model_name:      str   = None,
+    db_tag:          str   = '',
+    kfold:           int   = None,
 ):
     """
     One-call convenience wrapper:
@@ -786,7 +800,29 @@ def run_full_threshold_pipeline(
             best_ckpt_path = f"{MODEL_DIR}/BEST_psr_filter_ablang_transformer_lm_k10_fold7.pt",
             cost_fn        = 3.0,
         )
+
+    Called from transformer_lm.py with extra kwargs (UPD-5):
+        run_full_threshold_pipeline(
+            ...
+            model_name = "transformer_lm",   # resolved → model
+            db_tag     = "_ipiab0426_...",   # resolved → db_stem (leading _ stripped)
+            kfold      = 10,                 # accepted, not used
+        )
     """
+    # ── Resolve aliases ───────────────────────────────────────────────────────
+    # model_name takes priority over model when model is blank
+    if model_name and not model:
+        model = model_name
+
+    # db_tag takes priority over db_stem when db_stem is blank.
+    # db_tag arrives from transformer_lm.py as f"_{db_stem}" (leading underscore
+    # added by the `_db_tag` variable) — strip it before use.
+    if db_tag and not db_stem:
+        db_stem = db_tag.lstrip('_')
+
+    # kfold is accepted but not used — threshold optimisation operates on the
+    # pooled OOF predictions regardless of fold count.
+
     output_dir = output_dir or MODEL_DIR
     df_preds = pd.read_csv(fold_preds_csv)
 
