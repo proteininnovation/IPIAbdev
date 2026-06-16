@@ -159,8 +159,8 @@ fi
 echo ""
 echo "── Step 6: Verify installation ─────────────────────────────────"
 python3 - << 'PYEOF'
-import sys
-ok = True
+import sys, subprocess
+
 packages = [
     ("torch",        "PyTorch"),
     ("numpy",        "NumPy"),
@@ -180,27 +180,48 @@ packages = [
     ("antiberty",    "AntiBERTy"),
     ("peft",         "PEFT (LoRA)"),
 ]
+
+ok = True
 for pkg, name in packages:
-    try:
-        __import__(pkg)
+    # Test each import in an isolated subprocess
+    # Prevents one Bus error / crash from killing the entire verification
+    r = subprocess.run(
+        [sys.executable, "-c", f"import {pkg}"],
+        capture_output=True, timeout=30
+    )
+    if r.returncode == 0:
         print(f"  OK      {name}")
-    except ImportError:
-        print(f"  MISSING {name}")
+    else:
+        status = "BUS ERROR" if r.returncode == -7 else "MISSING"
+        print(f"  {status:<10} {name}")
+        if pkg == "torch":
+            print("           → torch crashed — run: pip install torch --index-url https://download.pytorch.org/whl/cu121 --no-cache-dir")
         ok = False
 
-import subprocess
-r = subprocess.run(["anarci", "--help"], capture_output=True, text=True)
+# ANARCI (command-line tool)
+r = subprocess.run(["anarci", "--help"], capture_output=True, text=True, timeout=10)
 print("  OK      ANARCI" if r.returncode == 0 else "  MISSING ANARCI")
 if r.returncode != 0:
     ok = False
 
-import torch
-cuda_ok = torch.cuda.is_available()
-mps_ok  = hasattr(torch.backends, 'mps') and torch.backends.mps.is_available()
-accel   = torch.cuda.get_device_name(0) if cuda_ok else ("MPS" if mps_ok else "CPU only")
-print(f"\n  PyTorch {torch.__version__}  |  Accelerator: {accel}")
+# CUDA check — only if torch works
+r = subprocess.run(
+    [sys.executable, "-c",
+     "import torch; "
+     "cuda=torch.cuda.is_available(); "
+     "gpu=torch.cuda.get_device_name(0) if cuda else 'N/A'; "
+     "print(f'PyTorch {torch.__version__}  CUDA={cuda}  GPU={gpu}')"],
+    capture_output=True, text=True, timeout=30
+)
+if r.returncode == 0:
+    print(f"\n  {r.stdout.strip()}")
+else:
+    print("\n  WARNING: torch import failed — CUDA check skipped")
+    print("  Fix: pip install torch --index-url https://download.pytorch.org/whl/cu121 --no-cache-dir")
 
 if not ok:
+    print("\n  Some packages failed. Check warnings above.")
+    print("  DELPHI may still work if torch is the only failure — fix torch first.")
     sys.exit(1)
 PYEOF
 
