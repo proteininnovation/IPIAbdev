@@ -50,6 +50,10 @@ Applicable to any binary antibody property label including PSR (polyreactivity),
 
 ## Overview
 
+<p align="center">
+  <img src="images/Interpretability.png" alt="DELPHI interpretability" width="700"/>
+</p>
+
 DELPHI is a unified interpretable machine learning platform for sequence-based prediction of antibody biophysical properties. It integrates five complementary capabilities within a single Python pipeline:
 
 | Capability | Description |
@@ -318,26 +322,26 @@ FINAL_sec_filter_biophysical_xgboost_ipi_sec.pt             sec_filter   biophs.
 
 ```bash
 # Predict PSR (polyreactivity) — Transformer onehot model
-python delphi.py --predict data/my_cohort.xlsx \
+python delphi.py --predict tests/DS1_psr_500.xlsx \
     --model_id FINAL_psr_filter_onehot_transformer_onehot_ipi_psr.pt \
     --outdir results/psr
 
 # Predict SEC (size exclusion) — Transformer onehot model
-python delphi.py --predict data/my_cohort.xlsx \
+python delphi.py --predict tests/DS1_psr_500.xlsx \
     --model_id FINAL_sec_filter_onehot_transformer_onehot_ipi_sec.pt \
     --outdir results/sec
 
 # Predict PSR using RF model instead
-python delphi.py --predict data/my_cohort.xlsx \
+python delphi.py --predict tests/DS1_psr_500.xlsx \
     --model_id FINAL_psr_filter_biophysical_rf_ipi_psr.pt \
     --outdir results/psr_rf
 ```
 
 Output files written to `--outdir`:
 ```
-results/psr/
-    my_cohort_psr_filter_predictions.xlsx    # BARCODE, score, label (PASS/FAIL)
-    my_cohort_psr_filter_predictions.csv
+tests/predictions/
+    DS1_psr_500_psr_filter_predictions.xlsx    # BARCODE, score, label (PASS/FAIL)
+    DS1_psr_500_psr_filter_predictions.csv
 ```
 
 ---
@@ -348,19 +352,19 @@ Compare DELPHI scores against your own experimental measurements:
 
 ```bash
 # Discover score columns in the prediction file
-python delphi.py --correlate results/psr/my_cohort_psr_filter_predictions.xlsx \
+python delphi.py --correlate tests/DS1_psr_500_psr_filter_predictions.xlsx \
     --target psr_filter --list-scores
 
 # Correlate against a single assay
-python delphi.py --correlate results/psr/my_cohort_psr_filter_predictions.xlsx \
-    --target psr_filter --assay my_psr_score \
-    --outdir results/psr_correlation
+python delphi.py --correlate tests/DS1_psr_500_psr_filter_predictions.xlsx \
+    --target psr_filter --assay psr_norm_smp \
+    --outdir tests/psr_correlation
 
 # Correlate against multiple assays
-python delphi.py --correlate results/psr/my_cohort_psr_filter_predictions.xlsx \
+python delphi.py --correlate tests/DS1_psr_500_psr_filter_predictions.xlsx \
     --target psr_filter \
     --assay psr_norm_dna psr_norm_avidin psr_norm_smp \
-    --outdir results/psr_correlation
+    --outdir tests/psr_correlation
 ```
 
 ---
@@ -374,14 +378,14 @@ Understand which CDR3 residues and sequence regions drive each prediction:
 python delphi_interpretability.py \
     --target psr_filter \
     --model_id FINAL_psr_filter_onehot_transformer_onehot_ipi_psr.pt \
-    --db data/my_cohort.xlsx \
+    --db tests/DS1_psr_500.xlsx \
     --outdir outputs/interp_psr
 
 # Full analysis — all three models, PSR + SEC
 python delphi_interpretability.py \
     --target psr_filter --target2 sec_filter \
-    --db  data/my_cohort.xlsx \
-    --db2 data/my_cohort.xlsx \
+    --db  tests/DS1_psr_500.xlsx \
+    --db2 tests/DS1_psr_500.xlsx \
     --outdir outputs/interp_psr_sec
 ```
 
@@ -422,26 +426,26 @@ Run `--build-dataset` when:
 
 ```bash
 # Recommended: combined strategy (CDR3 diversity + OOF confidence filtering)
-python delphi.py --build-dataset data/my_antibodies.xlsx \
+python delphi.py --build-dataset tests/DS1_psr_500.xlsx \
     --target psr_filter --strategy combined --min-total 6000
 
 # Cluster-only (diversity, fast)
-python delphi.py --build-dataset data/my_antibodies.xlsx \
+python delphi.py --build-dataset tests/DS1_psr_500.xlsx \
     --target psr_filter --strategy cluster --cluster 0.8
 
 # OOF consensus only (confidence filtering, stricter)
-python delphi.py --build-dataset data/my_antibodies.xlsx \
+python delphi.py --build-dataset tests/DS1_psr_500.xlsx \
     --target psr_filter --strategy kmer_consensus --min-prob 0.7
 ```
 
 **Output files** (if you ran `--build-dataset`):
 ```
-data/my_antibodies_psr_filter_balanced.xlsx        # balanced training set
-data/my_antibodies_psr_filter_imbalanced_6000.xlsx # imbalanced (natural ratio)
-data/my_antibodies_psr_filter_majority_rejected.xlsx
+tests/DS1_psr_500.xlsx        # balanced training set
+tests/DS1_psr_500.xlsx # imbalanced (natural ratio)
+tests/DS1_psr_500_majority_rejected.xlsx
 ```
 
-> If you skip this step, use your original file (`data/my_antibodies.xlsx`) as `--db` in all subsequent commands.
+> If you skip this step, use your original file (`tests/DS1_psr_500.xlsx`) as `--db` in all subsequent commands.
 
 <p align="center">
   <img src="images/trainsetsize_performance.png" alt="Training set size vs performance" width="600"/>
@@ -455,15 +459,15 @@ For PLM-based models, embeddings are computed once and reused across all runs:
 
 ```bash
 # IgBERT (1024-dim, recommended)
-python delphi.py --build-embedding data/my_antibodies_psr_filter_balanced.xlsx \
+python delphi.py --build-embedding tests/DS1_psr_500.xlsx \
     --lm igbert
 
 # ABlang2 (480-dim, fast)
-python delphi.py --build-embedding data/my_antibodies_psr_filter_balanced.xlsx \
+python delphi.py --build-embedding tests/DS1_psr_500.xlsx \
     --lm ablang
 
 # All supported PLMs at once
-python delphi.py --build-embedding data/my_antibodies_psr_filter_balanced.xlsx \
+python delphi.py --build-embedding tests/DS1_psr_500.xlsx \
     --lm all
 ```
 
@@ -479,22 +483,22 @@ Cross-validation gives an honest AUC estimate and identifies the optimal epoch c
 # Transformer + one-hot (no PLM needed, recommended first model)
 python delphi.py --kfold 10 \
     --target psr_filter --lm onehot --model transformer_onehot \
-    --db data/my_antibodies_psr_filter_balanced.xlsx
+    --db tests/DS1_psr_500.xlsx
 
 # Transformer + IgBERT (best AUC)
 python delphi.py --kfold 10 \
     --target psr_filter --lm igbert --model transformer_lm \
-    --db data/my_antibodies_psr_filter_balanced.xlsx
+    --db tests/DS1_psr_500.xlsx
 
 # Random Forest + biophysical (fast baseline, interpretable)
 python delphi.py --kfold 10 \
     --target psr_filter --lm biophysical --model rf \
-    --db data/my_antibodies_psr_filter_balanced.xlsx
+    --db tests/DS1_psr_500.xlsx
 
 # XGBoost + biophysical
 python delphi.py --kfold 10 \
     --target psr_filter --lm biophysical --model xgboost \
-    --db data/my_antibodies_psr_filter_balanced.xlsx
+    --db tests/DS1_psr_500.xlsx
 ```
 
 At the end of `--kfold`, DELPHI prints:
@@ -518,17 +522,17 @@ Train on the full dataset using the epoch count from cross-validation. The model
 # Transformer + one-hot
 python delphi.py --train \
     --target psr_filter --lm onehot --model transformer_onehot \
-    --db data/my_antibodies_psr_filter_balanced.xlsx
+    --db tests/DS1_psr_500.xlsx
 
 # Transformer + IgBERT
 python delphi.py --train \
     --target psr_filter --lm igbert --model transformer_lm \
-    --db data/my_antibodies_psr_filter_balanced.xlsx
+    --db tests/DS1_psr_500.xlsx
 
 # Random Forest
 python delphi.py --train \
     --target psr_filter --lm biophysical --model rf \
-    --db data/my_antibodies_psr_filter_balanced.xlsx
+    --db tests/DS1_psr_500.xlsx
 ```
 
 After training, verify registration:
@@ -544,16 +548,16 @@ python delphi.py --list-models --target psr_filter
 
 ```bash
 # Auto-lookup from registry (uses most recent model for this target+lm+model)
-python delphi.py --predict data/new_cohort.xlsx \
+python delphi.py --predict tests/DS1_psr_500.xlsx \
     --target psr_filter --lm onehot --model transformer_onehot
 
 # Specify a model by registry ID
-python delphi.py --predict data/new_cohort.xlsx \
-    --model_id FINAL_psr_filter_onehot_transformer_onehot_my_antibodies.pt
+python delphi.py --predict tests/DS1_psr_500.xlsx \
+    --model_id FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt
 
 # Specify explicit path
-python delphi.py --predict data/new_cohort.xlsx \
-    --model_path pretrained_202605/FINAL_psr_filter_onehot_transformer_onehot_my_antibodies.pt
+python delphi.py --predict tests/DS1_psr_500.xlsx \
+    --model_path pretrained_202605/FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt
 ```
 
 ---
@@ -564,20 +568,20 @@ Compare DELPHI scores against experimental measurements:
 
 ```bash
 # Discover available score columns in the prediction file
-python delphi.py --correlate data/new_cohort_pred.xlsx \
+python delphi.py --correlate tests/DS1_psr_500_psr_filter_predictions.xlsx \
     --target psr_filter --list-scores
 
 # Single assay
-python delphi.py --correlate data/new_cohort_pred.xlsx \
+python delphi.py --correlate tests/DS1_psr_500_psr_filter_predictions.xlsx \
     --target psr_filter --assay psr_norm_smp
 
 # Multiple assays with logit transform
-python delphi.py --correlate data/new_cohort_pred.xlsx \
+python delphi.py --correlate tests/DS1_psr_500_psr_filter_predictions.xlsx \
     --target psr_filter \
     --assay psr_norm_dna psr_norm_avidin psr_norm_smp \
     --logit-trans \
     --title "DELPHI PSR vs normalised PSR panel" \
-    --outdir results/psr_correlation
+    --outdir tests/psr_correlation
 ```
 
 ---
@@ -600,34 +604,34 @@ Missing models render their panel blank with a note — the script continues wit
 # Full analysis: all models, PSR + SEC
 python delphi_interpretability.py \
     --target psr_filter --target2 sec_filter \
-    --db  data/my_antibodies_psr_filter_balanced.xlsx \
-    --db2 data/my_antibodies_sec_filter_balanced.xlsx \
+    --db  tests/DS1_psr_500.xlsx \
+    --db2 tests/DS1_psr_500.xlsx \
     --outdir outputs/interp_psr_sec
 
 # Single model, single filter
 python delphi_interpretability.py \
     --target psr_filter --models transformer_onehot \
-    --db data/my_antibodies_psr_filter_balanced.xlsx \
+    --db tests/DS1_psr_500.xlsx \
     --outdir outputs/interp_psr_transformer
 
 # RF + Transformer only (skip XGBoost)
 python delphi_interpretability.py \
     --target psr_filter --models rf transformer_onehot \
-    --db data/my_antibodies_psr_filter_balanced.xlsx \
+    --db tests/DS1_psr_500.xlsx \
     --outdir outputs/interp_psr_rf_tr
 
 # Any label pair (not limited to PSR/SEC)
 python delphi_interpretability.py \
     --target hic_filter --target2 acsins_filter \
-    --db  data/my_antibodies_hic.xlsx \
-    --db2 data/my_antibodies_acsins.xlsx \
+    --db  tests/DS1_psr_500.xlsx \
+    --db2 tests/DS1_psr_500.xlsx \
     --outdir outputs/interp_hic_acsins
 
 # For final publication figures (all antibodies, high IG steps)
 python delphi_interpretability.py \
     --target psr_filter --target2 sec_filter \
-    --db  data/my_antibodies_psr_filter_balanced.xlsx \
-    --db2 data/my_antibodies_sec_filter_balanced.xlsx \
+    --db  tests/DS1_psr_500.xlsx \
+    --db2 tests/DS1_psr_500.xlsx \
     --max-samples 0 --ig-steps 1000 \
     --outdir outputs/interp_publication
 ```
@@ -643,7 +647,7 @@ If a required model is not found, DELPHI prints the exact command to train it:
   │   python delphi.py --train \                                │
   │       --target psr_filter \                                 │
   │       --lm biophysical --model rf \                         │
-  │       --db data/my_antibodies_psr_filter_balanced.xlsx      │
+  │       --db tests/DS1_psr_500.xlsx      │
   │                                                             │
   │ Then re-run delphi_interpretability.py                      │
   └─────────────────────────────────────────────────────────────┘
@@ -667,23 +671,23 @@ python delphi.py --list-models
 python delphi.py --list-models --target psr_filter
 
 # Predict using registry auto-lookup (no --db needed after training)
-python delphi.py --predict data/new_cohort.xlsx \
+python delphi.py --predict tests/DS1_psr_500.xlsx \
     --target psr_filter --lm onehot --model transformer_onehot
 
 # Predict using a specific model_id
-python delphi.py --predict data/new_cohort.xlsx \
-    --model_id FINAL_psr_filter_onehot_transformer_onehot_my_antibodies.pt
+python delphi.py --predict tests/DS1_psr_500.xlsx \
+    --model_id FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt
 ```
 
 **Example registry entry** (written automatically after `--train`):
 
 ```yaml
-FINAL_psr_filter_onehot_transformer_onehot_my_antibodies.pt:
-  trainset:        data/my_antibodies_psr_filter_balanced.xlsx
+FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt:
+  trainset:        tests/DS1_psr_500.xlsx
   target:          psr_filter
   lm:              onehot
   model:           transformer_onehot
-  model_path:      pretrained_202605/FINAL_psr_filter_onehot_transformer_onehot_my_antibodies.pt
+  model_path:      pretrained_202605/FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt
   type:            full_train
   trained_at:      "2026-05-18 14:23:00"
   kfold_auc:       0.9341
@@ -767,13 +771,16 @@ If you use DELPHI in your research, please cite:
 Hoan Nguyen, Andre Teixeira et al.
 DELPHI: a unified interpretable ML platform for multi-objective antibody
 developability prediction.
-,2026 (in preparation).
+Nature Biotechnology, 2026 (in preparation).
 ```
 
 ---
 
 ## Contact
 
+**Hoan Nguyen, PhD** — [Hoan.Nguyen@proteininnovation.org](mailto:Hoan.Nguyen@proteininnovation.org)
+
+**Andre Teixeira** — [Andre.Teixeira@proteininnovation.org](mailto:Andre.Teixeira@proteininnovation.org)
 
 Institute for Protein Innovation (IPI), Boston, MA, USA
 
