@@ -45,6 +45,7 @@ tqdm
 ablang2
 antiberty
 transformers
+rjieba                      # required by some HuggingFace tokenizers (IgBERT, AntiBERTa2)
 peft
 tf-keras
 
