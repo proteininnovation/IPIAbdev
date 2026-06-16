@@ -21,7 +21,9 @@ openpyxl
 pyyaml
 
 # ── ML frameworks ─────────────────────────────────────────────────────────────
-torch
+# torch is installed separately in install.sh via pip wheel from pytorch.org
+# to avoid Intel MKL conflicts (iJIT_NotifyEvent error on some Linux systems).
+# Do not add torch here — it will conflict with the GPU-specific wheel.
 scikit-learn
 xgboost==2.1.1
 joblib

@@ -50,8 +50,10 @@ echo "  Activated: $ENV_NAME"
 
 # ── Detect GPU and install correct PyTorch ────────────────────────────────────
 echo ""
-echo "── Step 2: Install PyTorch (GPU-aware) ─────────────────────────"
+echo "── Step 2: Install PyTorch (GPU-aware, via pip wheel) ──────────"
 
+# Use pip wheels from pytorch.org — avoids Intel MKL iJIT_NotifyEvent
+# conflict that occurs when installing PyTorch via conda channel.
 CUDA_VER=""
 if command -v nvidia-smi &>/dev/null; then
     CUDA_VER=$(nvidia-smi | grep "CUDA Version" | awk '{print $9}' | cut -d. -f1)
@@ -61,16 +63,17 @@ else
 fi
 
 if [ -n "$CUDA_VER" ] && [ "$CUDA_VER" -ge 12 ] 2>/dev/null; then
-    echo "  Installing PyTorch with CUDA 12.x support..."
-    conda install pytorch torchvision torchaudio pytorch-cuda=12.1 \
-        -c pytorch -c nvidia -y
+    echo "  Installing PyTorch with CUDA 12.x support (pip)..."
+    pip install torch torchvision torchaudio \
+        --index-url https://download.pytorch.org/whl/cu121
 elif [ -n "$CUDA_VER" ] && [ "$CUDA_VER" -ge 11 ] 2>/dev/null; then
-    echo "  Installing PyTorch with CUDA 11.x support..."
-    conda install pytorch torchvision torchaudio pytorch-cuda=11.8 \
-        -c pytorch -c nvidia -y
+    echo "  Installing PyTorch with CUDA 11.8 support (pip)..."
+    pip install torch torchvision torchaudio \
+        --index-url https://download.pytorch.org/whl/cu118
 else
-    echo "  Installing CPU-only PyTorch..."
-    conda install pytorch torchvision torchaudio cpuonly -c pytorch -y
+    echo "  Installing CPU-only PyTorch (pip)..."
+    pip install torch torchvision torchaudio \
+        --index-url https://download.pytorch.org/whl/cpu
 fi
 
 # Verify PyTorch works
