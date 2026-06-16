@@ -50,9 +50,6 @@ Applicable to any binary antibody property label including PSR (polyreactivity),
 
 ## Overview
 
-<p align="center">
-  <img src="images/Interpretability.png" alt="DELPHI interpretability" width="700"/>
-</p>
 
 DELPHI is a unified interpretable machine learning platform for sequence-based prediction of antibody biophysical properties. It integrates five complementary capabilities within a single Python pipeline:
 
@@ -68,7 +65,7 @@ DELPHI is a unified interpretable machine learning platform for sequence-based p
 
 ```
 delphi.py                    — train, predict, correlate, build-dataset
-delphi_interpretability.py   — publication-quality interpretability figures (Nature Biotechnology style)
+delphi_interpretability.py   — interpretability 
 ```
 
 ---
@@ -346,30 +343,8 @@ tests/predictions/
 
 ---
 
-### Tutorial Step 4: Correlate with experimental assays (optional)
 
-Compare DELPHI scores against your own experimental measurements:
-
-```bash
-# Discover score columns in the prediction file
-python delphi.py --correlate tests/DS1_psr_500_psr_filter_predictions.xlsx \
-    --target psr_filter --list-scores
-
-# Correlate against a single assay
-python delphi.py --correlate tests/DS1_psr_500_psr_filter_predictions.xlsx \
-    --target psr_filter --assay psr_norm_smp \
-    --outdir tests/psr_correlation
-
-# Correlate against multiple assays
-python delphi.py --correlate tests/DS1_psr_500_psr_filter_predictions.xlsx \
-    --target psr_filter \
-    --assay psr_norm_dna psr_norm_avidin psr_norm_smp \
-    --outdir tests/psr_correlation
-```
-
----
-
-### Tutorial Step 5: Interpretability analysis (optional)
+### Tutorial Step 4: Interpretability analysis
 
 Understand which CDR3 residues and sequence regions drive each prediction:
 
@@ -392,6 +367,30 @@ python delphi_interpretability.py \
 Output includes SHAP bar charts (RF, XGBoost), Integrated Gradients position
 plots, HCDR3 residue heatmaps, and CDR3 in silico mutagenesis — all in
 300 DPI TIFF/PDF/PNG format.
+
+---
+
+### Tutorial Step 5: Correlate with experimental assays (optional)
+
+Compare DELPHI scores against your own experimental measurements:
+
+```bash
+# Discover score columns in the prediction file
+python delphi.py --correlate tests/DS1_psr_500_psr_filter_predictions.xlsx \
+    --target psr_filter --list-scores
+
+# Correlate against a single assay
+python delphi.py --correlate tests/DS1_psr_500_psr_filter_predictions.xlsx \
+    --target psr_filter --assay psr_norm_smp \
+    --outdir tests/psr_correlation
+
+# Correlate against multiple assays
+python delphi.py --correlate tests/DS1_psr_500_psr_filter_predictions.xlsx \
+    --target psr_filter \
+    --assay psr_norm_dna psr_norm_avidin psr_norm_smp \
+    --outdir tests/psr_correlation
+```
+
 
 ---
 
@@ -778,9 +777,6 @@ Nature Biotechnology, 2026 (in preparation).
 
 ## Contact
 
-**Hoan Nguyen, PhD** — [Hoan.Nguyen@proteininnovation.org](mailto:Hoan.Nguyen@proteininnovation.org)
-
-**Andre Teixeira** — [Andre.Teixeira@proteininnovation.org](mailto:Andre.Teixeira@proteininnovation.org)
 
 Institute for Protein Innovation (IPI), Boston, MA, USA
 
