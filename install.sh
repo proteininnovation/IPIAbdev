@@ -135,24 +135,26 @@ echo "  All packages installed"
 # ── Pre-download IgBERT weights ───────────────────────────────────────────────
 echo ""
 echo "── Step 5: Pre-download IgBERT weights ─────────────────────────"
-
-# Test torch import first — Bus error here means PyTorch is still broken
 if ! python3 -c "import torch" 2>/dev/null; then
     echo "  WARNING: torch import failed — skipping IgBERT download"
-    echo "  Fix torch first, then run manually:"
-    echo "    python -c \"from transformers import AutoModel; AutoModel.from_pretrained('Exscientia/IgBert')\""
 else
-    python3 - << 'PYEOF' || echo "  WARNING: IgBERT download failed — will download automatically on first use"
-try:
-    from transformers import AutoTokenizer, AutoModel
-    print("  Downloading Exscientia/IgBert...")
-    AutoTokenizer.from_pretrained("Exscientia/IgBert")
-    AutoModel.from_pretrained("Exscientia/IgBert")
-    print("  IgBERT weights cached")
-except Exception as e:
-    print(f"  WARNING: IgBERT download failed: {e}")
-    print("  Run manually: python -c \"from transformers import AutoModel; AutoModel.from_pretrained('Exscientia/IgBert')\"")
-PYEOF
+    # Run in subprocess to isolate any CUDA Bus error from install.sh
+    python3 -c "
+import subprocess, sys, os
+r = subprocess.run([sys.executable, '-c', '''
+from transformers import AutoTokenizer, AutoModel
+print(\\\"  Downloading Exscientia/IgBert...\\\")
+AutoTokenizer.from_pretrained(\\\"Exscientia/IgBert\\\")
+AutoModel.from_pretrained(\\\"Exscientia/IgBert\\\")
+print(\\\"  IgBERT weights cached\\\")
+'''], capture_output=True, text=True, env=os.environ.copy())
+if r.returncode == 0:
+    print(r.stdout.strip())
+else:
+    print('  WARNING: IgBERT download failed (will download automatically on first use)')
+    print('  Run manually after install:')
+    print('    python -c \"from transformers import AutoModel; AutoModel.from_pretrained(chr(39)+'+'Exscientia/IgBert'+chr(39)+')\"')
+" 2>/dev/null || echo "  WARNING: IgBERT download failed — will download automatically on first use"
 fi
 
 # ── Verify all imports ────────────────────────────────────────────────────────
@@ -161,8 +163,11 @@ echo "── Step 6: Verify installation ─────────────
 python3 - << 'PYEOF'
 import sys, subprocess, os
 
-# Pass current PATH so conda binaries (anarci) are found in subprocesses
+# Include conda bin so ANARCI and other conda tools are found in subprocesses
 env = os.environ.copy()
+conda_prefix = os.environ.get("CONDA_PREFIX", "")
+if conda_prefix:
+    env["PATH"] = os.path.join(conda_prefix, "bin") + ":" + env.get("PATH", "")
 
 def check_import(pkg, name, optional=False):
     r = subprocess.run(
