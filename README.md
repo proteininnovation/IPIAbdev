@@ -774,7 +774,6 @@ developability prediction.
 
 ## Contact
 
-**Hoan Nguyen** — [Hoan.Nguyen@proteininnovation.org](mailto:Hoan.Nguyen@proteininnovation.org)   **Andre Teixeira** — [Andre.Teixeira@proteininnovation.org](mailto:Andre.Teixeira@proteininnovation.org)
 
 Institute for Protein Innovation (IPI), Boston, MA, USA
 
