@@ -1,57 +1,112 @@
 #!/usr/bin/env python3
+# ══════════════════════════════════════════════════════════════════════════════
+# DELPHI — Deep End-to-end Learning Platform for antibody developability
+#          with High Interpretability
+#
+# Module      : delphi_interpretability.py
+# Description : Nature Biotechnology interpretability figure generator.
+#               Computes SHAP (RF, XGBoost) and Integrated Gradients
+#               (Transformer onehot) attributions and renders 5-panel
+#               Extended-Data-style figures. Models are resolved via
+#               config/model_registry.yaml or explicit --model-path flags.
+#               --db is optional: if omitted, models are found via
+#               --model-id args or registry (target + lm + model).
+#               Applicable to any binary antibody property label
+#               (PSR, SEC, HIC, AC-SINS, viscosity, expression, ...).
+# Author      : Hoan Nguyen, PhD
+# Company     : Institute for Protein Innovation (IPI)
+# Date        : 2026-05
+# Version     : 1.0.0
+# ══════════════════════════════════════════════════════════════════════════════
 """
 delphi_interpretability.py
 ─────────────────────────────────────────────────────────────────────────────
-MLAbDev — Nature Biotech interpretability figure generator.
+DELPHI — Nature Biotechnology interpretability figure generator.
 
-Given a training database (e.g. ipi_psr_trainset.xlsx), this script:
+Given a training database or a new antibody file, this script:
 
-  1. Auto-locates FINAL_*.pkl / FINAL_*.pt checkpoints in MODEL_DIR for:
+  1. Resolves FINAL_*.pkl / FINAL_*.pt checkpoints via:
+       a. --model-id / --rf-model-id / --xgb-model-id / --tr-model-id
+       b. config/model_registry.yaml   (target + lm + model lookup)
+       c. FINAL_* filename glob fallback (backward compat)
+     for:
        • Random Forest + biophysical features        (SHAP)
        • XGBoost       + biophysical features        (SHAP)
        • Transformer   + one-hot sequences           (Integrated Gradients)
 
-  2. Computes interpretability attributions on the full training set.
+  2. Computes interpretability attributions on the provided antibody set.
 
   3. Renders a 5-panel Extended-Data-style figure matching Nature Biotech
-     style (same specs as Extended Figs 2/3/4):
-       • 6.3 × 10.2 inch  (160 × 260 mm)  — single-column, stacks 5 panels
-       • 300 DPI TIFF (LZW) + 300 DPI PDF (vector) + 150 DPI PNG
-       • DejaVu Sans 6pt / 0.5pt axis linewidth
-       • Panel letters (a, b, c, d, e) lowercase
+     style (300 DPI TIFF/PDF/PNG, DejaVu Sans 6pt, 0.5pt axis linewidth).
 
   4. Writes raw attribution arrays (CSV + NPZ) alongside the figure.
 
-Usage
-─────
-    # PSR figure
-    python run_interpretability_analysis.py \
-        --db data/ipi_psr_trainset.xlsx --target psr_filter
+Usage — all models, two filters (default recommended)
+──────────────────────────────────────────────────────
+    python delphi_interpretability.py \
+        --target psr_filter --target2 sec_filter \
+        --db  data/ipi_psr_trainset.xlsx \
+        --db2 data/ipi_sec_trainset.xlsx \
+        --outdir outputs/interp_psr_sec
 
-    # SEC figure
-    python run_interpretability_analysis.py \
-        --db data/ipi_sec_trainset.xlsx --target sec_filter
+Usage — single model, single filter
+─────────────────────────────────────
+    # Transformer only, PSR
+    python delphi_interpretability.py \
+        --target psr_filter --models transformer_onehot \
+        --db data/ipi_psr_trainset.xlsx \
+        --outdir outputs/interp_psr_transformer
 
-    # Custom LMs per model (defaults shown):
-    python run_interpretability_analysis.py \
-        --db data/ipi_psr_trainset.xlsx --target psr_filter \
-        --rf-lm biophysical --xgb-lm biophysical \
-        --transformer-lm onehot \
-        --model-dir build/pretrained_models \
-        --outdir outputs/interp_psr
+    # RF only, HIC filter
+    python delphi_interpretability.py \
+        --target hic_filter --models rf \
+        --db data/ipi_hic_trainset.xlsx \
+        --outdir outputs/interp_hic_rf
 
-Output naming convention (matches predict_developability.py)
-────────────────────────────────────────────────────────────
+    # RF + Transformer (no XGBoost)
+    python delphi_interpretability.py \
+        --target psr_filter --models rf transformer_onehot \
+        --db data/ipi_psr_trainset.xlsx \
+        --outdir outputs/interp_psr_rf_tr
+
+Usage — any label pair (not limited to PSR/SEC)
+─────────────────────────────────────────────────
+    python delphi_interpretability.py \
+        --target hic_filter --target2 acsins_filter \
+        --db  data/ipi_hic_trainset.xlsx \
+        --db2 data/ipi_acsins_trainset.xlsx \
+        --outdir outputs/interp_hic_acsins
+
+Usage — external users (registry, no training database)
+────────────────────────────────────────────────────────
+    # Step 1 — discover available models
+    python delphi.py --list-models
+
+    # Step 2 — run with model_id + your own antibody file as --db
+    python delphi_interpretability.py \
+        --target psr_filter \
+        --model_id FINAL_psr_filter_onehot_transformer_onehot_ipi_psr.pt \
+        --db my_cohort.xlsx \
+        --outdir outputs/interp_psr_mycohort
+
+Usage — controlling output location
+─────────────────────────────────────
+    # Default: outputs/interp_{target}_{db_stem}/
+    # Override with --outdir:
+    python delphi_interpretability.py \
+        --target psr_filter --target2 sec_filter \
+        --db  data/ipi_psr_trainset.xlsx \
+        --db2 data/ipi_sec_trainset.xlsx \
+        --outdir /path/to/my/results/psr_sec_may2026
+
+Output naming convention (inside --outdir)
+───────────────────────────────────────────
     interp_{target}_{rf_lm}_{xgb_lm}_{tr_lm}_{db_stem}.{tiff|pdf|png}
     shap_rf_{target}_{rf_lm}_{db_stem}.csv
     shap_xgb_{target}_{xgb_lm}_{db_stem}.csv
     ig_{target}_{tr_lm}_{db_stem}.npz
     region_attribution_{target}_{db_stem}.csv
     interp_log_{target}_{db_stem}.txt
-
-If a model is missing, the corresponding panel is rendered blank with a
-note, and the script continues — so you can run it before all three
-models are trained.
 """
 
 from __future__ import annotations
@@ -199,33 +254,121 @@ class _Log:
 #     ext = .pkl for rf/xgboost, .pt for transformer_onehot
 # ══════════════════════════════════════════════════════════════════════════════
 
-def _find_final(model_dir: str, target: str, lm: str, model_type: str,
-                db_stem: str, ext: str) -> Optional[str]:
+def _registry_lookup_local(target: str, lm: str, model_type: str,
+                           db_stem: str = '', model_id: str = None) -> Optional[str]:
     """
-    Find a FINAL_* checkpoint. Preference order:
-      1. exact match:            FINAL_{target}_{lm}_{model}_{db_stem}{ext}
-      2. classification suffix:  FINAL_{target}_{lm}_{model}_{db_stem}_classification{ext}
-      3. any non-regression glob: FINAL_{target}_{lm}_{model}_{db_stem}*{ext}
-                                   (files containing '_regression' are excluded)
-      4. None
-    """
-    stem = f"FINAL_{target}_{lm}_{model_type}_{db_stem}"
-    # Try exact match, then explicit classification suffix
-    for candidate in [
-        os.path.join(model_dir, f"{stem}{ext}"),
-        os.path.join(model_dir, f"{stem}_classification{ext}"),
-    ]:
-        if os.path.exists(candidate):
-            return candidate
+    Look up model_path from config/model_registry.yaml.
 
-    # Glob fallback — prefer classification, skip regression entirely
-    pattern = os.path.join(model_dir, f"{stem}*{ext}")
-    found   = sorted(glob.glob(pattern), key=os.path.getmtime, reverse=True)
-    # Filter out regression models
-    non_reg = [f for f in found if '_regression' not in os.path.basename(f)]
-    if non_reg:
-        return non_reg[0]
-    # Last resort: warn and return None (don't silently use regression for classification)
+    Priority:
+      1. model_id given  → exact key match
+      2. target + lm + model_type (+ optional db_stem) → most recent entry
+
+    Returns model_path string or None.
+    """
+    import yaml as _yaml, datetime as _dt
+    _reg_path = os.path.join('config', 'model_registry.yaml')
+    if not os.path.exists(_reg_path):
+        return None
+    try:
+        with open(_reg_path, 'r', encoding='utf-8') as _f:
+            _reg = _yaml.safe_load(_f) or {}
+        _models = _reg.get('models', {})
+        if not _models:
+            return None
+
+        # 1. Exact model_id
+        if model_id:
+            _entry = _models.get(model_id)
+            if _entry:
+                _p = _entry.get('model_path', '')
+                return _p if _p and os.path.exists(_p) else None
+            return None
+
+        # 2. Filter by fields
+        _candidates = []
+        for _mid, _entry in _models.items():
+            if _entry.get('target') != target:     continue
+            if _entry.get('lm')     != lm:         continue
+            if _entry.get('model')  != model_type: continue
+            if db_stem:
+                _ts = Path(_entry.get('trainset', '')).stem
+                if _ts != db_stem: continue
+            _candidates.append((_mid, _entry))
+
+        if not _candidates:
+            return None
+
+        def _ts_key(pair):
+            try:
+                return _dt.datetime.strptime(
+                    pair[1].get('trained_at', '1970-01-01 00:00:00'),
+                    '%Y-%m-%d %H:%M:%S')
+            except Exception:
+                return _dt.datetime.min
+
+        _candidates.sort(key=_ts_key, reverse=True)
+        _best_path = _candidates[0][1].get('model_path', '')
+        return _best_path if _best_path and os.path.exists(_best_path) else None
+
+    except Exception:
+        return None
+
+
+def _find_final(model_dir: str, target: str, lm: str, model_type: str,
+                db_stem: str, ext: str, model_id: str = None,
+                db_path: str = None) -> Optional[str]:
+    """
+    Find a model checkpoint. Lookup order:
+
+      1. model_id given            → exact registry match (config/model_registry.yaml)
+      2. registry by fields        → most recent (target, lm, model[, db_stem]) entry
+      3. FINAL_* exact filename    → backward-compat filename match
+      4. FINAL_* classification    → _classification suffix variant
+      5. FINAL_* glob              → any non-regression match in model_dir
+      6. None + actionable hint    → model not found — prints delphi --train command
+
+    db_stem may be empty string when --db is not provided (external users).
+    In that case steps 3-5 are skipped and only registry lookup is attempted.
+    db_path is used only for the not-found hint message.
+    """
+    # 1 + 2: Registry lookup first (works with or without db_stem)
+    _reg_path = _registry_lookup_local(
+        target=target, lm=lm, model_type=model_type,
+        db_stem=db_stem, model_id=model_id)
+    if _reg_path:
+        return _reg_path
+
+    # 3-5: Filename-based fallback (requires db_stem — skip for external users)
+    if db_stem:
+        stem = f"FINAL_{target}_{lm}_{model_type}_{db_stem}"
+        for candidate in [
+            os.path.join(model_dir, f"{stem}{ext}"),
+            os.path.join(model_dir, f"{stem}_classification{ext}"),
+        ]:
+            if os.path.exists(candidate):
+                return candidate
+
+        pattern = os.path.join(model_dir, f"{stem}*{ext}")
+        found   = sorted(glob.glob(pattern), key=os.path.getmtime, reverse=True)
+        non_reg = [f for f in found if '_regression' not in os.path.basename(f)]
+        if non_reg:
+            return non_reg[0]
+
+    # 6: Not found — print actionable hint with exact delphi --train command
+    _hint_db = db_path or (f"data/{db_stem}.xlsx" if db_stem else "<your_training_db.xlsx>")
+    _sep = "─" * 61
+    print(f"\n  ┌{_sep}┐")
+    print(f"  │ {model_type} ({lm}) not found for target={target}")
+    print(f"  │")
+    print(f"  │ To train this model, run:")
+    print(f"  │")
+    print(f"  │   python delphi.py --train \\")
+    print(f"  │       --target {target} \\")
+    print(f"  │       --lm {lm} --model {model_type} \\")
+    print(f"  │       --db {_hint_db}")
+    print(f"  │")
+    print(f"  │ Then re-run delphi_interpretability.py")
+    print(f"  └{_sep}┘")
     return None
 
 
@@ -2741,12 +2884,16 @@ def _load_result_from_disk(args, db_path: str, target: str,
 
     # ── Find transformer model path (for per-antibody IG) ─────────────────
     tr_path = _find_final(args.model_dir, target, args.transformer_lm,
-                          'transformer_onehot', db_stem, '.pt')
+                          'transformer_onehot', db_stem, '.pt',
+                          model_id=getattr(args, 'tr_model_id', None),
+                          db_path=db_path)
     if tr_path:
         result['transformer_model_path'] = tr_path
 
     # ── Load RF model (for per-antibody SHAP + rf_proba) ──────────────────
-    rf_path = _find_final(args.model_dir, target, args.rf_lm, 'rf', db_stem, '.pkl')
+    rf_path = _find_final(args.model_dir, target, args.rf_lm, 'rf', db_stem, '.pkl',
+                          model_id=getattr(args, 'rf_model_id', None),
+                          db_path=db_path)
     if rf_path:
         try:
             from models.randomforest import RandomForestModel
@@ -2764,7 +2911,9 @@ def _load_result_from_disk(args, db_path: str, target: str,
             log(f"[csv-exist] RF model load failed: {e}")
 
     # ── Load XGB model (for per-antibody SHAP + xgb_proba) ───────────────
-    xgb_path = _find_final(args.model_dir, target, args.xgb_lm, 'xgboost', db_stem, '.pkl')
+    xgb_path = _find_final(args.model_dir, target, args.xgb_lm, 'xgboost', db_stem, '.pkl',
+                           model_id=getattr(args, 'xgb_model_id', None),
+                           db_path=db_path)
     if xgb_path:
         try:
             from models.xgboost import XGBoostModel
@@ -2799,151 +2948,193 @@ def _load_result_from_disk(args, db_path: str, target: str,
     return result
 
 
-def _run_one_dataset(args, db_path: str, target: str,
+def _run_one_dataset(args, db_path: Optional[str], target: str,
                      outdir_base: str = None,
-                     _inject_df=None) -> dict:
+                     _inject_df=None,
+                     model_ids: dict = None) -> dict:
     """
     Compute SHAP (RF + XGB) and IG (Transformer) for one database/target pair.
-    Returns a dict with all computed data + metadata used by both the
-    single-dataset run() and the 2-row combined figure.
+
+    db_path    : training database path — optional.
+                 If None, models are found via model_ids / registry only.
+                 SHAP/IG computation still runs if --input / --predict provides sequences.
+    model_ids  : dict with keys 'rf', 'xgb', 'tr' — model_id strings for registry lookup.
+                 Overrides db_stem-based registry lookup when provided.
     """
-    db_stem = Path(db_path).stem
-    outdir  = Path(outdir_base or f"outputs/interp_{target}_{db_stem}")
+    model_ids  = model_ids or {}
+    db_stem    = Path(db_path).stem if db_path else ''
+    outdir_tag = db_stem or target
+    outdir     = Path(outdir_base or f"outputs/interp_{target}_{outdir_tag}")
     outdir.mkdir(parents=True, exist_ok=True)
 
     log = _Log(outdir / f"interp_log_{target}_{args.rf_lm}_{args.xgb_lm}_"
-                         f"{args.transformer_lm}_{db_stem}.txt")
+                         f"{args.transformer_lm}_{outdir_tag}.txt")
     result = dict(db_path=db_path, target=target, db_stem=db_stem,
                   outdir=outdir, log=log,
                   rf_shap=None, xgb_shap=None, ig_data=None,
                   rf_reg=None, xgb_reg=None, ig_reg=None, df=None,
                   transformer_model_path=None,
                   xgb_proba={}, rf_proba={},
-                  rf_model=None, xgb_model=None)   # kept for per-antibody SHAP
+                  rf_model=None, xgb_model=None)
     try:
         log("═" * 62)
-        log(f"  MLAbDev INTERPRETABILITY ANALYSIS")
-        log(f"  db         : {db_path}")
+        log(f"  DELPHI INTERPRETABILITY ANALYSIS")
+        log(f"  db         : {db_path or '(not provided — using registry/model_ids)'}")
         log(f"  target     : {target}")
         log(f"  RF  lm     : {args.rf_lm}")
         log(f"  XGB lm     : {args.xgb_lm}")
         log(f"  Trans lm   : {args.transformer_lm}")
         log(f"  model_dir  : {args.model_dir}")
         log(f"  outdir     : {outdir}")
+        if model_ids:
+            log(f"  model_ids  : {model_ids}")
         log("═" * 62)
 
         if _inject_df is not None:
             df = _inject_df
             log(f"[load] using pre-labelled inject DF: {len(df):,} rows")
-        else:
+        elif db_path:
             df = _load_db(db_path, target, log)
-        if 'label' not in df.columns:
+        elif getattr(args, 'input_file', None):
+            df = _load_db(args.input_file, target, log)
+            if target not in df.columns:
+                df[target] = 0   # placeholder — no true labels in input file
+                log(f"[load] no true labels in --input — placeholder added")
+                log(f"[load] PASS/FAIL colours in waterfall figures not meaningful")
+            log(f"[load] sequences from --input: {len(df):,} antibodies")
+        else:
+            df = None
+            log(f"[load] no sequence source — SHAP/IG skipped")
+
+        if df is not None and 'label' not in df.columns:
             df['label'] = df[target].astype(int, errors='ignore')
         result['df'] = df
 
+        _run_rf  = 'rf'               in getattr(args, 'models', ['rf', 'xgboost', 'transformer_onehot'])
+        _run_xgb = 'xgboost'          in getattr(args, 'models', ['rf', 'xgboost', 'transformer_onehot'])
+        _run_tr  = 'transformer_onehot' in getattr(args, 'models', ['rf', 'xgboost', 'transformer_onehot'])
+
+        log(f"\n[models] running: "
+            f"{'RF ' if _run_rf else ''}"
+            f"{'XGBoost ' if _run_xgb else ''}"
+            f"{'Transformer_onehot' if _run_tr else ''}")
+
         # ── RF ──────────────────────────────────────────────────────────
-        rf_path = _find_final(args.model_dir, target, args.rf_lm,
-                              'rf', db_stem, '.pkl')
-        log(f"\n[RF]  checkpoint → {rf_path or 'NOT FOUND'}")
-        if rf_path:
+        if _run_rf:
+            rf_path = _find_final(args.model_dir, target, args.rf_lm,
+                                  'rf', db_stem, '.pkl',
+                                  model_id=model_ids.get('rf'),
+                                  db_path=db_path)
+            log(f"\n[RF]  checkpoint → {rf_path or 'NOT FOUND'}")
+        else:
+            rf_path = None
+            log(f"\n[RF]  skipped (not in --models)")
+        if _run_rf and rf_path:
             try:
                 from models.randomforest import RandomForestModel
                 rf_model = RandomForestModel.load(rf_path)
                 result['rf_model'] = rf_model
-                rf_shap  = _compute_tree_shap(rf_model, df,
-                                              args.shap_max_samples, log)
-                if rf_shap is not None:
-                    result['rf_shap'] = rf_shap
-                    result['rf_reg']  = _region_attribution_tree(
-                        rf_shap, kmer_source=args.rf_lm)
-                    # Summary CSV (mean |SHAP| per feature)
-                    pd.DataFrame({
-                        'feature': rf_shap['names'],
-                        'mean_abs_shap': rf_shap['mean_abs_shap'],
-                        'region': [_feature_region(n, args.rf_lm)
-                                   for n in rf_shap['names']],
-                    }).sort_values('mean_abs_shap', ascending=False).to_csv(
-                        outdir / f"shap_rf_{target}_{args.rf_lm}_{db_stem}.csv",
-                        index=False)
-                    log(f"[RF]  csv → shap_rf_{target}_{args.rf_lm}_{db_stem}.csv")
-
-                    # Full SHAP matrix CSV (n_antibodies × n_features)
-                    # Rows: barcodes  |  Cols: shap_{feature}, fval_{feature}, true_label, pred_prob
-                    _export_full_shap_csv(
-                        rf_shap, df, target, result.get('rf_proba', {}),
-                        outdir / f"shap_rf_FULL_{target}_{args.rf_lm}_{db_stem}.csv",
-                        log, model_name=f"RF-{args.rf_lm}")
-
-                # ── RF predicted probs for ALL antibodies (for triple-model selection)
-                try:
-                    fb_rf  = rf_model.fb_
-                    ne_rf  = np.array(fb_rf.non_embedding_indices)
-                    X_rf   = fb_rf.transform(df, None)[:, ne_rf]
-                    probs_rf = rf_model.model.predict_proba(X_rf)[:, 1]
-                    result['rf_proba'] = {
-                        str(bc): float(p)
-                        for bc, p in zip(df.index, probs_rf)
-                    }
-                    log(f"[RF]  rf_proba computed for {len(result['rf_proba']):,} antibodies")
-                except Exception as _ep:
-                    log(f"[RF]  rf_proba skipped ({_ep})")
+                if df is not None:
+                    rf_shap  = _compute_tree_shap(rf_model, df,
+                                                  args.shap_max_samples, log)
+                    if rf_shap is not None:
+                        result['rf_shap'] = rf_shap
+                        result['rf_reg']  = _region_attribution_tree(
+                            rf_shap, kmer_source=args.rf_lm)
+                        pd.DataFrame({
+                            'feature': rf_shap['names'],
+                            'mean_abs_shap': rf_shap['mean_abs_shap'],
+                            'region': [_feature_region(n, args.rf_lm)
+                                       for n in rf_shap['names']],
+                        }).sort_values('mean_abs_shap', ascending=False).to_csv(
+                            outdir / f"shap_rf_{target}_{args.rf_lm}_{outdir_tag}.csv",
+                            index=False)
+                        log(f"[RF]  csv → shap_rf_{target}_{args.rf_lm}_{outdir_tag}.csv")
+                        _export_full_shap_csv(
+                            rf_shap, df, target, result.get('rf_proba', {}),
+                            outdir / f"shap_rf_FULL_{target}_{args.rf_lm}_{outdir_tag}.csv",
+                            log, model_name=f"RF-{args.rf_lm}")
+                    try:
+                        fb_rf  = rf_model.fb_
+                        ne_rf  = np.array(fb_rf.non_embedding_indices)
+                        X_rf   = fb_rf.transform(df, None)[:, ne_rf]
+                        probs_rf = rf_model.model.predict_proba(X_rf)[:, 1]
+                        result['rf_proba'] = {
+                            str(bc): float(p)
+                            for bc, p in zip(df.index, probs_rf)
+                        }
+                        log(f"[RF]  rf_proba computed for {len(result['rf_proba']):,} antibodies")
+                    except Exception as _ep:
+                        log(f"[RF]  rf_proba skipped ({_ep})")
+                else:
+                    log(f"[RF]  model loaded — skipping SHAP (no --db sequences)")
             except Exception as e:
                 log(f"[RF]  FAILED: {e}"); log(traceback.format_exc())
 
         # ── XGBoost ─────────────────────────────────────────────────────
-        xgb_path = _find_final(args.model_dir, target, args.xgb_lm,
-                               'xgboost', db_stem, '.pkl')
-        log(f"\n[XGB] checkpoint → {xgb_path or 'NOT FOUND'}")
-        if xgb_path:
+        if _run_xgb:
+            xgb_path = _find_final(args.model_dir, target, args.xgb_lm,
+                                   'xgboost', db_stem, '.pkl',
+                                   model_id=model_ids.get('xgb'),
+                                   db_path=db_path)
+            log(f"\n[XGB] checkpoint → {xgb_path or 'NOT FOUND'}")
+        else:
+            xgb_path = None
+            log(f"\n[XGB] skipped (not in --models)")
+        if _run_xgb and xgb_path:
             try:
                 from models.xgboost import XGBoostModel
                 xgb_model = XGBoostModel.load(xgb_path)
                 result['xgb_model'] = xgb_model
-                xgb_shap  = _compute_tree_shap(xgb_model, df,
-                                               args.shap_max_samples, log)
-                if xgb_shap is not None:
-                    result['xgb_shap'] = xgb_shap
-                    result['xgb_reg']  = _region_attribution_tree(
-                        xgb_shap, kmer_source=args.xgb_lm)
-                    # Summary CSV
-                    pd.DataFrame({
-                        'feature': xgb_shap['names'],
-                        'mean_abs_shap': xgb_shap['mean_abs_shap'],
-                        'region': [_feature_region(n, args.xgb_lm)
-                                   for n in xgb_shap['names']],
-                    }).sort_values('mean_abs_shap', ascending=False).to_csv(
-                        outdir / f"shap_xgb_{target}_{args.xgb_lm}_{db_stem}.csv",
-                        index=False)
-                    log(f"[XGB] csv → shap_xgb_{target}_{args.xgb_lm}_{db_stem}.csv")
-
-                    # Full SHAP matrix CSV
-                    _export_full_shap_csv(
-                        xgb_shap, df, target, result.get('xgb_proba', {}),
-                        outdir / f"shap_xgb_FULL_{target}_{args.xgb_lm}_{db_stem}.csv",
-                        log, model_name=f"XGBoost-{args.xgb_lm}")
-
-                # ── XGBoost predicted probs for ALL antibodies (for per-ab titles)
-                try:
-                    fb = xgb_model.fb_
-                    ne_idx = np.array(fb.non_embedding_indices)
-                    X_all  = fb.transform(df, None)[:, ne_idx]
-                    probs_all = xgb_model.model.predict_proba(X_all)[:, 1]
-                    result['xgb_proba'] = {
-                        str(bc): float(p)
-                        for bc, p in zip(df.index, probs_all)
-                    }
-                    log(f"[XGB] xgb_proba computed for {len(result['xgb_proba']):,} antibodies")
-                except Exception as _ep:
-                    log(f"[XGB] xgb_proba skipped ({_ep})")
+                if df is not None:
+                    xgb_shap  = _compute_tree_shap(xgb_model, df,
+                                                   args.shap_max_samples, log)
+                    if xgb_shap is not None:
+                        result['xgb_shap'] = xgb_shap
+                        result['xgb_reg']  = _region_attribution_tree(
+                            xgb_shap, kmer_source=args.xgb_lm)
+                        pd.DataFrame({
+                            'feature': xgb_shap['names'],
+                            'mean_abs_shap': xgb_shap['mean_abs_shap'],
+                            'region': [_feature_region(n, args.xgb_lm)
+                                       for n in xgb_shap['names']],
+                        }).sort_values('mean_abs_shap', ascending=False).to_csv(
+                            outdir / f"shap_xgb_{target}_{args.xgb_lm}_{outdir_tag}.csv",
+                            index=False)
+                        log(f"[XGB] csv → shap_xgb_{target}_{args.xgb_lm}_{outdir_tag}.csv")
+                        _export_full_shap_csv(
+                            xgb_shap, df, target, result.get('xgb_proba', {}),
+                            outdir / f"shap_xgb_FULL_{target}_{args.xgb_lm}_{outdir_tag}.csv",
+                            log, model_name=f"XGBoost-{args.xgb_lm}")
+                    try:
+                        fb = xgb_model.fb_
+                        ne_idx = np.array(fb.non_embedding_indices)
+                        X_all  = fb.transform(df, None)[:, ne_idx]
+                        probs_all = xgb_model.model.predict_proba(X_all)[:, 1]
+                        result['xgb_proba'] = {
+                            str(bc): float(p)
+                            for bc, p in zip(df.index, probs_all)
+                        }
+                        log(f"[XGB] xgb_proba computed for {len(result['xgb_proba']):,} antibodies")
+                    except Exception as _ep:
+                        log(f"[XGB] xgb_proba skipped ({_ep})")
+                else:
+                    log(f"[XGB] model loaded — skipping SHAP (no --db sequences)")
             except Exception as e:
                 log(f"[XGB] FAILED: {e}"); log(traceback.format_exc())
 
         # ── Transformer IG ───────────────────────────────────────────────
-        tr_path = _find_final(args.model_dir, target, args.transformer_lm,
-                              'transformer_onehot', db_stem, '.pt')
-        log(f"\n[IG]  checkpoint → {tr_path or 'NOT FOUND'}")
-        if tr_path:
-            result['transformer_model_path'] = tr_path   # for per-antibody IG
+        if _run_tr:
+            tr_path = _find_final(args.model_dir, target, args.transformer_lm,
+                                  'transformer_onehot', db_stem, '.pt',
+                                  model_id=model_ids.get('tr'),
+                                  db_path=db_path)
+            log(f"\n[IG]  checkpoint → {tr_path or 'NOT FOUND'}")
+        else:
+            tr_path = None
+            log(f"\n[IG]  skipped (not in --models)")
+        if _run_tr and tr_path:
+            result['transformer_model_path'] = tr_path
             try:
                 from models.transformer_onehot import TransformerOneHotModel
                 tr_model = TransformerOneHotModel.load(tr_path)
@@ -3168,6 +3359,18 @@ def run(args) -> int:
     # ── Resolve root output directory once ───────────────────────────────
     root_dir = Path(args.outdir) if args.outdir else Path('outputs')
 
+    # ── Resolve model_ids for both filters ───────────────────────────────
+    _model_ids_1 = {
+        'rf':  getattr(args, 'rf_model_id',  None),
+        'xgb': getattr(args, 'xgb_model_id', None),
+        'tr':  getattr(args, 'tr_model_id',  None),
+    }
+    _model_ids_2 = {
+        'rf':  getattr(args, 'rf_model_id2',  None),
+        'xgb': getattr(args, 'xgb_model_id2', None),
+        'tr':  getattr(args, 'tr_model_id2',  None),
+    }
+
     # ── Unified sample limit ──────────────────────────────────────────────
     _max = getattr(args, 'max_samples', 3000)
     if _max is None: _max = 3000
@@ -3349,15 +3552,17 @@ def run(args) -> int:
         return 0
 
     # ── Run dataset 1 (always) ────────────────────────────────────────────
-    outdir1 = root_dir / f"interp_{args.target}_{Path(args.db).stem}"
-    r1 = _run_one_dataset(args, args.db, args.target, str(outdir1))
+    outdir1 = root_dir / f"interp_{args.target}_{Path(args.db).stem if args.db else args.target}"
+    r1 = _run_one_dataset(args, args.db, args.target, str(outdir1),
+                          model_ids=_model_ids_1)
     log1 = r1['log']
 
     # ── Run dataset 2 (when --db2 / --target2 provided) ─────────────────
     r2 = None
-    if args.db2 and args.target2:
-        outdir2 = root_dir / f"interp_{args.target2}_{Path(args.db2).stem}"
-        r2 = _run_one_dataset(args, args.db2, args.target2, str(outdir2))
+    if args.target2:
+        outdir2 = root_dir / f"interp_{args.target2}_{Path(args.db2).stem if args.db2 else args.target2}"
+        r2 = _run_one_dataset(args, args.db2, args.target2, str(outdir2),
+                              model_ids=_model_ids_2)
 
     # ── Per-dataset standalone figures ───────────────────────────────────
     for r in ([r1] if r2 is None else [r1, r2]):
@@ -3473,8 +3678,18 @@ def run(args) -> int:
 
         _n_pairs = getattr(args, 'n_pairs', 20)
 
+        # Single-target: relaxed selection (Transformer only, score 0.05-0.49)
+        # Dual-target:   strict selection (all 3 models must agree)
+        if r2 is None:
+            log1(f"\n[per_ab] Single-target mode: relaxed antibody selection "
+                 f"(Transformer-only, FAIL score 0.05-0.49)")
+            fail_list, pass_list = _find_single_target_antibodies(
+                r1, log1, n_each=_n_pairs)
+        else:
+            fail_list, pass_list = _find_all_example_antibodies(
+                r1, r2, log1, n_each=_n_pairs)
+
         log1(f"\n[per_ab] Rendering per-antibody IG waterfall figure ...")
-        fail_list, pass_list = _find_all_example_antibodies(r1, r2, log1, n_each=_n_pairs)
         build_figure_per_antibody_ig(
             r1=r1, r2=r2, out_stem=out_stem, log=log1,
             n_vhvl_top=6, ig_steps=getattr(args, 'ig_steps', 100), n_pairs=_n_pairs,
@@ -3746,6 +3961,73 @@ def build_figure_xgb_dual_filter(
     log(f"[xgb_dual] → {out_stem}_xgb_dual_filter  "
         f"(n_features={n_rows}, n1={len(xgb_shap_1['shap_matrix']) if xgb_shap_1 else 0}"
         f", n2={len(xgb_shap_2['shap_matrix']) if xgb_shap_2 else 0})")
+
+
+def _find_single_target_antibodies(r, log, n_each=20):
+    """
+    Find example antibodies for SINGLE-TARGET per-antibody figures.
+
+    Relaxed selection vs dual-target:
+      - Only Transformer prediction must agree with true label
+        (RF and XGBoost agreement NOT required — they may be absent)
+      - FAIL score range: 0.05–0.49  (wider than dual-target 0.10–0.40)
+      - PASS: any Transformer score >= threshold
+
+    Returns (fail_list, pass_list) — same tuple format as
+    _find_all_example_antibodies so callers are unchanged.
+    Each entry: (barcode, tr_prob, tr_prob, xgb_prob, xgb_prob)
+    """
+    THRESH = r.get('threshold', 0.5)
+    df     = r.get('df')
+    target = r.get('target', 'label')
+
+    tr_probs  = r.get('tr_probs',  {})
+    xgb_probs = r.get('xgb_probs', {})
+    rf_probs  = r.get('rf_probs',  {})
+
+    if df is None or not tr_probs:
+        log("[per_ab_single] No df or Transformer probs — skipping")
+        return [], []
+
+    FAIL_MIN, FAIL_MAX = 0.05, 0.49   # relaxed range
+
+    fail_list, pass_list = [], []
+
+    for bc in tr_probs:
+        row = df[df['BARCODE'] == bc]
+        if row.empty:
+            continue
+        y  = int(row[target].values[0]) if target in row.columns else None
+        if y is None:
+            continue
+        tp = tr_probs[bc]
+        xp = xgb_probs.get(bc)
+        rp = rf_probs.get(bc)
+        tr_pred = 1 if tp >= THRESH else 0
+
+        # Only Transformer must agree — RF/XGBoost are optional
+        if tr_pred != y:
+            continue
+
+        if y == 0 and FAIL_MIN <= tp <= FAIL_MAX:
+            fail_list.append((bc, tp, tp, xp, xp))
+        elif y == 1:
+            pass_list.append((bc, tp, tp, xp, xp))
+
+    # Sort: FAIL closest to 0.30 (most informative mutagenesis)
+    # PASS: most confident first
+    fail_list.sort(key=lambda x: abs(x[1] - 0.30))
+    pass_list.sort(key=lambda x: -x[1])
+
+    log(f"[per_ab_single] Transformer-only selection: "
+        f"{len(fail_list)} FAIL (score {FAIL_MIN}–{FAIL_MAX})  "
+        f"{len(pass_list)} PASS  → up to {min(n_each, len(fail_list), len(pass_list))} pairs")
+
+    if len(fail_list) < n_each:
+        log(f"[per_ab_single] WARNING: only {len(fail_list)} FAIL antibodies found. "
+            f"Consider --n-pairs {len(fail_list)} or larger --max-samples.")
+
+    return fail_list[:n_each], pass_list[:n_each]
 
 
 def _find_all_example_antibodies(r1, r2, log, n_each=20):
@@ -5425,83 +5707,137 @@ def build_figure_2row_6panels(r1: dict, r2: dict, args,
 
 def main():
     ap = argparse.ArgumentParser(
-        description="MLAbDev — generate Nature Biotech interpretability figure")
-    ap.add_argument('--db',             required=True,
-                    help="Training database (.xlsx or .csv), "
-                         "e.g. data/ipi_psr_trainset.xlsx")
-    ap.add_argument('--target',         required=True,
+        description="DELPHI — interpretability figure generator",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+examples:
+  # Internal (IPI) — with training database
+  python delphi_interpretability.py \\
+      --db data/ipi_psr_trainset.xlsx --target psr_filter \\
+      --db2 data/ipi_sec_trainset.xlsx --target2 sec_filter
+
+  # External — registry model_id, public or own antibody file
+  python delphi_interpretability.py \\
+      --target psr_filter \\
+      --rf-model-id  FINAL_psr_filter_biophysical_rf_ipi_psr.pt \\
+      --xgb-model-id FINAL_psr_filter_biophysical_xgboost_ipi_psr.pt \\
+      --tr-model-id  FINAL_psr_filter_onehot_transformer_onehot_ipi_psr.pt \\
+      --input my_cohort.xlsx
+
+  # List available models first
+  python delphi.py --list-models
+        """)
+
+    # ── Core args ─────────────────────────────────────────────────────────
+    ap.add_argument('--target',  required=True,
                     help="Label column, e.g. psr_filter or sec_filter")
+    ap.add_argument('--db',      default=None,
+                    help="Training database (.xlsx or .csv). Optional — "
+                         "if omitted, models are found via --*-model-id or registry.")
+    ap.add_argument('--input',   default=None, dest='input_file',
+                    help="New antibody file for SHAP/IG computation when --db is absent "
+                         "(.xlsx or .csv, columns: BARCODE/ID, HSEQ, LSEQ, CDR3).")
 
-    ap.add_argument('--rf-lm',          default='biophysical',
-                    choices=['biophysical', 'kmer'],
-                    help="Feature mode for the RF model (default: biophysical)")
-    ap.add_argument('--xgb-lm',         default='biophysical',
-                    choices=['biophysical', 'kmer'],
-                    help="Feature mode for the XGBoost model (default: biophysical)")
-    ap.add_argument('--transformer-lm', default='onehot',
-                    choices=['onehot', 'onehot_vh'],
-                    help="Branch-1 mode for the Transformer model (default: onehot)")
+    # ── Model IDs for filter 1 ────────────────────────────────────────────
+    grp1 = ap.add_argument_group('model IDs — filter 1 (--target)')
+    grp1.add_argument('--rf-model-id',   default=None, metavar='ID',
+                      help="Registry model_id for the RF model (filter 1). "
+                           "Overrides registry auto-lookup.")
+    grp1.add_argument('--xgb-model-id',  default=None, metavar='ID',
+                      help="Registry model_id for the XGBoost model (filter 1).")
+    grp1.add_argument('--tr-model-id',   default=None, metavar='ID',
+                      help="Registry model_id for the Transformer onehot model (filter 1).")
 
-    ap.add_argument('--model-dir',      default='build/pretrained_models',
-                    help="Directory holding FINAL_*.pkl / FINAL_*.pt "
-                         "(default: build/pretrained_models)")
-    ap.add_argument('--outdir',         default=None,
-                    help="Output directory. "
-                         "Default: outputs/interp_{target}_{db_stem}")
+    # ── Second filter ─────────────────────────────────────────────────────
+    grp2 = ap.add_argument_group('second filter (--target2)')
+    grp2.add_argument('--target2',       default=None,
+                      help="Label column for second filter (e.g. sec_filter). "
+                           "When provided, generates a 2-row PSR+SEC combined figure.")
+    grp2.add_argument('--db2',           default=None,
+                      help="Training database for filter 2 (optional).")
+    grp2.add_argument('--rf-model-id2',  default=None, metavar='ID',
+                      help="Registry model_id for RF model (filter 2).")
+    grp2.add_argument('--xgb-model-id2', default=None, metavar='ID',
+                      help="Registry model_id for XGBoost model (filter 2).")
+    grp2.add_argument('--tr-model-id2',  default=None, metavar='ID',
+                      help="Registry model_id for Transformer onehot model (filter 2).")
 
-    ap.add_argument('--max-samples',      type=int, default=3000,
-                    help="Max antibodies used for SHAP (RF/XGBoost) AND IG (Transformer) "
-                         "computation. Applied uniformly to all models. "
-                         "0 = use ALL antibodies (recommended for final figures). "
-                         "Set to e.g. 500 for fast exploratory runs. (default: 3000)")
-    # Legacy aliases — still accepted so existing scripts don't break
-    ap.add_argument('--shap-max-samples', type=int, default=None,
-                    help="[legacy] Use --max-samples instead.")
-    ap.add_argument('--ig-max-samples',   type=int, default=None,
-                    help="[legacy] Use --max-samples instead. "
-                         "0 = use ALL (default, recommended for final figures).")
-    ap.add_argument('--ig-baseline',      default='zero',
-                    choices=['zero', 'mean'],
-                    help="IG baseline: 'zero' (standard one-hot baseline, default) or "
-                         "'mean' (average antibody baseline — suppresses attribution "
-                         "at conserved positions like CAR anchor). "
-                         "Use 'mean' to test whether position 3_R signal disappears. "
-                         "(default: zero)")
-    ap.add_argument('--ig-steps',         type=int, default=200,
-                    help="IG integration steps (default: 200)")
-    ap.add_argument('--n-pairs',          type=int, default=20,
-                    help="Number of per-antibody figures to generate for IG, "
-                         "XGBoost-SHAP and RF-SHAP waterfall sets. "
-                         "Each pair = 1 FAIL antibody + 1 PASS antibody. "
-                         "(default: 20)")
-    ap.add_argument('--csv-exist', action='store_true', default=False,
-                    help="Skip model loading and SHAP/IG computation entirely. "
-                         "Load all data from previously saved CSV and NPZ files "
-                         "and regenerate all figures. "
-                         "Requires --db/--target (and --db2/--target2 for combined figures) "
-                         "to locate the output directories. "
-                         "Use this when you only want to update figure styling "
-                         "without waiting for SHAP/IG to rerun. "
-                         "(default: False)")
-    ap.add_argument('--predict',          default=None,
-                    help="Path to NEW unseen antibody file (.xlsx or .csv) with columns: "
-                         "BARCODE (or ID), HSEQ, LSEQ, CDR3. "
-                         "All three models predict on this set; the same interpretability "
-                         "plots are produced using predicted labels (no true labels needed). "
-                         "Requires --db/--target (used for model lookup only) and --db2/--target2 "
-                         "for a second filter. Outputs go to --outdir/predict_{stem}/.")
-    ap.add_argument('--predict2',         default=None,
-                    help="Second unseen antibody file for the second filter (--target2). "
-                         "If omitted, --predict is used for both filters.")
-    ap.add_argument('--target2',          default=None,
-                    help="Target column for second database (e.g. sec_filter)")
-    ap.add_argument('--db2',              default=None,
-                    help="Second database (e.g. sec/ipi_sec.xlsx). "
-                         "When provided with --target2, produces a 2-row "
-                         "PSR+SEC combined figure in addition to all "
-                         "individual per-dataset figures.")
+    # ── Model selection ────────────────────────────────────────────────────
+    grp_sel = ap.add_argument_group('model selection')
+    grp_sel.add_argument('--models', nargs='+',
+                         choices=['rf', 'xgboost', 'transformer_onehot'],
+                         default=['rf', 'xgboost', 'transformer_onehot'],
+                         metavar='MODEL',
+                         help="Which models to run. Any subset of: "
+                              "rf  xgboost  transformer_onehot. "
+                              "Default: all three. Examples:\n"
+                              "  --models rf\n"
+                              "  --models transformer_onehot\n"
+                              "  --models rf transformer_onehot")
+
+    # ── LM / architecture ─────────────────────────────────────────────────
+    grp_lm = ap.add_argument_group('model architecture')
+    grp_lm.add_argument('--rf-lm',          default='biophysical',
+                        choices=['biophysical', 'kmer'],
+                        help="Feature mode for the RF model (default: biophysical)")
+    grp_lm.add_argument('--xgb-lm',         default='biophysical',
+                        choices=['biophysical', 'kmer'],
+                        help="Feature mode for the XGBoost model (default: biophysical)")
+    grp_lm.add_argument('--transformer-lm', default='onehot',
+                        choices=['onehot', 'onehot_vh'],
+                        help="Branch-1 mode for the Transformer model (default: onehot)")
+    grp_lm.add_argument('--model-dir',      default='build/pretrained_models',
+                        help="Directory holding FINAL_*.pkl / FINAL_*.pt "
+                             "(fallback when registry lookup fails, default: build/pretrained_models)")
+
+    # ── Output ────────────────────────────────────────────────────────────
+    ap.add_argument('--outdir', default=None,
+                    help="Output directory for all figures, CSVs and logs. "
+                         "Default: outputs/interp_{target}_{db_stem}/ "
+                         "For combined figures (--target2), a second directory "
+                         "outputs/interp_{target2}_{db2_stem}/ is also created, "
+                         "plus outputs/interp_{target}_{target2}_combined/.")
+
+    # ── Computation ───────────────────────────────────────────────────────
+    grp_c = ap.add_argument_group('computation')
+    grp_c.add_argument('--max-samples',      type=int, default=3000,
+                       help="Max antibodies for SHAP + IG. 0 = all. (default: 3000)")
+    grp_c.add_argument('--shap-max-samples', type=int, default=None,
+                       help="[legacy] Use --max-samples instead.")
+    grp_c.add_argument('--ig-max-samples',   type=int, default=None,
+                       help="[legacy] Use --max-samples instead. 0 = all.")
+    grp_c.add_argument('--ig-baseline',      default='zero',
+                       choices=['zero', 'mean'],
+                       help="IG baseline: 'zero' (default) or 'mean' (suppresses "
+                            "attribution at conserved positions like CAR).")
+    grp_c.add_argument('--ig-steps',         type=int, default=200,
+                       help="IG integration steps (default: 200)")
+    grp_c.add_argument('--n-pairs',          type=int, default=20,
+                       help="Per-antibody waterfall figures to generate (default: 20)")
+    grp_c.add_argument('--csv-exist',        action='store_true', default=False,
+                       help="Skip SHAP/IG — regenerate figures from saved CSVs/NPZs.")
+    grp_c.add_argument('--predict',          default=None,
+                       help="New antibody file for prediction mode (.xlsx or .csv). "
+                            "Models predict on this set; interpretability uses "
+                            "predicted labels.")
+    grp_c.add_argument('--predict2',         default=None,
+                       help="Second file for prediction mode (filter 2). "
+                            "If omitted, --predict is used for both filters.")
 
     args = ap.parse_args()
+
+    # ── Validate: need at least --db or --input or --predict ─────────────
+    if not args.db and not getattr(args, 'input_file', None) and not args.predict \
+            and not args.csv_exist:
+        ap.error(
+            "Provide at least one sequence source:\n"
+            "  --db       training database (internal/public)\n"
+            "  --input    new antibody file (no true labels needed)\n"
+            "  --predict  new antibody file (prediction mode)\n"
+            "  --csv-exist  regenerate figures from saved CSVs only\n\n"
+            "To discover available models: python delphi.py --list-models"
+        )
+
     sys.exit(run(args))
 
 
