@@ -1,11 +1,11 @@
 # models/__init__.py
 
-from .xgboost_bk import XGBoostModel
+from .xgboost import XGBoostModel
 from .randomforest import RandomForestModel
 from .cnn import CNNClassifier
 from .transformer_onehot import TransformerOneHotModel
 #from .transformer_onehot_vh import TransformerOneHotModel_VH
-from .transformer_lm_old import TransformerLMModel
+from .transformer_lm import TransformerLMModel
 
 
 available_models = {
