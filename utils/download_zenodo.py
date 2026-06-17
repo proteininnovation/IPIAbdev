@@ -201,6 +201,10 @@ def main():
     ap.add_argument("--filter",  default=None,
                     help="Only download files whose name contains this string "
                          "(e.g. --filter psr_filter  or  --filter .pt)")
+    ap.add_argument("--include-embeddings", action="store_true",
+                    help="Also download DS1 embedding files (DS1*.emb.csv). "
+                         "These are large and not needed for prediction. "
+                         "Excluded by default.")
     args = ap.parse_args()
 
     out_dir = Path(args.outdir)
@@ -214,6 +218,8 @@ def main():
     print(f"  Token   : {'provided' if args.token else 'none (public only)'}")
     if args.dry_run:
         print("  Mode    : DRY-RUN")
+    emb_status = "included" if args.include_embeddings else "excluded (use --include-embeddings)"
+    print(f"  Embeddings: DS1*.emb.csv {emb_status}")
     if args.filter:
         print(f"  Filter  : '{args.filter}'")
     print("══════════════════════════════════════════════════════════════════")
@@ -231,6 +237,16 @@ def main():
         files = [f for f in files
                  if args.filter in (f.get("key") or f.get("filename", ""))]
         print(f"  After filter '{args.filter}': {len(files)} files")
+
+    # Exclude DS1 embedding CSVs by default (large, not needed for prediction)
+    if not args.include_embeddings:
+        before = len(files)
+        files  = [f for f in files
+                  if ".emb.csv" not in (f.get("key") or f.get("filename", ""))]
+        skipped = before - len(files)
+        if skipped:
+            print(f"  Skipped {skipped} DS1 embedding file(s) "
+                  f"(use --include-embeddings to download them)")
 
     if not files:
         print("  No files match the filter.")
