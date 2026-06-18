@@ -798,6 +798,14 @@ def _panel_shap_beeswarm(ax, shap_data: Optional[dict], title: str,
     rng     = np.random.default_rng(0)
 
     import matplotlib.cm as _cm
+
+def _safe_cmap(name):
+    """matplotlib>=3.7 removed cm.get_cmap() — use colormaps[] instead."""
+    try:
+        return _cm.get_cmap(name)           # matplotlib < 3.7
+    except AttributeError:
+        import matplotlib
+        return matplotlib.colormaps[name]   # matplotlib >= 3.7
     import matplotlib.colors as _mc
     cmap    = _cm.RdBu_r
     dot_s   = 7      # point size — larger for readability
@@ -1565,6 +1573,14 @@ def build_figure_3beeswarms(rf_shap, xgb_shap, ig_data,
     font_scale   : multiply all font sizes (1.0 = default, 1.2 = larger)
     """
     import matplotlib.cm as _cm
+
+def _safe_cmap(name):
+    """matplotlib>=3.7 removed cm.get_cmap() — use colormaps[] instead."""
+    try:
+        return _cm.get_cmap(name)           # matplotlib < 3.7
+    except AttributeError:
+        import matplotlib
+        return matplotlib.colormaps[name]   # matplotlib >= 3.7
     import matplotlib.colors as _mc
     import matplotlib.transforms as _mt
     from matplotlib.gridspec import GridSpec
@@ -1594,7 +1610,7 @@ def build_figure_3beeswarms(rf_shap, xgb_shap, ig_data,
     ax_xgb = fig.add_subplot(gs[0, 1])
     ax_ig  = fig.add_subplot(gs[0, 2])
 
-    cmap_feat = _cm.get_cmap('RdBu_r')
+    cmap_feat = _safe_cmap('RdBu_r')
     rng = np.random.default_rng(42)
 
     def _pretty(l):
@@ -1813,6 +1829,14 @@ def _standalone_shap_beeswarm(shap_data: Optional[dict],
                     same RdBu_r scale used by shap.summary_plot()
     """
     import matplotlib.cm as _cm
+
+def _safe_cmap(name):
+    """matplotlib>=3.7 removed cm.get_cmap() — use colormaps[] instead."""
+    try:
+        return _cm.get_cmap(name)           # matplotlib < 3.7
+    except AttributeError:
+        import matplotlib
+        return matplotlib.colormaps[name]   # matplotlib >= 3.7
     import matplotlib.colors as _mc
 
     if shap_data is None:
@@ -1832,7 +1856,7 @@ def _standalone_shap_beeswarm(shap_data: Optional[dict],
                  .replace('_ph7', '').replace('_', '_'))
 
     pretty = [_pretty(names[i]) for i in order]
-    cmap   = _cm.get_cmap('RdBu_r')   # matches shap.summary_plot default
+    cmap   = _safe_cmap('RdBu_r')   # matches shap.summary_plot default
     rng    = np.random.default_rng(42)
 
     fig, ax = plt.subplots(figsize=(10, max(5, n_feat * 0.35)))
@@ -1898,6 +1922,14 @@ def _standalone_ig_beeswarm(ig_data: Optional[dict],
              If blue dots are RIGHT → anionic residues here are protective.
     """
     import matplotlib.cm as _cm
+
+def _safe_cmap(name):
+    """matplotlib>=3.7 removed cm.get_cmap() — use colormaps[] instead."""
+    try:
+        return _cm.get_cmap(name)           # matplotlib < 3.7
+    except AttributeError:
+        import matplotlib
+        return matplotlib.colormaps[name]   # matplotlib >= 3.7
     import matplotlib.colors as _mc
 
     if ig_data is None:
@@ -1943,7 +1975,7 @@ def _standalone_ig_beeswarm(ig_data: Optional[dict],
 
     # Colormap: blue (−1, anionic) → grey (0, neutral) → red (+1, cationic)
     # Use TwoSlopeNorm centred at 0
-    cmap = _cm.get_cmap('RdBu_r')
+    cmap = _safe_cmap('RdBu_r')
     norm = _mc.TwoSlopeNorm(vmin=-1, vcenter=0, vmax=1)
     rng  = np.random.default_rng(42)
 
@@ -3822,6 +3854,14 @@ def build_figure_xgb_dual_filter(
     {out_stem}_xgb_dual_filter.{tiff|pdf|png}
     """
     import matplotlib.cm as _cm
+
+def _safe_cmap(name):
+    """matplotlib>=3.7 removed cm.get_cmap() — use colormaps[] instead."""
+    try:
+        return _cm.get_cmap(name)           # matplotlib < 3.7
+    except AttributeError:
+        import matplotlib
+        return matplotlib.colormaps[name]   # matplotlib >= 3.7
     import matplotlib.colors as _mc
     from matplotlib.gridspec import GridSpec
 
@@ -3831,7 +3871,7 @@ def build_figure_xgb_dual_filter(
         return
 
     rng = np.random.default_rng(42)
-    cmap = _cm.get_cmap('RdBu_r')
+    cmap = _safe_cmap('RdBu_r')
 
     # ── Build shared feature row order ───────────────────────────────────
     # Collect feature names appearing in either panel
@@ -4687,6 +4727,14 @@ def _waterfall_shap_single_ab(ax, bc: str, r: dict, top_n: int = 25,
     Returns (true_label, pred_prob, filter_name, outcome_str, title_col)
     """
     import matplotlib.cm as _cm
+
+def _safe_cmap(name):
+    """matplotlib>=3.7 removed cm.get_cmap() — use colormaps[] instead."""
+    try:
+        return _cm.get_cmap(name)           # matplotlib < 3.7
+    except AttributeError:
+        import matplotlib
+        return matplotlib.colormaps[name]   # matplotlib >= 3.7
     import matplotlib.colors as _mc2
 
     df     = r['df']
@@ -4748,7 +4796,7 @@ def _waterfall_shap_single_ab(ax, bc: str, r: dict, top_n: int = 25,
                   for i in order]
 
         # Colour by feature value
-        cmap = _cm.get_cmap('RdBu_r')
+        cmap = _safe_cmap('RdBu_r')
         lo, hi = xv_top.min(), xv_top.max()
         norm_xv = (xv_top - lo) / (hi - lo + 1e-10)
         colors  = [cmap(v) for v in norm_xv]
@@ -5536,6 +5584,14 @@ def build_figure_2row_6panels(r1: dict, r2: dict, args,
     No figure super-title. No external legend strip.
     """
     import matplotlib.cm as _cm
+
+def _safe_cmap(name):
+    """matplotlib>=3.7 removed cm.get_cmap() — use colormaps[] instead."""
+    try:
+        return _cm.get_cmap(name)           # matplotlib < 3.7
+    except AttributeError:
+        import matplotlib
+        return matplotlib.colormaps[name]   # matplotlib >= 3.7
     import matplotlib.colors as _mc
     from matplotlib.gridspec import GridSpec
 
@@ -5553,7 +5609,7 @@ def build_figure_2row_6panels(r1: dict, r2: dict, args,
     FIG_W     = 16.0   # wider for larger labels
     FIG_H     = row_px * 2 + 1.5
 
-    cmap_feat = _cm.get_cmap('RdBu_r')
+    cmap_feat = _safe_cmap('RdBu_r')
     rng       = np.random.default_rng(42)
 
     fig = plt.figure(figsize=(FIG_W, FIG_H))
