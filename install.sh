@@ -3,18 +3,12 @@
 # DELPHI — Installation Script
 # Institute for Protein Innovation (IPI)
 #
-# Works on all platforms:
-#   Linux   + NVIDIA GPU (CUDA 11 or 12)
-#   Linux   + CPU only
-#   macOS   + Apple Silicon (MPS)
-#   macOS   + Intel (CPU)
+# Installs DELPHI and all dependencies.
+# Auto-installs Miniconda if conda is not found (no sudo needed).
 #
 # Usage:
 #   chmod +x install.sh
 #   ./install.sh
-#
-# After installation:
-#   conda activate delphi
 # ══════════════════════════════════════════════════════════════════════════════
 
 set -e
@@ -27,159 +21,166 @@ echo "════════════════════════�
 echo "  DELPHI — Installation"
 echo "══════════════════════════════════════════════════════════════════"
 echo ""
+echo "  OS : $(uname -s) $(uname -m)"
 
-# ── Check conda ───────────────────────────────────────────────────────────────
-if ! command -v conda &>/dev/null; then
-    echo "ERROR: conda not found."
-    echo "  Install Miniconda: https://docs.conda.io/en/latest/miniconda.html"
+# ── Step 1: Ensure conda is available (auto-install Miniconda if needed) ──────
+echo ""
+echo "── Step 1: Check / install conda ───────────────────────────────"
+
+CONDA_BIN=""
+for _loc in \
+    "$(command -v conda 2>/dev/null)" \
+    "${CONDA_EXE:-}" \
+    "$HOME/miniconda3/bin/conda" \
+    "$HOME/anaconda3/bin/conda" \
+    "/opt/conda/bin/conda" \
+    "/usr/local/miniconda3/bin/conda"; do
+    [ -x "$_loc" ] && CONDA_BIN="$_loc" && break
+done
+
+# Also detect via CONDA_PREFIX (active env)
+if [ -z "$CONDA_BIN" ] && [ -n "${CONDA_PREFIX:-}" ]; then
+    _try="$(dirname "$CONDA_PREFIX")/bin/conda"
+    [ -x "$_try" ] && CONDA_BIN="$_try"
+fi
+
+if [ -n "$CONDA_BIN" ]; then
+    echo "  conda found : $($CONDA_BIN --version)"
+else
+    echo "  conda not found — installing Miniconda (no sudo needed)..."
+    OS=$(uname -s); ARCH=$(uname -m)
+    case "$OS-$ARCH" in
+        Linux-x86_64)   URL="https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh" ;;
+        Darwin-arm64)   URL="https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh" ;;
+        Darwin-x86_64)  URL="https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh" ;;
+        *)
+            echo "  ERROR: Unsupported platform: $OS $ARCH"
+            exit 1 ;;
+    esac
+    wget -q "$URL" -O /tmp/miniconda.sh
+    bash /tmp/miniconda.sh -b -p "$HOME/miniconda3"
+    rm /tmp/miniconda.sh
+    CONDA_BIN="$HOME/miniconda3/bin/conda"
+    HAS_CONDA=true
+    # Source conda for this shell session immediately
+    source "$HOME/miniconda3/etc/profile.d/conda.sh"
+    # Initialize for all future sessions
+    "$CONDA_BIN" init bash 2>/dev/null || true
+    echo "  Miniconda installed → $HOME/miniconda3/"
+    echo "  Conda initialized (restart terminal or: source ~/.bashrc)"
+fi
+
+# ── Step 2: Create delphi conda environment ───────────────────────────────────
+echo ""
+echo "── Step 2: Create conda environment ($ENV_NAME, Python $PYTHON_VERSION) ─"
+
+CONDA_BASE=$(dirname $(dirname "$CONDA_BIN"))
+# Source conda.sh — makes 'conda activate' work in this script
+if [ -f "$CONDA_BASE/etc/profile.d/conda.sh" ]; then
+    source "$CONDA_BASE/etc/profile.d/conda.sh"
+elif [ -f "$HOME/miniconda3/etc/profile.d/conda.sh" ]; then
+    source "$HOME/miniconda3/etc/profile.d/conda.sh"
+else
+    echo "ERROR: conda.sh not found — cannot activate environment"
     exit 1
 fi
-echo "  conda   : $(conda --version)"
-echo "  OS      : $(uname -s) $(uname -m)"
 
-# ── Create environment ────────────────────────────────────────────────────────
-echo ""
-echo "── Step 1: Create conda environment ($ENV_NAME, Python $PYTHON_VERSION) ─"
-if conda env list | grep -q "^$ENV_NAME "; then
-    echo "  Environment '$ENV_NAME' already exists — skipping creation"
+if $CONDA_BIN env list | grep -q "^$ENV_NAME "; then
+    echo "  Environment '$ENV_NAME' already exists — skipping"
 else
-    conda create -n $ENV_NAME python=$PYTHON_VERSION -y
+    $CONDA_BIN create -n $ENV_NAME python=$PYTHON_VERSION -y
     echo "  Environment '$ENV_NAME' created"
 fi
 
-# Activate environment
-source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate $ENV_NAME
 echo "  Activated : $ENV_NAME  (Python $(python3 --version))"
 
-# ── Detect platform and install PyTorch ──────────────────────────────────────
+# ── Step 3: Install PyTorch (pip wheel — avoids Intel MKL Bus error) ─────────
 echo ""
-echo "── Step 2: Install PyTorch (platform-aware, via pip wheel) ─────"
-echo "   Using pip wheels avoids Intel MKL conflicts on Linux GPU machines."
+echo "── Step 3: Install PyTorch (GPU-aware, via pip wheel) ──────────"
 
-OS=$(uname -s)
-ARCH=$(uname -m)
-TORCH_URL=""
-TORCH_NOTE=""
-
-if [ "$OS" = "Darwin" ]; then
-    # macOS: pip install without --index-url (supports both Intel + Apple Silicon MPS)
-    TORCH_URL=""
-    TORCH_NOTE="macOS (Apple Silicon MPS / Intel CPU)"
-
-elif [ "$OS" = "Linux" ]; then
-    # Linux: detect CUDA version
-    CUDA_VER=""
-    if command -v nvidia-smi &>/dev/null; then
-        CUDA_VER=$(nvidia-smi 2>/dev/null | grep -oP "CUDA Version: \K[0-9]+" | head -1)
-    fi
-
-    if [ -z "$CUDA_VER" ]; then
-        TORCH_URL="https://download.pytorch.org/whl/cpu"
-        TORCH_NOTE="Linux CPU-only"
-    elif [ "$CUDA_VER" -ge 12 ] 2>/dev/null; then
-        TORCH_URL="https://download.pytorch.org/whl/cu121"
-        TORCH_NOTE="Linux + CUDA $CUDA_VER (using cu121 wheel)"
-    elif [ "$CUDA_VER" -ge 11 ] 2>/dev/null; then
-        TORCH_URL="https://download.pytorch.org/whl/cu118"
-        TORCH_NOTE="Linux + CUDA $CUDA_VER (using cu118 wheel)"
-    else
-        TORCH_URL="https://download.pytorch.org/whl/cpu"
-        TORCH_NOTE="Linux CPU (CUDA $CUDA_VER not supported)"
-    fi
-else
-    # Windows or other
-    TORCH_URL=""
-    TORCH_NOTE="Unknown OS — installing default PyTorch"
-fi
-
-echo "  Platform  : $TORCH_NOTE"
-
-# Purge any existing PyTorch (conda or pip) to avoid libtorch_cpu.so conflicts
-echo "  Removing any existing PyTorch installation..."
-conda remove pytorch torchvision torchaudio torchtriton \
-    pytorch-cuda pytorch-mutex --force -y 2>/dev/null || true
+# Purge any existing conda/pip PyTorch to avoid libtorch_cpu.so conflicts
+$CONDA_BIN remove -n $ENV_NAME pytorch torchvision torchaudio \
+    torchtriton pytorch-cuda pytorch-mutex --force -y 2>/dev/null || true
 pip uninstall torch torchvision torchaudio triton -y 2>/dev/null || true
 
+TORCH_URL=""
+CUDA_VER=""
+if command -v nvidia-smi &>/dev/null; then
+    CUDA_VER=$(nvidia-smi 2>/dev/null | grep -oP "CUDA Version: \K[0-9]+" | head -1)
+    echo "  GPU detected  |  CUDA $CUDA_VER"
+fi
+
+case "$(uname -s)-${CUDA_VER}" in
+    Linux-1[2-9]|Linux-2[0-9]) TORCH_URL="https://download.pytorch.org/whl/cu121" ; NOTE="CUDA 12.x" ;;
+    Linux-11)                   TORCH_URL="https://download.pytorch.org/whl/cu118" ; NOTE="CUDA 11.x" ;;
+    Linux-*)                    TORCH_URL="https://download.pytorch.org/whl/cpu"   ; NOTE="CPU only" ;;
+    Darwin-*)                   TORCH_URL=""                                        ; NOTE="macOS (MPS/CPU)" ;;
+esac
+
+echo "  Platform : $NOTE"
 if [ -n "$TORCH_URL" ]; then
-    echo "  Wheel URL : $TORCH_URL"
     pip install torch torchvision torchaudio --index-url "$TORCH_URL"
 else
     pip install torch torchvision torchaudio
 fi
 
-# Verify PyTorch
-python3 - << 'PYEOF'
+python3 -c "
 import torch
-print(f"  PyTorch   : {torch.__version__}")
+print(f'  PyTorch {torch.__version__}')
 if torch.cuda.is_available():
-    print(f"  CUDA GPU  : {torch.cuda.get_device_name(0)}")
-elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
-    print(f"  MPS (Apple Silicon): available")
+    print(f'  GPU: {torch.cuda.get_device_name(0)}')
+elif hasattr(torch.backends,'mps') and torch.backends.mps.is_available():
+    print('  Accelerator: Apple MPS')
 else:
-    print(f"  Compute   : CPU only")
-PYEOF
+    print('  Accelerator: CPU only')
+"
 
-# ── HMMER + ANARCI via conda ──────────────────────────────────────────────────
+# ── Step 4: Install HMMER + ANARCI ───────────────────────────────────────────
 echo ""
-echo "── Step 3: Install HMMER + ANARCI ──────────────────────────────"
-conda install -c bioconda hmmer anarci -y
+echo "── Step 4: Install HMMER + ANARCI ──────────────────────────────"
+$CONDA_BIN install -n $ENV_NAME -c bioconda hmmer anarci -y
 echo "  HMMER + ANARCI installed"
 
-# ── All pip packages (torch already installed above) ─────────────────────────
+# ── Step 5: Install pip packages ─────────────────────────────────────────────
 echo ""
-echo "── Step 4: Install pip packages ────────────────────────────────"
+echo "── Step 5: Install pip packages ────────────────────────────────"
 pip install -r requirements.txt
 echo "  All packages installed"
 
-# ── Pre-download IgBERT weights ───────────────────────────────────────────────
+# ── Step 6: Pre-download IgBERT weights ──────────────────────────────────────
 echo ""
-echo "── Step 5: Pre-download IgBERT weights ─────────────────────────"
-if ! python3 -c "import torch" 2>/dev/null; then
-    echo "  WARNING: torch import failed — skipping IgBERT download"
-else
-    # Run in subprocess to isolate any CUDA Bus error from install.sh
-    python3 -c "
+echo "── Step 6: Pre-download IgBERT weights ─────────────────────────"
+python3 -c "
 import subprocess, sys, os
-r = subprocess.run([sys.executable, '-c', '''
-from transformers import AutoTokenizer, AutoModel
-print(\\\"  Downloading Exscientia/IgBert...\\\")
-AutoTokenizer.from_pretrained(\\\"Exscientia/IgBert\\\")
-AutoModel.from_pretrained(\\\"Exscientia/IgBert\\\")
-print(\\\"  IgBERT weights cached\\\")
-'''], capture_output=True, text=True, env=os.environ.copy())
-if r.returncode == 0:
-    print(r.stdout.strip())
-else:
-    print('  WARNING: IgBERT download failed (will download automatically on first use)')
-    print('  Run manually after install:')
-    print('    python -c \"from transformers import AutoModel; AutoModel.from_pretrained(chr(39)+'+'Exscientia/IgBert'+chr(39)+')\"')
-" 2>/dev/null || echo "  WARNING: IgBERT download failed — will download automatically on first use"
-fi
+r = subprocess.run([sys.executable, '-c',
+    'from transformers import AutoTokenizer, AutoModel; '
+    'AutoTokenizer.from_pretrained(\"Exscientia/IgBert\"); '
+    'AutoModel.from_pretrained(\"Exscientia/IgBert\"); '
+    'print(\"  IgBERT weights cached\")'],
+    capture_output=True, text=True, env=os.environ.copy())
+print(r.stdout.strip() if r.returncode == 0 else
+      '  WARNING: IgBERT download failed — will download on first use')
+" 2>/dev/null || echo "  WARNING: IgBERT download failed — will download on first use"
 
-# ── Verify all imports ────────────────────────────────────────────────────────
+# ── Step 7: Verify installation ───────────────────────────────────────────────
 echo ""
-echo "── Step 6: Verify installation ─────────────────────────────────"
+echo "── Step 7: Verify installation ─────────────────────────────────"
 python3 - << 'PYEOF'
 import sys, subprocess, os
 
-# Include conda bin so ANARCI and other conda tools are found in subprocesses
 env = os.environ.copy()
-conda_prefix = os.environ.get("CONDA_PREFIX", "")
-if conda_prefix:
-    env["PATH"] = os.path.join(conda_prefix, "bin") + ":" + env.get("PATH", "")
+if os.environ.get("CONDA_PREFIX"):
+    env["PATH"] = os.path.join(os.environ["CONDA_PREFIX"], "bin") + ":" + env.get("PATH","")
 
-def check_import(pkg, name, optional=False):
-    r = subprocess.run(
-        [sys.executable, "-c", f"import {pkg}"],
-        capture_output=True, timeout=30, env=env
-    )
+def check(pkg, name, optional=False):
+    r = subprocess.run([sys.executable, "-c", f"import {pkg}"],
+                       capture_output=True, timeout=30, env=env)
     if r.returncode == 0:
         print(f"  OK      {name}")
         return True
-    elif r.returncode == -7:   # SIGBUS
-        tag = "WARN   " if optional else "BUS ERR"
-        print(f"  {tag} {name}  ← Bus error at import (CUDA init issue)")
+    elif r.returncode == -7:
+        print(f"  WARN    {name}  [Bus error at import — works at runtime]")
         return optional
     else:
         if not optional:
@@ -189,95 +190,96 @@ def check_import(pkg, name, optional=False):
             if r2.returncode == 0:
                 print(f"  OK      {name}  (just installed)")
                 return True
-            else:
-                print(f"  FAIL    {name}  — pip install {pkg} failed")
+            print(f"  FAIL    {name}")
         else:
-            print(f"  MISSING {name}")
+            print(f"  MISSING {name}  [optional]")
         return False
 
 ok = True
-
-# Core packages — must all pass
-core = [
-    ("torch",        "PyTorch"),
-    ("numpy",        "NumPy"),
-    ("pandas",       "Pandas"),
-    ("sklearn",      "scikit-learn"),
-    ("xgboost",      "XGBoost"),
-    ("captum",       "Captum  (Integrated Gradients)"),
-    ("shap",         "SHAP"),
-    ("matplotlib",   "Matplotlib"),
-    ("seaborn",      "Seaborn"),
-    ("yaml",         "PyYAML"),
-    ("Levenshtein",  "Levenshtein"),
-    ("openpyxl",     "openpyxl"),
-    ("pptx",         "python-pptx"),
-]
 print("  Core packages:")
-for pkg, name in core:
-    if not check_import(pkg, name, optional=False):
-        ok = False
+for pkg, name in [
+    ("torch","PyTorch"), ("numpy","NumPy"), ("pandas","Pandas"),
+    ("sklearn","scikit-learn"), ("xgboost","XGBoost"),
+    ("captum","Captum (Integrated Gradients)"), ("shap","SHAP"),
+    ("matplotlib","Matplotlib"), ("seaborn","Seaborn"),
+    ("yaml","PyYAML"), ("Levenshtein","Levenshtein"),
+    ("openpyxl","openpyxl"), ("pptx","python-pptx"),
+]:
+    if not check(pkg, name): ok = False
 
-# Optional PLMs — Bus errors shown as warnings, not failures
 print("\n  Optional PLMs:")
-plms = [
-    ("transformers", "Transformers (IgBERT / AntiBERTa2)"),
-    ("ablang2",      "ABlang2"),
-    ("antiberty",    "AntiBERTy"),
-    ("peft",         "PEFT (LoRA)"),
-]
-for pkg, name in plms:
-    check_import(pkg, name, optional=True)
+for pkg, name in [
+    ("transformers","Transformers (IgBERT / AntiBERTa2)"),
+    ("ablang2","ABlang2"), ("antiberty","AntiBERTy"), ("peft","PEFT (LoRA)"),
+]:
+    check(pkg, name, optional=True)
 
-# ANARCI — check as command-line tool, auto-install if missing
 print()
-anarci_path = subprocess.run(["which", "anarci"], capture_output=True,
-                              text=True, env=env).stdout.strip()
-if anarci_path:
-    print(f"  OK      ANARCI  ({anarci_path})")
-else:
-    print("  MISSING ANARCI — installing automatically...")
-    r = subprocess.run(
-        ["conda", "install", "-c", "bioconda", "hmmer", "anarci", "-y"],
-        env=env
-    )
-    if r.returncode == 0:
-        anarci_path = subprocess.run(["which", "anarci"], capture_output=True,
-                                     text=True, env=env).stdout.strip()
-        print(f"  OK      ANARCI installed  ({anarci_path})")
-    else:
-        print("  FAIL    ANARCI install failed — run manually:")
-        print("          conda install -c bioconda hmmer anarci")
-        ok = False
+# Find anarci: check CONDA_PREFIX/bin/ directly + PATH
+conda_prefix = os.environ.get("CONDA_PREFIX", "")
+search_paths = [
+    os.path.join(conda_prefix, "bin"),
+    os.path.expanduser("~/miniconda3/envs/delphi/bin"),
+    os.path.expanduser("~/anaconda3/envs/delphi/bin"),
+] + env.get("PATH", "").split(":")
 
-# CUDA check
-r = subprocess.run(
-    [sys.executable, "-c",
-     "import torch; cuda=torch.cuda.is_available(); "
-     "gpu=torch.cuda.get_device_name(0) if cuda else 'N/A'; "
-     "print(f'PyTorch {torch.__version__}  CUDA={cuda}  GPU={gpu}')"],
-    capture_output=True, text=True, timeout=30, env=env
-)
-if r.returncode == 0:
-    print(f"\n  {r.stdout.strip()}")
-else:
-    print("\n  WARNING: CUDA check failed")
+import shutil
+anarci = None
+for p in search_paths:
+    candidate = os.path.join(p, "anarci")
+    if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+        anarci = candidate
+        break
+if not anarci:
+    anarci = shutil.which("anarci")   # last resort
 
-if not ok:
-    print("\n  Some core packages missing — check warnings above.")
-    sys.exit(1)
+if anarci:
+    print(f"  OK      ANARCI  ({anarci})")
 else:
-    print("\n  Installation OK — core packages all verified.")
+    print("  MISSING ANARCI — installing...")
+    import shutil as _sh
+    conda = (_sh.which("conda") or
+             os.path.expanduser("~/miniconda3/bin/conda"))
+    subprocess.run([conda, "install", "-c", "bioconda", "hmmer", "anarci", "-y"], env=env)
+    for p in search_paths:
+        candidate = os.path.join(p, "anarci")
+        if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            anarci = candidate; break
+    print(f"  OK      ANARCI  ({anarci})" if anarci else "  FAIL    ANARCI")
+    if not anarci: ok = False
+
+r = subprocess.run([sys.executable, "-c",
+    "import torch; c=torch.cuda.is_available(); "
+    "g=torch.cuda.get_device_name(0) if c else 'CPU'; "
+    "print(f'  PyTorch {torch.__version__}  |  {g}')"],
+    capture_output=True, text=True, env=env)
+if r.returncode == 0: print(r.stdout.strip())
+
+print()
+if ok: print("  Installation complete — all core packages verified.")
+else:  print("  WARNING: some packages failed — check above."); sys.exit(1)
 PYEOF
 
 echo ""
 echo "══════════════════════════════════════════════════════════════════"
-echo "  Installation complete."
+echo "  Done."
 echo ""
-echo "  Activate:   conda activate $ENV_NAME"
+echo "  Activate DELPHI — run this in your terminal:"
 echo ""
-echo "  Next steps:"
+echo "    source activate.sh"
+echo ""
+echo "  Next steps (after activating):"
 echo "    python utils/download_zenodo.py   # download pretrained models"
 echo "    python tests/test_delphi.py       # run integration tests"
 echo "══════════════════════════════════════════════════════════════════"
 echo ""
+
+# Write activate.sh so users can source it in their terminal
+cat > activate.sh << ACTIVATE
+#!/bin/bash
+# Generated by install.sh — run with: source activate.sh
+source ~/miniconda3/etc/profile.d/conda.sh
+conda activate $ENV_NAME
+echo "  DELPHI environment activated: $ENV_NAME"
+ACTIVATE
+echo "  activate.sh written — run: source activate.sh"
