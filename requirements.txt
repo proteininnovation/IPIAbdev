@@ -33,7 +33,7 @@ captum
 shap
 
 # ── Visualisation ─────────────────────────────────────────────────────────────
-matplotlib
+matplotlib  # _safe_cmap() in delphi_interpretability.py handles all versions (cm.get_cmap removed in 3.9)
 seaborn
 python-pptx
 
