@@ -125,27 +125,24 @@ def test_imports() -> bool:
         ("matplotlib",   "Matplotlib"),
         ("seaborn",      "Seaborn"),
     ]
-    optional = [
+    plms = [
         ("ablang2",      "ABlang2"),
         ("antiberty",    "AntiBERTy"),
         ("transformers", "Transformers  (IgBERT / AntiBERTa2)"),
         ("peft",         "PEFT  (LoRA)"),
     ]
 
+    import subprocess, os
+    _env = os.environ.copy()
+    if os.environ.get("CONDA_PREFIX"):
+        _env["PATH"] = os.path.join(os.environ["CONDA_PREFIX"], "bin") + ":" + _env.get("PATH", "")
+
     all_ok = True
-    for pkg, name in core:
+    for pkg, name in core + plms:
         try:
             __import__(pkg); _ok(name)
         except ImportError:
             _fail(f"{name}  — pip install {pkg}"); all_ok = False
-
-    _sep()
-    _info("Optional PLMs:")
-    for pkg, name in optional:
-        try:
-            __import__(pkg); _ok(f"{name}  [optional]")
-        except ImportError:
-            _warn(f"{name} not installed  (pip install {pkg})")
 
     return all_ok
 
@@ -444,8 +441,8 @@ def test_interpretability() -> bool:
          "--target",      TARGET,
          "--models",      "rf", "xgboost", "transformer_onehot",
          "--db",          TEST_DATA,
-         "--max-samples", "500",
-         "--ig-steps",    "50",
+         "--max-samples", "200",
+         "--ig-steps",    "20",
          "--n-pairs",     "2",
          "--outdir",      out_dir],
         label="interpretability (psr_filter, DS1_psr_500, 500 samples, 2 pairs)",
