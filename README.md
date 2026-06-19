@@ -17,7 +17,7 @@ Applicable to any binary antibody property label including PSR (polyreactivity),
 
 > Code and full tutorial documentation accompanying the manuscript:
 > **"DELPHI: a unified interpretable ML platform for multi-objective antibody developability prediction"**
-> Hoan Nguyen, Andre Teixeira et al., *Nature Biotechnology* (in preparation)
+> Hoan Nguyen, Andre Teixeira et al., (in preparation)
 
 ---
 
@@ -145,7 +145,7 @@ After `./install.sh` completes, your environment is fully ready.
 
 ### Step 2: Download IPI pretrained models from Zenodo
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20648372.svg)](https://doi.org/10.5281/zenodo.20648372)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20752840.svg)](https://doi.org/10.5281/zenodo.20752840)
 
 ```bash
 # Download all IPI pretrained models to pretrained_202605/
@@ -229,7 +229,7 @@ IPI provides pretrained models for PSR, SEC, HIC, and AC-SINS.
 
 **Download pretrained models** from Zenodo:
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20648372.svg)](https://doi.org/10.5281/zenodo.20648372)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20752840.svg)](https://doi.org/10.5281/zenodo.20752840)
 
 ```bash
 python utils/download_zenodo.py
@@ -753,9 +753,6 @@ Nature Biotechnology, 2026 (in preparation).
 
 ## Contact
 
-**Hoan Nguyen, PhD** — [Hoan.Nguyen@proteininnovation.org](mailto:Hoan.Nguyen@proteininnovation.org)
-
-**Andre Teixeira** — [Andre.Teixeira@proteininnovation.org](mailto:Andre.Teixeira@proteininnovation.org)
 
 Institute for Protein Innovation (IPI), Boston, MA, USA
 
