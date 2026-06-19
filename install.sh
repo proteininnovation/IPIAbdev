@@ -85,6 +85,13 @@ else
     exit 1
 fi
 
+# Auto-accept conda Terms of Service (required for Anaconda channels)
+echo "  Accepting conda Terms of Service..."
+"$CONDA_BIN" tos accept --override-channels \
+    --channel https://repo.anaconda.com/pkgs/main 2>/dev/null || true
+"$CONDA_BIN" tos accept --override-channels \
+    --channel https://repo.anaconda.com/pkgs/r   2>/dev/null || true
+
 if $CONDA_BIN env list | grep -q "^$ENV_NAME "; then
     echo "  Environment '$ENV_NAME' already exists — skipping"
 else
