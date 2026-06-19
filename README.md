@@ -17,7 +17,7 @@ Applicable to any binary antibody property label including PSR (polyreactivity),
 
 > Code and full tutorial documentation accompanying the manuscript:
 > **"DELPHI: a unified interpretable ML platform for multi-objective antibody developability prediction"**
-> Hoan Nguyen, Andre Teixeira et al., (in preparation)
+> Hoan Nguyen, Andre Teixeira et al., *Nature Biotechnology* (in preparation)
 
 ---
 
@@ -753,6 +753,9 @@ Nature Biotechnology, 2026 (in preparation).
 
 ## Contact
 
+**Hoan Nguyen, PhD** — [Hoan.Nguyen@proteininnovation.org](mailto:Hoan.Nguyen@proteininnovation.org)
+
+**Andre Teixeira** — [Andre.Teixeira@proteininnovation.org](mailto:Andre.Teixeira@proteininnovation.org)
 
 Institute for Protein Innovation (IPI), Boston, MA, USA
 
