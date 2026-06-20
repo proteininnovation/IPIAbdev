@@ -1,7 +1,23 @@
 #!/usr/bin/env python3
 # delphi.py
-# Delphi — IPI Antibody Developability Prediction Platform
-# Author: Hoan Nguyen | IPI Biologics
+# ══════════════════════════════════════════════════════════════════════════════
+# DELPHI — Deep End-to-end Learning Platform for antibody developability
+#          with High Interpretability
+#
+# Module      : delphi_interpretability.py
+# Description : Nature Biotechnology interpretability figure generator.
+#               Computes SHAP (RF, XGBoost) and Integrated Gradients
+#               (Transformer onehot) attributions and renders 5-panel
+#               Extended-Data-style figures. Models are resolved via
+#               config/model_registry.yaml or explicit --model-path flags.
+#               --db is optional: if omitted, models are found via
+#               --model-id args or registry (target + lm + model).
+#               Applicable to any binary antibody property label
+#               (PSR, SEC, HIC, AC-SINS, viscosity, expression, ...).
+# Author      : Hoan Nguyen, PhD
+# Company     : Institute for Protein Innovation (IPI)
+# Date        : 2026-05
+# Version     : 1.0.0
 #
 # ══════════════════════════════════════════════════════════════════════════════
 # SUBCOMMANDS  (mutually exclusive — pick one per run)
