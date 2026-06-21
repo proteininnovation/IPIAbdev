@@ -32,8 +32,8 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 
-RECORD_ID  = "20648372"
-ZENODO_DOI = "10.5281/zenodo.20648372"
+RECORD_ID  = "20752840"
+ZENODO_DOI = "10.5281/zenodo.20752840"
 ZENODO_URL = f"https://zenodo.org/records/{RECORD_ID}"
 _ROOT      = Path(__file__).resolve().parent.parent
 OUT_DIR    = _ROOT / "pretrained_202605"   # default: save IPI models here
