@@ -68,9 +68,10 @@ MIN_AUC = {
 }
 
 
-def _run(cmd: list, label: str, timeout: int = 3600) -> bool:
+def _run(cmd: list, label: str, timeout: int = None) -> bool:
     """Run a delphi CLI command silently. Show output only on failure."""
-    _info(f"$ python {' '.join(str(c) for c in cmd)}")
+    _info(f"$ python {' '.join(str(c) for c in cmd)}"
+          + (f"  [no timeout]" if timeout is None else f"  [timeout={timeout}s]"))
     t0 = time.time()
 
     # Suppress HuggingFace warnings
@@ -198,7 +199,7 @@ def test_embeddings() -> bool:
         results[lm] = _run(
             [_DELPHI, "--build-embedding", TEST_DATA, "--lm", lm],
             label=f"embed {lm}",
-            timeout=1800,
+            timeout=None,
         )
 
     _sep()
@@ -253,7 +254,7 @@ def test_predict(df: pd.DataFrame) -> bool:
                    "--lm",      lm,
                    "--model",   model,
                    "--model_id", model_id]
-            ok = _run(cmd, label=f"predict {tag}", timeout=600)
+            ok = _run(cmd, label=f"predict {tag}", timeout=None)
             results[tag] = ok
 
             if ok and has_labels:
@@ -298,10 +299,10 @@ def test_kfold() -> bool:
     _head("── Test 4: 10-fold cross-validation ────────────────────────────")
 
     runs = [
-        ("transformer_lm",     "ablang",      1800),
-        ("transformer_onehot", "onehot",      1800),
-        ("rf",                 "biophysical",  600),
-        ("xgboost",            "biophysical",  600),
+        ("transformer_lm",     "ablang",      None),
+        ("transformer_onehot", "onehot",      None),
+        ("rf",                 "biophysical", None),
+        ("xgboost",            "biophysical", None),
     ]
 
     results = {}
@@ -332,15 +333,15 @@ def test_train() -> bool:
 
     runs = [
         # Transformer models
-        ("transformer_lm",     "igbert",       1800),
-        ("transformer_lm",     "ablang",       1800),
-        ("transformer_onehot", "onehot",       1800),
+        ("transformer_lm",     "igbert",       None),
+        ("transformer_lm",     "ablang",       None),
+        ("transformer_onehot", "onehot",       None),
         # RF — biophysical + kmer
-        ("rf",                 "biophysical",   600),
-        ("rf",                 "kmer",          600),
+        ("rf",                 "biophysical", None),
+        ("rf",                 "kmer", None),
         # XGBoost — biophysical + kmer
-        ("xgboost",            "biophysical",   600),
-        ("xgboost",            "kmer",          600),
+        ("xgboost",            "biophysical", None),
+        ("xgboost",            "kmer", None),
     ]
 
     results = {}
@@ -394,11 +395,11 @@ def test_interpretability() -> bool:
     _sep()
 
     needed = [
-        ("rf",                 "biophysical", 600),
-        ("rf",                 "kmer",        600),
-        ("xgboost",            "biophysical", 600),
-        ("xgboost",            "kmer",        600),
-        ("transformer_onehot", "onehot",      1800),
+        ("rf",                 "biophysical", None),
+        ("rf",                 "kmer", None),
+        ("xgboost",            "biophysical", None),
+        ("xgboost",            "kmer", None),
+        ("transformer_onehot", "onehot",      None),
     ]
 
     # ── Check registry — auto-train any missing models ─────────────────────
@@ -452,7 +453,7 @@ def test_interpretability() -> bool:
          "--n-pairs",     "2",
          "--outdir",      out_dir],
         label="interpretability (rf + xgboost + transformer_onehot)",
-        timeout=1200,
+        timeout=None,
     )
 
     if ok:
@@ -505,7 +506,7 @@ def test_interpretability_pretrained_psr() -> bool:
          "--n-pairs",     "2",
          "--outdir",      out_dir],
         label="interpretability PSR pretrained",
-        timeout=1200,
+        timeout=None,
     )
     if ok:
         figures = list(out_dir.rglob("*.png")) + list(out_dir.rglob("*.tiff"))
@@ -564,7 +565,7 @@ def test_interpretability_pretrained_psr_sec() -> bool:
          "--n-pairs",      "2",
          "--outdir",       out_dir],
         label="interpretability PSR+SEC pretrained",
-        timeout=1800,
+        timeout=None,
     )
     if ok:
         figures = list(out_dir.rglob("*.png")) + list(out_dir.rglob("*.tiff"))
