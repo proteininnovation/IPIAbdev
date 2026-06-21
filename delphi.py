@@ -1,92 +1,85 @@
 #!/usr/bin/env python3
-# delphi.py
 # ══════════════════════════════════════════════════════════════════════════════
-# DELPHI — Deep End-to-end Learning Platform for antibody developability
+# DELPHI — Deep End-to-end Learning Platform for antibody Developability
 #          with High Interpretability
 #
-# Module      : delphi_interpretability.py
-# Description : Nature Biotechnology interpretability figure generator.
-#               Computes SHAP (RF, XGBoost) and Integrated Gradients
-#               (Transformer onehot) attributions and renders 5-panel
-#               Extended-Data-style figures. Models are resolved via
-#               config/model_registry.yaml or explicit --model-path flags.
-#               --db is optional: if omitted, models are found via
-#               --model-id args or registry (target + lm + model).
-#               Applicable to any binary antibody property label
-#               (PSR, SEC, HIC, AC-SINS, viscosity, expression, ...).
-# Author      : Hoan Nguyen, PhD
+# Module      : delphi.py
+# Description : Main command-line interface for DELPHI. Supports embedding
+#               generation, k-fold cross-validation, full-data training,
+#               and prediction for binary antibody developability labels
+#               (PSR polyreactivity, SEC aggregation, HIC, AC-SINS,
+#               viscosity, expression, and any custom 1/0 label).
+#               Integrates five model architectures:
+#                 transformer_lm      — Dual-branch Transformer on PLM
+#                                       embeddings (IgBERT, ABlang2,
+#                                       AntiBERTa2, AntiBERTy). Best AUC.
+#                 transformer_onehot  — Dual-branch Transformer on one-hot
+#                                       sequences. No PLM required.
+#                 rf                  — Random Forest with SHAP.
+#                 xgboost             — XGBoost with SHAP.
+#                 cnn                 — CNN on PLM embeddings.
+#               Benchmark: mean AUC 0.957 (PSR), 0.934 (SEC).
+#               Applicable to any binary antibody property label.
+# Developer   : Hoan Nguyen, PhD
 # Company     : Institute for Protein Innovation (IPI)
 # Date        : 2026-05
 # Version     : 1.0.0
-#
-# ══════════════════════════════════════════════════════════════════════════════
-# SUBCOMMANDS  (mutually exclusive — pick one per run)
 # ══════════════════════════════════════════════════════════════════════════════
 #
-#   --build-dataset FILE   Balance / curate raw training data
-#                          (calls utils/build_balanced_dataset_v4.py)
-#   --kfold        N       Cross-validate model on training database
-#   --train                Train final model on full training database
-#   --predict      FILE    Score new antibodies with a trained model
-#   --correlate    FILE+   Correlate IPI scores against experimental assays
-#                          (calls utils/developability_correlation.py)
-#   --build-embedding FILE Pre-compute PLM embeddings for a database
-#   --split-dataset        Split --db into group-stratified train + val files
-#
 # ══════════════════════════════════════════════════════════════════════════════
-# MODELS  (--model)
+# MODELS & PLMs SUPPORTED
 # ══════════════════════════════════════════════════════════════════════════════
 #
-#   transformer_lm      Transformer + PLM embeddings  (best AUC)
-#   transformer_onehot  Transformer + one-hot sequences (no PLM needed)
-#   rf                  Random Forest (fast, SHAP, CDR3 mutagenesis)
-#   xgboost             XGBoost
-#   cnn                 CNN
+#   --model  transformer_lm      Transformer + PLM embeddings  (best AUC)
+#            transformer_onehot  Transformer + one-hot sequences (no PLM)
+#            rf                  Random Forest (fast, SHAP, mutagenesis)
+#            xgboost             XGBoost
+#            cnn                 CNN
+#
+#   --lm     biophysical         charge, pI, hydrophobicity, R/K/W counts (26d)
+#            kmer                1-mer + 2-mer AA frequencies (~440d)
+#            onehot              VH+VL one-hot position encoding
+#            onehot_vh           VH one-hot only
+#            onehot_cdr3         HCDR3 one-hot only
+#            ablang              ABlang2 480-dim   pip install ablang2
+#            antiberty           AntiBERTy 512-dim  pip install antiberty
+#            antiberta2          AntiBERTa2 1024-dim pip install transformers
+#            antiberta2-cssp     AntiBERTa2-CSSP 1024-dim
+#            igbert              IgBERT 1024-dim
 #
 # ══════════════════════════════════════════════════════════════════════════════
-# EMBEDDINGS  (--lm)
+# TRAINING MODES (transformer_lm)
 # ══════════════════════════════════════════════════════════════════════════════
 #
-#   biophysical       charge, pI, hydrophobicity, R/K/W counts (26 dims)
-#   kmer              1-mer + 2-mer AA frequencies (~440 dims)
-#   onehot            VH+VL one-hot position encoding
-#   onehot_vh         VH one-hot only
-#   onehot_cdr3       HCDR3 one-hot only
-#   ablang            ABlang2 480-dim        pip install ablang2
-#   antiberty         AntiBERTy 512-dim      pip install antiberty
-#   antiberta2        AntiBERTa2 1024-dim    pip install transformers
-#   antiberta2-cssp   AntiBERTa2-CSSP 1024-dim
-#   igbert            IgBERT 1024-dim
-#
-# ══════════════════════════════════════════════════════════════════════════════
-# TRAINING MODES  (transformer_lm)
-# ══════════════════════════════════════════════════════════════════════════════
-#
-#   MODE 1  Frozen embeddings  (DEFAULT, recommended)
+#   MODE 1 — Frozen embeddings  (DEFAULT — recommended)
 #   ─────────────────────────────────────────────────────────────────────────
 #   sequences → PLM (frozen) → pre-computed .emb.csv → classifier trains
 #   PLM weights: never updated  |  Trained: ~200k classifier params only
 #   Best for: n < 10,000  |  CPU  |  same domain as pretraining
+#   Your results: ablang ρ_OVA = −0.66 on GDPa3 (n=80)
 #
-#   MODE 2  PLM layer unfreezing  (--train --finetune_plm)
+#   MODE 2 — PLM layer unfreezing  (--train --finetune_plm)
 #   ─────────────────────────────────────────────────────────────────────────
 #   sequences → PLM (top layers update via backprop) → classifier trains
 #   PLM weights: top N layers updated  |  Trained: ~20M params
 #   Best for: n > 20,000  |  GPU  |  domain-shifted sequences
+#   No .emb.csv needed — sequences processed in batches during training
 #
-#   MODE 3  LoRA  (--train --finetune_plm --peft lora)  [RECOMMENDED]
+#   MODE 3 — LoRA  (--train --finetune_plm --peft lora)  [RECOMMENDED]
 #   ─────────────────────────────────────────────────────────────────────────
-#   sequences → PLM (W frozen, only LoRA A×B updated) → classifier trains
+#   sequences → PLM (W frozen, only LoRA A×B trained) → classifier trains
 #   PLM weights: W NEVER changes, only low-rank A×B matrices (~400k params)
 #   Best for: n > 1,000  |  CPU feasible  |  low forgetting risk
+#   No .emb.csv needed — sequences processed in batches during training
 #
-#   LEVEL 2  Collaborator fine-tune  (--finetune --pretrained path.pt)
+#   LEVEL 2 — Collaborator fine-tune  (--finetune --pretrained path.pt)
 #   ─────────────────────────────────────────────────────────────────────────
 #   Load YOUR pretrained .pt → fine-tune classifier on THEIR small dataset
+#   PLM: embedded in their local MLAbDev install (ablang2/transformers)
 #   Best for: 50–2,000 new antibodies from a collaborator lab
 #
 # ══════════════════════════════════════════════════════════════════════════════
-# CDR3 CONVENTION  (2026)
+# CDR3 CONVENTION (2026 UPDATE)
 # ══════════════════════════════════════════════════════════════════════════════
 #
 #   CDR3 does NOT include the leading framework cysteine (Kabat/IMGT pos 104).
@@ -99,168 +92,44 @@
 #   strip_cdr3_c_prefix() removes the leading 'C' if present.
 #   This replaces the old fix_cdr3_c_prefix() which incorrectly ADDED 'C'.
 #
+#   Impact on models:
+#     - CDR3 position 1 = A (Ala)   ← first true CDR3 residue
+#     - CDR3 position 2 = R (Arg)   ← germline anchor
+#     - CDR3 position 3+= variable  ← developability-relevant positions
+#
 #   All transformer_onehot and RF/XGBoost models must be retrained after
-#   this change as CDR3 sequences are 1 residue shorter.
+#   this change as CDR3 sequences are shorter by 1 residue.
 #
 # ══════════════════════════════════════════════════════════════════════════════
-# TYPICAL WORKFLOW
+# EXAMPLE 1 — RF biophysical (fastest, interpretable, no PLM needed)
 # ══════════════════════════════════════════════════════════════════════════════
 #
-#   Step 1  Build a balanced training set (optional but recommended)
-#   Step 2  Cross-validate to find best hyperparameters + epoch count
-#   Step 3  Train final model on full dataset  (auto-registered in model_registry.yaml)
-#   Step 4  Predict on new cohort  (registry resolves model automatically)
-#   Step 5  Correlate predictions against experimental assays
-#
-# ══════════════════════════════════════════════════════════════════════════════
-# MODEL REGISTRY  (config/model_registry.yaml)
-# ══════════════════════════════════════════════════════════════════════════════
-#
-#   # List all registered models
-#   python delphi.py --list-models
-#
-#   # Filter by target, lm, model, or db
-#   python delphi.py --list-models --target psr_filter --lm onehot
-#
-#   # Predict using registry lookup (no --db needed)
-#   python delphi.py --predict data/new_cohort.xlsx \
-#       --target psr_filter --lm onehot --model transformer_onehot
-#
-#   # Predict using a specific model_id (any checkpoint, any name)
-#   python delphi.py --predict data/new_cohort.xlsx \
-#       --model_id FINAL_psr_filter_onehot_transformer_onehot_ipi_psr.pt
-#
-#   # To register a best_fold checkpoint manually:
-#   # 1. Open config/model_registry.yaml
-#   # 2. Add an entry with type: best_fold, point model_path to the BEST_*.pt file
-#   # 3. The model_id can be any name you want
-#
-# ══════════════════════════════════════════════════════════════════════════════
-# EXAMPLE 1 — build-dataset  (curate + balance raw data)
-# ══════════════════════════════════════════════════════════════════════════════
-#
-#   # Recommended: combined strategy (CDR3 diversity + OOF confidence)
-#   python delphi.py --build-dataset data/ipi_psr_raw.xlsx \
-#       --target psr_filter --strategy combined --min-total 6000
-#
-#   # Cluster-only (fast, diversity only)
-#   python delphi.py --build-dataset data/ipi_psr_raw.xlsx \
-#       --target psr_filter --strategy cluster --cluster 0.8
-#
-#   # kmer_consensus (OOF confidence only, stricter threshold)
-#   python delphi.py --build-dataset data/ipi_psr_raw.xlsx \
-#       --target psr_filter --strategy kmer_consensus --min-prob 0.7 --cv 3
-#
-#   Output: data/ipi_psr_raw_psr_filter_balanced.xlsx
-#           data/ipi_psr_raw_psr_filter_imbalanced_6000.xlsx
-#           data/ipi_psr_raw_psr_filter_majority_rejected.xlsx
-#
-# ══════════════════════════════════════════════════════════════════════════════
-# EXAMPLE 2 — RF biophysical  (fastest, interpretable, no PLM needed)
-# ══════════════════════════════════════════════════════════════════════════════
-#
-#   python delphi.py --kfold 10 \
+#   python predict_developability.py --kfold 10 \
 #       --target psr_filter --lm biophysical --model rf \
 #       --db data/ipi_psr_trainset.xlsx \
 #       --cost_fn 3.0
 #
-#   python delphi.py --train \
+#   python predict_developability.py --train \
 #       --target psr_filter --lm biophysical --model rf \
 #       --db data/ipi_psr_trainset.xlsx
 #
-#   python delphi.py --predict data/new_cohort.xlsx \
+#   python predict_developability.py --predict data/new_cohort.xlsx \
 #       --target psr_filter --lm biophysical --model rf \
 #       --db data/ipi_psr_trainset.xlsx \
 #       --mutagenesis 50
 #
 # ══════════════════════════════════════════════════════════════════════════════
-# EXAMPLE 3 — transformer_onehot  (VH+VL+CDR3 one-hot, no PLM)
+# EXAMPLE 2 — transformer_onehot (VH+VL+CDR3 one-hot, no PLM)
 # ══════════════════════════════════════════════════════════════════════════════
 #
-#   python delphi.py --kfold 10 \
+#   python predict_developability.py --kfold 10 \
 #       --target psr_filter --lm onehot --model transformer_onehot \
-#       --db data/ipi_psr_trainset.xlsx --cluster 0.8
-#
-#   python delphi.py --train \
-#       --target psr_filter --lm onehot --model transformer_onehot \
-#       --db data/ipi_psr_trainset.xlsx
-#
-#   python delphi.py --predict data/new_cohort.xlsx \
-#       --target psr_filter --lm onehot --model transformer_onehot \
-#       --db data/ipi_psr_trainset.xlsx
-#
-# ══════════════════════════════════════════════════════════════════════════════
-# EXAMPLE 4 — transformer_lm  (PLM embeddings, best AUC)
-# ══════════════════════════════════════════════════════════════════════════════
-#
-#   # Pre-compute embeddings once (reused across kfold + train + predict)
-#   python delphi.py --build-embedding data/ipi_psr_trainset.xlsx \
-#       --lm igbert
-#
-#   python delphi.py --kfold 10 \
-#       --target psr_filter --lm igbert --model transformer_lm \
-#       --db data/ipi_psr_trainset.xlsx --cluster 0.8
-#
-#   python delphi.py --train \
-#       --target psr_filter --lm igbert --model transformer_lm \
-#       --db data/ipi_psr_trainset.xlsx
-#
-#   python delphi.py --predict data/new_cohort.xlsx \
-#       --target psr_filter --lm igbert --model transformer_lm \
-#       --db data/ipi_psr_trainset.xlsx
-#
-# ══════════════════════════════════════════════════════════════════════════════
-# EXAMPLE 5 — correlate  (IPI score vs experimental assay)
-# ══════════════════════════════════════════════════════════════════════════════
-#
-#   # Discover which score columns are in the prediction file
-#   python delphi.py --correlate data/new_cohort_pred.xlsx \
-#       --target psr_filter --list-scores
-#
-#   # Single assay
-#   python delphi.py --correlate data/new_cohort_pred.xlsx \
-#       --target psr_filter --assay psr_norm_smp
-#
-#   # Multiple assays + logit transform + custom title
-#   python delphi.py --correlate data/new_cohort_pred.xlsx \
-#       --target psr_filter \
-#       --assay psr_norm_dna psr_norm_avidin psr_norm_smp psr_norm_mean \
-#       --logit-trans \
-#       --title "IPI PSR model vs normalised PSR panel" \
-#       --out results/psr_correlation
-#
-#   # Multiple prediction files (e.g. compare LMs)
-#   python delphi.py \
-#       --correlate pred_igbert.xlsx pred_ablang.xlsx pred_antiberta2.xlsx \
-#       --target psr_filter --assay psr_norm_mean \
-#       --title "GDPa3 (n=80) — IPI PSR vs PROPHET-Ab polyreactivity" \
-#       --out results/GDPa3_psr_correlation
-#
-#   # t-SNE on embedding space
-#   python delphi.py --correlate data/new_cohort_pred.xlsx \
-#       --target psr_filter --assay psr_norm_mean \
-#       --tsne-source embedding \
-#       --embedding-file data/ipi_psr_trainset.xlsx.igbert.emb.csv \
-#       --out results/psr_tsne
-#
-# ══════════════════════════════════════════════════════════════════════════════
-# EXAMPLE 6 — LoRA fine-tuning  (large dataset, GPU)
-# ══════════════════════════════════════════════════════════════════════════════
-#
-#   python delphi.py --train --finetune_plm --peft lora \
-#       --target psr_filter --lm igbert --model transformer_lm \
 #       --db data/ipi_psr_trainset.xlsx \
-#       --lora_r 8 --lora_alpha 16
+#       --cluster 0.8
 #
-# ══════════════════════════════════════════════════════════════════════════════
-# EXAMPLE 7 — collaborator fine-tune  (small external dataset)
-# ══════════════════════════════════════════════════════════════════════════════
-#
-#   python delphi.py --finetune \
-#       --pretrained build/pretrained_models/FINAL_psr_filter_igbert_transformer_lm_ipi_psr_trainset.pt \
-#       --finetune_db data/collaborator_50ab.xlsx \
-#       --target psr_filter --lm igbert --model transformer_lm \
-#       --finetune_epochs 10 --finetune_lr 1e-6
+#   python predict_developability.py --train \
+#       --target psr_filter --lm onehot --model transformer_onehot \
+#       --db data/ipi_psr_trainset.xlsx
 #
 # ══════════════════════════════════════════════════════════════════════════════
 # ── Platform fixes — must be FIRST, before any imports ───────────────────────
@@ -269,16 +138,11 @@ os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 os.environ.setdefault("OBJC_DISABLE_INITIALIZE_FORK_SAFETY", "YES")
 # ─────────────────────────────────────────────────────────────────────────────
 """
-Delphi — IPI Antibody Developability Prediction Platform
-Production Version 2026
-
-Subcommands: --build-dataset | --kfold | --train | --predict |
-             --correlate | --build-embedding | --split-dataset
+IPI Antibody Developability Prediction Platform
+Final Production Version — 2026
+Supports: SEC & PSR | XGBoost & RF & CNN & Transformer (One-Hot) & Transformer (LM)
 
 Changes (2026-05):
-  * Renamed predict_developability.py -> delphi.py
-  * --build-dataset: balance/curate raw training data (utils/build_balanced_dataset_v4.py)
-  * --correlate: assay correlation plots (utils/developability_correlation.py)
   * strip_cdr3_c_prefix(): removes leading framework C from CDR3 (replaces fix_cdr3_c_prefix)
     CDR3 = AR... not CAR... The C belongs to VH framework (Kabat pos 104).
   * Auto-extract CDR3 from HSEQ when CDR3 column is missing (ANARCI -> regex fallback)
@@ -299,6 +163,43 @@ from embedding_generator import generate_embedding
 
 import sys
 import datetime
+
+def _dbname_from_model_id(model_id_or_path: str, target: str = "",
+                           lm: str = "", model: str = "") -> str:
+    """
+    Extract db_stem from model_id or model_path filename.
+
+    Pattern: FINAL_{target}_{lm}_{model}_{db_stem}.pt/.pkl
+    Examples:
+      FINAL_psr_filter_ablang_transformer_lm_ipi_psr_trainset.pt  → ipi_psr_trainset
+      FINAL_sec_filter_biophysical_rf_ipi_sec_5000.pkl             → ipi_sec_5000
+      FINAL_psr_filter_onehot_transformer_onehot_DS1.pt            → DS1
+    """
+    import os as _os
+    name = _os.path.splitext(_os.path.basename(str(model_id_or_path)))[0]
+    # Try exact prefix match: FINAL_{target}_{lm}_{model}_
+    prefix = f"FINAL_{target}_{lm}_{model}_"
+    if name.startswith(prefix):
+        return name[len(prefix):]
+    # Fallback: strip FINAL_ and any known prefix parts
+    if name.startswith("FINAL_"):
+        name = name[6:]   # remove "FINAL_"
+        # Remove target parts
+        for part in (target or "").split("_"):
+            if part and name.startswith(part + "_"):
+                name = name[len(part)+1:]
+        # Remove lm parts
+        for part in (lm or "").replace("-","_").split("_"):
+            if part and name.startswith(part + "_"):
+                name = name[len(part)+1:]
+        # Remove model parts
+        for part in (model or "").split("_"):
+            if part and name.startswith(part + "_"):
+                name = name[len(part)+1:]
+        if name:
+            return name
+    return "default"
+
 
 
 class _Tee:
@@ -333,7 +234,13 @@ def _setup_logging(args, db_path: str) -> str:
     _LM_NORM = {"onehot_cdr3": "onehot_hcdr3"}
     args.lm  = _LM_NORM.get(args.lm, args.lm)
     lm_tag   = args.lm.replace(",", "_")
-    db_stem = Path(db_path).stem if db_path else "default"
+    db_stem = (Path(db_path).stem if db_path
+             else _dbname_from_model_id(
+                 getattr(args, "model_id", None) or
+                 getattr(args, "model_path", None) or "default",
+                 getattr(args, "target", ""),
+                 getattr(args, "lm", ""),
+                 getattr(args, "model", "")))
 
     if args.train:
         name     = f"train_{args.target}_{lm_tag}_{args.model}_{db_stem}_{ts}.log"
@@ -356,16 +263,6 @@ def _setup_logging(args, db_path: str) -> str:
     elif getattr(args, 'split_dataset', False):
         name     = f"split_{Path(db_path).stem}_{ts}.log"
         log_path = str(Path(db_path).parent / name)
-        mode_w   = 'w'
-    elif getattr(args, 'build_dataset', None):
-        p        = Path(args.build_dataset)
-        name     = f"build_dataset_{p.stem}_{args.target}_{ts}.log"
-        log_path = str(p.parent / name)
-        mode_w   = 'w'
-    elif getattr(args, 'correlate', None):
-        p        = Path(args.correlate[0])
-        name     = f"correlate_{args.target}_{ts}.log"
-        log_path = str(p.parent / name)
         mode_w   = 'w'
     else:
         log_path = f"ipi_{ts}.log"
@@ -391,249 +288,6 @@ from models.transformer_lm import TransformerLMModel
 
 os.makedirs(MODEL_DIR, exist_ok=True)
 os.makedirs(PREDICTION_DIR, exist_ok=True)
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# MODEL REGISTRY
-# ══════════════════════════════════════════════════════════════════════════════
-
-REGISTRY_PATH = os.path.join('config', 'model_registry.yaml')
-
-_REGISTRY_HEADER = """\
-# ══════════════════════════════════════════════════════════════════════════════
-# Delphi — Model Registry
-# config/model_registry.yaml
-# ══════════════════════════════════════════════════════════════════════════════
-#
-# REQUIRED FIELDS  (delphi cannot load the model without these)
-#   model_id (key)  unique label — used by --model_id. Defaults to filename of
-#                   model_path. Can be renamed freely. Must be unique.
-#   trainset        path to the training database
-#   target          label column  (psr_filter, sec_filter, ...)
-#   lm              embedding     (onehot, igbert, biophysical, ...)
-#   model           architecture  (transformer_onehot, transformer_lm, rf, ...)
-#   model_path      actual .pt/.pkl file loaded. Independent of model_id.
-#
-# OPTIONAL FIELDS  (add as many or as few as you like)
-#   type             full_train | best_fold
-#   trained_at       timestamp
-#   kfold_auc        mean AUC from --kfold
-#   kfold_std        AUC std across folds
-#   kfold_folds      number of folds
-#   kfold_best_fold  fold with highest AUC
-#   threshold        classification threshold (default 0.5 if omitted)
-#   epochs           epochs used for --train
-#   notes            free text — delphi never overwrites this field
-#
-# LOOKUP ORDER during  delphi --predict
-#   1. --model_path               use directly, skip registry
-#   2. --model_id NAME            find by model_id, load its model_path
-#   3. --db + target + lm + model most recent full_train for that trainset
-#   4. target + lm + model        most recent full_train across all trainsets
-#   5. nothing found              error: run --train or add entry manually
-#
-# ══════════════════════════════════════════════════════════════════════════════
-
-"""
-
-
-def _registry_load() -> dict:
-    """Load registry YAML. Returns {'models': {}} if file does not exist."""
-    import yaml
-    if not os.path.exists(REGISTRY_PATH):
-        return {'models': {}}
-    with open(REGISTRY_PATH, 'r', encoding='utf-8') as _f:
-        _data = yaml.safe_load(_f) or {}
-    if 'models' not in _data:
-        _data['models'] = {}
-    return _data
-
-
-def _registry_save(reg: dict) -> None:
-    """Write registry to YAML with fixed header block."""
-    import yaml
-    os.makedirs(os.path.dirname(REGISTRY_PATH) or '.', exist_ok=True)
-    _body = yaml.dump(reg, default_flow_style=False, sort_keys=False,
-                      allow_unicode=True, width=120)
-    with open(REGISTRY_PATH, 'w', encoding='utf-8') as _f:
-        _f.write(_REGISTRY_HEADER)
-        _f.write(_body)
-
-
-def _registry_add(
-    model_id:        str,
-    trainset:        str,
-    target:          str,
-    lm:              str,
-    model:           str,
-    model_path:      str,
-    entry_type:      str   = 'full_train',
-    kfold_auc:       float = None,
-    kfold_std:       float = None,
-    kfold_folds:     int   = None,
-    kfold_best_fold: int   = None,
-    threshold:       float = None,
-    epochs:          int   = None,
-    notes:           str   = '',
-) -> str:
-    """
-    Append one entry to the registry after --train.
-    If model_id already exists, appends a timestamp suffix to ensure uniqueness.
-    Returns the model_id actually used.
-    """
-    import datetime as _dt
-    reg    = _registry_load()
-    models = reg['models']
-
-    # Enforce uniqueness
-    if model_id in models:
-        _ts    = _dt.datetime.now().strftime('%Y%m%d_%H%M%S')
-        _stem  = Path(model_id).stem
-        _suf   = Path(model_id).suffix
-        model_id = f"{_stem}_{_ts}{_suf}"
-        print(f"  [registry] duplicate model_id — using '{model_id}'")
-
-    entry = {
-        'trainset':   str(trainset),
-        'target':     str(target),
-        'lm':         str(lm),
-        'model':      str(model),
-        'model_path': str(model_path),
-        'type':       entry_type,
-        'trained_at': _dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-    }
-
-    # Optional metadata — only written when available
-    if kfold_auc is not None:
-        entry['kfold_auc'] = round(float(kfold_auc), 4)
-    if kfold_std is not None:
-        entry['kfold_std'] = round(float(kfold_std), 4)
-    if kfold_folds is not None:
-        entry['kfold_folds'] = int(kfold_folds)
-    if kfold_best_fold is not None:
-        entry['kfold_best_fold'] = int(kfold_best_fold)
-    # Only write threshold when it differs meaningfully from 0.5
-    if threshold is not None and abs(float(threshold) - 0.5) > 1e-4:
-        entry['threshold'] = round(float(threshold), 4)
-    if epochs is not None:
-        entry['epochs'] = int(epochs)
-    entry['notes'] = notes or ''
-
-    models[model_id] = entry
-    _registry_save(reg)
-
-    _auc_str   = f"  kfold_auc={kfold_auc:.4f}" if kfold_auc is not None else ""
-    _thr_str   = f"  threshold={threshold:.4f}" if (threshold and abs(threshold-0.5)>1e-4) else ""
-    print(f"\n[registry] Registered: {model_id}{_auc_str}{_thr_str}")
-    print(f"[registry] → {REGISTRY_PATH}")
-    return model_id
-
-
-def _registry_lookup(
-    model_id: str  = None,
-    trainset: str  = None,
-    target:   str  = None,
-    lm:       str  = None,
-    model:    str  = None,
-) -> dict:
-    """
-    Find one registry entry. Returns the entry dict (with 'model_id' injected)
-    or None if not found.
-
-    Priority:
-      1. model_id given  →  exact key match
-      2. trainset + target + lm + model  →  most recent full_train for that db
-      3. target + lm + model (no trainset)  →  most recent full_train overall
-    """
-    import datetime as _dt
-    reg    = _registry_load()
-    models = reg.get('models', {})
-    if not models:
-        return None
-
-    # 1. Exact model_id lookup
-    if model_id:
-        entry = models.get(model_id)
-        if entry:
-            return {**entry, 'model_id': model_id}
-        print(f"  [registry] model_id '{model_id}' not found in registry")
-        return None
-
-    # 2 + 3. Filter by fields
-    db_stem = Path(trainset).stem if trainset else None
-
-    candidates = []
-    for mid, entry in models.items():
-        if target and entry.get('target') != target:
-            continue
-        if lm and entry.get('lm') != lm:
-            continue
-        if model and entry.get('model') != model:
-            continue
-        if db_stem:
-            _e_stem = Path(entry.get('trainset', '')).stem
-            if _e_stem != db_stem:
-                continue
-        candidates.append((mid, entry))
-
-    if not candidates:
-        return None
-
-    # Sort by trained_at descending — most recent first
-    def _ts(pair):
-        try:
-            return _dt.datetime.strptime(
-                pair[1].get('trained_at', '1970-01-01 00:00:00'),
-                '%Y-%m-%d %H:%M:%S')
-        except Exception:
-            return _dt.datetime.min
-
-    candidates.sort(key=_ts, reverse=True)
-    best_id, best_entry = candidates[0]
-    return {**best_entry, 'model_id': best_id}
-
-
-def _registry_list(target: str = None, lm: str = None,
-                   model: str = None, trainset: str = None) -> None:
-    """Print registry entries, optionally filtered."""
-    reg    = _registry_load()
-    models = reg.get('models', {})
-    if not models:
-        print("[registry] Empty — no models registered yet. Run --train to add entries.")
-        return
-
-    db_stem = Path(trainset).stem if trainset else None
-    W = 66
-    print(f"\n{'═'*W}")
-    print(f"  Delphi Model Registry")
-    print(f"  {REGISTRY_PATH}")
-    print(f"{'─'*W}")
-
-    shown = 0
-    for mid, entry in models.items():
-        if target   and entry.get('target') != target:   continue
-        if lm       and entry.get('lm')     != lm:       continue
-        if model    and entry.get('model')  != model:    continue
-        if db_stem:
-            if Path(entry.get('trainset', '')).stem != db_stem: continue
-
-        _auc = (f"  kfold_auc={entry['kfold_auc']:.4f}" if entry.get('kfold_auc') else "")
-        _thr = (f"  threshold={entry['threshold']:.4f}" if entry.get('threshold')
-                else "  threshold=0.5")
-        print(f"  {mid}")
-        print(f"    target={entry.get('target')}  lm={entry.get('lm')}  "
-              f"model={entry.get('model')}  type={entry.get('type','?')}")
-        print(f"    trained_at={entry.get('trained_at','?')}{_auc}{_thr}")
-        print(f"    model_path={entry.get('model_path')}")
-        if entry.get('notes'):
-            print(f"    notes: {entry['notes']}")
-        print()
-        shown += 1
-
-    if shown == 0:
-        print("  No entries match the given filter.")
-    print(f"  Total: {shown} / {len(models)} entries shown")
-    print(f"{'═'*W}\n")
 
 
 def get_default_db_path():
@@ -1343,7 +997,7 @@ def _find_matching_checkpoints(model_dir: str, target: str, lm: str,
 def auto_predict(input_file, target="sec_filter", lm="antiberta2",
                  model_type="xgboost", db_path=None, test_target=None,
                  run_mutagenesis=False, mutagenesis_n=None, threshold=None,
-                 model_path=None, model_id=None, **kwargs):
+                 model_path=None, **kwargs):
     kwargs['model_path'] = model_path
     print(f"\nPREDICTING: {os.path.basename(input_file)}")
     print(f"Target: {target.upper()} | Model: {model_type.upper()} | LM: {lm}")
@@ -1423,7 +1077,10 @@ def auto_predict(input_file, target="sec_filter", lm="antiberta2",
             _ckpt_stem)
         db_stem = _m2.group(1) if _m2 else _ckpt_stem
     else:
-        db_stem = "default"
+        # Try to extract from model_id if available
+        _mid = kwargs.get("model_id") or kwargs.get("model_id_str", "")
+        db_stem = (_dbname_from_model_id(_mid, target, lm, model_type)
+                   if _mid else "default")
 
     ext        = ".pt" if model_type in ["cnn", "transformer_onehot", "transformer_lm"] else ".pkl"
     _chain_tag = ""
@@ -1440,51 +1097,31 @@ def auto_predict(input_file, target="sec_filter", lm="antiberta2",
             except Exception:
                 _chain_tag = ""
 
-    _explicit_path = kwargs.get('model_path', None) or model_path
+    _explicit_path = kwargs.get('model_path', None)
     if _explicit_path:
         model_path = _explicit_path
         print(f"[load] Using explicit model path: {model_path}")
     else:
-        # ── Registry lookup (steps 2-4) ────────────────────────────────────
-        _reg_entry = _registry_lookup(
-            model_id = model_id,
-            trainset = db_path,
-            target   = target,
-            lm       = lm,
-            model    = model_type,
-        )
-        if _reg_entry:
-            model_path = _reg_entry['model_path']
-            _reg_id    = _reg_entry['model_id']
-            _reg_thr   = _reg_entry.get('threshold')
-            print(f"[load] Registry: {_reg_id}")
-            print(f"[load] model_path: {model_path}")
-            if _reg_thr and threshold is None:
-                threshold = _reg_thr
-                print(f"[load] threshold={threshold:.4f}  (from registry)")
+        _base_path = f"{MODEL_DIR}/FINAL_{target}_{lm}{_chain_tag}_{model_type}_{db_stem}"
+        if os.path.exists(f"{_base_path}_regression{ext}"):
+            model_path = f"{_base_path}_regression{ext}"
         else:
-            # ── Fallback: reconstruct FINAL_* path from args ────────────────
-            _base_path = f"{MODEL_DIR}/FINAL_{target}_{lm}{_chain_tag}_{model_type}_{db_stem}"
-            if os.path.exists(f"{_base_path}_regression{ext}"):
-                model_path = f"{_base_path}_regression{ext}"
+            model_path = f"{_base_path}{ext}"
+        if not os.path.exists(model_path):
+            _candidates = _find_matching_checkpoints(
+                MODEL_DIR, target, lm, model_type, db_stem, ext)
+            if _candidates:
+                print(f"\n[load] Exact checkpoint not found: {Path(model_path).name}")
+                print(f"[load] Found {len(_candidates)} matching checkpoint(s):")
+                for i, c in enumerate(_candidates):
+                    print(f"  [{i}] {Path(c).name}")
+                print(f"[load] Using: [{0}] {Path(_candidates[0]).name}")
+                model_path = _candidates[0]
             else:
-                model_path = f"{_base_path}{ext}"
-            if not os.path.exists(model_path):
-                _candidates = _find_matching_checkpoints(
-                    MODEL_DIR, target, lm, model_type, db_stem, ext)
-                if _candidates:
-                    print(f"\n[load] Exact checkpoint not found: {Path(model_path).name}")
-                    print(f"[load] Found {len(_candidates)} matching checkpoint(s):")
-                    for i, c in enumerate(_candidates):
-                        print(f"  [{i}] {Path(c).name}")
-                    print(f"[load] Using: [{0}] {Path(_candidates[0]).name}")
-                    model_path = _candidates[0]
-                else:
-                    raise FileNotFoundError(
-                        f"Model not found: {model_path}\n"
-                        f"Registry: no match for "
-                        f"(target={target}, lm={lm}, model={model_type})\n"
-                        f"Run --train first, or use --model_path / --model_id.")
+                raise FileNotFoundError(
+                    f"Model not found: {model_path}\n"
+                    f"Searched in: {MODEL_DIR}\n"
+                    f"Run --train first, or use --model_path to specify explicitly.")
 
     if not os.path.exists(model_path):
         raise FileNotFoundError(f"Model not found: {model_path}")
@@ -1706,7 +1343,10 @@ def auto_predict_multi_lm(input_file, target="psr_filter",
 
     base_data = base_data.set_index("BARCODE")
 
-    db_stem = Path(db_path).stem if db_path else "default"
+    db_stem = (Path(db_path).stem if db_path
+             else _dbname_from_model_id(
+                 kwargs.get("model_id") or kwargs.get("model_path", "default"),
+                 target, "", model_type))
     ext     = ".pt" if model_type in ["cnn", "transformer_onehot", "transformer_lm"] else ".pkl"
 
     results_summary = []
@@ -1817,17 +1457,6 @@ def main():
     group.add_argument("--train",           action="store_true", help="Train final model")
     group.add_argument("--split-dataset",   action="store_true", dest="split_dataset",
                        help="Split --db into train + val files.")
-    group.add_argument("--build-dataset",   type=str,            dest="build_dataset",
-                       metavar="FILE",
-                       help="Build balanced + imbalanced datasets from FILE "
-                            "(uses --target as label column)")
-    group.add_argument("--correlate",       type=str, nargs="+", dest="correlate",
-                       metavar="FILE",
-                       help="Correlation analysis on prediction file(s) "
-                            "(uses --target, --assay)")
-    group.add_argument("--list-models",     action="store_true", dest="list_models",
-                       help="List all registered models (optionally filter with "
-                            "--target, --lm, --model, --db)")
 
     parser.add_argument("--target", type=str, default="psr_filter")
     parser.add_argument("--lm", default="antiberta2")
@@ -1844,9 +1473,6 @@ def main():
     parser.add_argument("--mutagenesis", type=int, nargs="?", const=50, default=None, metavar="N")
     parser.add_argument("--threshold", type=float, default=None, metavar="T")
     parser.add_argument("--model_path", type=str, default=None, metavar="PATH")
-    parser.add_argument("--model_id",   type=str, default=None, metavar="ID",
-                        help="Registry model_id for --predict lookup "
-                             "(alternative to --model_path and --db)")
     parser.add_argument("--finetune", action="store_true", default=False)
     parser.add_argument("--finetune_plm", action="store_true", default=False)
     parser.add_argument("--pretrained", type=str, default=None, metavar="PATH")
@@ -1863,44 +1489,6 @@ def main():
     parser.add_argument("--lora_layers", type=int, nargs="+", default=None, metavar="N")
     parser.add_argument("--cost_fn", type=float, default=3.0, metavar="W")
     parser.add_argument("--cost_fp", type=float, default=1.0, metavar="W")
-
-    # ── --build-dataset args ──────────────────────────────────────────────────
-    parser.add_argument("--strategy",   type=str,   default="combined",
-                        choices=["cluster", "kmer_consensus", "combined"],
-                        help="[build-dataset] Downsampling strategy (default: combined)")
-    parser.add_argument("--min-total",  type=int,   default=5000, dest="min_total",
-                        help="[build-dataset] Min total size for imbalanced dataset (default: 5000)")
-    parser.add_argument("--floor-prob", type=float, default=0.5,  dest="floor_prob",
-                        help="[build-dataset] Per-cluster OOF floor to exclude mislabels (default: 0.5)")
-    parser.add_argument("--min-prob",   type=float, default=0.6,  dest="min_prob",
-                        help="[build-dataset] Global OOF consensus threshold (default: 0.6)")
-    parser.add_argument("--cv",         type=int,   default=5,
-                        help="[build-dataset] GridSearchCV folds (default: 5; use 3 for large datasets)")
-    parser.add_argument("--seed",       type=int,   default=42,
-                        help="[build-dataset] Random seed (default: 42)")
-
-    # ── --correlate args ──────────────────────────────────────────────────────
-    parser.add_argument("--assay",          type=str, nargs="+", default=None,
-                        help="[correlate] Assay column name(s) to correlate against "
-                             "(space or comma separated; quote multi-word names)")
-    parser.add_argument("--out",            type=str, default=None,
-                        help="[correlate] Output file stem (default: auto-derived from input)")
-    parser.add_argument("--title",          type=str, default=None,
-                        help="[correlate] Custom figure title")
-    parser.add_argument("--xlabel",         type=str, default=None,
-                        help="[correlate] Custom x-axis label")
-    parser.add_argument("--logit-trans",    action="store_true", default=False,
-                        dest="logit_trans",
-                        help="[correlate] Apply logit transform to scores before correlating")
-    parser.add_argument("--list-scores",    action="store_true", default=False,
-                        dest="list_scores",
-                        help="[correlate] Print detected score columns and exit")
-    parser.add_argument("--tsne-source",    type=str, default="assay", dest="tsne_source",
-                        choices=["assay", "scores", "embedding", "both"],
-                        help="[correlate] Feature space for t-SNE (default: assay)")
-    parser.add_argument("--embedding-file", type=str, default=None, dest="embedding_file",
-                        metavar="EMB_CSV",
-                        help="[correlate] PLM embedding CSV for --tsne-source embedding")
 
     args    = parser.parse_args()
 
@@ -1934,77 +1522,9 @@ def main():
     }
     _cluster_col = _cluster_col_map.get(_cluster_col_src, f"HCDR3_CLUSTER_{_cluster_thresh}")
 
-    # ── --list-models ─────────────────────────────────────────────────────────
-    if getattr(args, 'list_models', False):
-        _registry_list(
-            target   = args.target   if args.target   != 'psr_filter' else None,
-            lm       = args.lm       if args.lm       != 'antiberta2' else None,
-            model    = args.model    if args.model     != 'xgboost'   else None,
-            trainset = db_path,
-        )
-        return
-
-    # ── --build-dataset ───────────────────────────────────────────────────────
-    if getattr(args, 'build_dataset', None):
-        from utils.build_balanced_dataset_v4 import build_balanced_dataset
-        # --cluster_col reused as the sequence column for both clustering and kmer steps
-        _bbd_seq_col = getattr(args, 'cluster_col', 'CDR3')
-        build_balanced_dataset(
-            input_path   = args.build_dataset,
-            label_col    = args.target,
-            strategy     = args.strategy,
-            min_total    = args.min_total,
-            cluster_col  = _bbd_seq_col,
-            threshold    = args.cluster,      # --cluster reused (default 0.8)
-            kmer_col     = _bbd_seq_col,
-            min_prob     = args.min_prob,
-            floor_prob   = args.floor_prob,
-            cv           = args.cv,
-            bal_path     = None,              # auto: <input>_<label>_balanced.xlsx
-            imb_path     = None,              # auto: <input>_<label>_imbalanced_<min_total>.xlsx
-            reject_path  = None,              # auto: <input>_<label>_majority_rejected.xlsx
-            random_state = args.seed,
-        )
-        return
-
-    # ── --correlate ───────────────────────────────────────────────────────────
-    if getattr(args, 'correlate', None):
-        from utils.developability_correlation import run as _corr_run
-
-        # Support comma-separated file list as well as space-separated
-        _corr_files = []
-        for _f in args.correlate:
-            _corr_files.extend([x.strip() for x in _f.split(',') if x.strip()])
-
-        # Mirror the comma/space handling from the original CLI
-        _assay_raw = args.assay or []
-        if any(',' in tok for tok in _assay_raw):
-            _assay_cols = [x.strip() for x in ' '.join(_assay_raw).split(',') if x.strip()]
-        else:
-            _assay_cols = [x.strip() for x in _assay_raw if x.strip()]
-
-        if not _assay_cols and not args.list_scores:
-            parser.error(
-                "--correlate requires --assay COL [COL ...]\n"
-                "  Use --list-scores to discover available columns first."
-            )
-
-        _corr_run(
-            files          = _corr_files,
-            assay_cols     = _assay_cols,
-            out            = args.out,
-            title          = args.title,
-            xlabel         = args.xlabel,
-            logit_trans    = args.logit_trans,
-            list_scores    = args.list_scores,
-            target_col     = args.target,
-            tsne_source    = args.tsne_source,
-            embedding_file = args.embedding_file,
-        )
-        return
-
-    # ── --split-dataset ───────────────────────────────────────────────────────
     if args.split_dataset:
+        if not db_path:
+            parser.error("--db required for --split-dataset")
         if not (0.0 < args.split < 1.0):
             parser.error("--split must be in (0,1)")
         split_and_save(db_path=db_path, split=args.split,
@@ -2239,51 +1759,6 @@ def main():
         model.save(path)
         print(f"FINAL MODEL SAVED: {path}")
 
-        # ── Auto-register in model registry ───────────────────────────────
-        _reg_threshold = getattr(model, 'recommended_threshold', None)
-        _reg_epochs    = None
-        try:
-            _reg_epochs = model.config.get('training', {}).get('epochs')
-        except Exception:
-            pass
-
-        # Try to read kfold stats from most recent BEST_*.pt for this run
-        _kfold_auc = _kfold_std = _kfold_folds = _kfold_best_fold = None
-        try:
-            import glob as _glob
-            _best_pat  = os.path.join(
-                MODEL_DIR,
-                f"BEST_{args.target}_{args.lm}*{args.model}*{db_stem}*.pt")
-            _best_list = sorted(_glob.glob(_best_pat),
-                                key=os.path.getmtime, reverse=True)
-            if _best_list:
-                import torch as _torch
-                _ckpt = _torch.load(_best_list[0], map_location='cpu',
-                                    weights_only=False)
-                if isinstance(_ckpt, dict):
-                    _kfold_auc       = _ckpt.get('mean_auc') or _ckpt.get('fold_auc')
-                    _kfold_folds     = _ckpt.get('kfold')
-                    _kfold_best_fold = _ckpt.get('fold')
-        except Exception:
-            pass
-
-        _registry_add(
-            model_id        = Path(path).name,
-            trainset        = db_path,
-            target          = args.target,
-            lm              = args.lm,
-            model           = args.model,
-            model_path      = path,
-            entry_type      = 'full_train',
-            kfold_auc       = _kfold_auc,
-            kfold_std       = _kfold_std,
-            kfold_folds     = _kfold_folds,
-            kfold_best_fold = _kfold_best_fold,
-            threshold       = _reg_threshold,
-            epochs          = _reg_epochs,
-            notes           = '',
-        )
-
     if args.predict:
         _VALID_PLM_LMS = {"ablang","antiberty","antiberta2","antiberta2-cssp","igbert"}
         _SEQ_ONLY_LMS  = {"onehot","onehot_vh","onehot_cdr3","onehot_hcdr3","biophysical","kmer","seq","none"}
@@ -2309,8 +1784,7 @@ def main():
                          run_mutagenesis=args.mutagenesis is not None,
                          mutagenesis_n=args.mutagenesis,
                          threshold=args.threshold,
-                         model_path=getattr(args, 'model_path', None),
-                         model_id=getattr(args, 'model_id', None))
+                         model_path=getattr(args, 'model_path', None))
 
 
 if __name__ == "__main__":
