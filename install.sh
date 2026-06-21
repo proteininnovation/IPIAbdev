@@ -125,6 +125,10 @@ echo "  Activated : $ENV_NAME  (Python $(python3 --version))"
     echo '    eval "$($CONDA_BIN shell.bash hook 2>/dev/null)"'
     echo 'fi'
     echo "conda activate $ENV_NAME"
+    # macOS: set OMP_NUM_THREADS=1 to prevent XGBoost/PyTorch OpenMP segfault
+    if [ "$(uname -s)" = "Darwin" ]; then
+        echo 'export OMP_NUM_THREADS=1   # macOS: prevents XGBoost+PyTorch OpenMP segfault'
+    fi
     echo 'echo "  DELPHI environment activated"'
 } > activate.sh
 chmod +x activate.sh
