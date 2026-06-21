@@ -210,8 +210,11 @@ def main():
         print("  No files found in this record.")
         sys.exit(0)
 
-    # ── Filter by mode ────────────────────────────────────────────────────
-    IS_EMB = lambda f: ".emb.csv" in (f.get("key") or f.get("filename", ""))
+    SKIP_DEFAULT = {"DS1.xlsx", "DS1_embedding.tar.gz"}
+    IS_DS1_DATA = lambda f: (
+        (f.get("key") or f.get("filename", "")) in SKIP_DEFAULT or
+        ".emb.csv" in (f.get("key") or f.get("filename", ""))
+    )
 
     if args.embeddings:
         # ── Download DS1_embedding.tar.gz → extract to data/ ─────────────
@@ -261,12 +264,14 @@ def main():
         print("══════════════════════════════════════════════════════════════════")
         print()
         return
-        # Default: all models EXCEPT DS1 embedding CSVs
-        emb_count = sum(1 for f in files if IS_EMB(f))
-        files     = [f for f in files if not IS_EMB(f)]
+
+    else:
+        # Default: all pretrained models — skip DS1 data files
+        emb_count = sum(1 for f in files if IS_DS1_DATA(f))
+        files     = [f for f in files if not IS_DS1_DATA(f)]
         if emb_count:
-            print(f"  Skipped {emb_count} DS1 embedding file(s)  "
-                  f"(use --embeddings to download them instead)")
+            print(f"  Skipped {emb_count} DS1 data file(s)  "
+                  f"(use --embeddings to download DS1_embedding.tar.gz → data/)")
 
     # ── Print file list ───────────────────────────────────────────────────
     total_size = sum(f.get("size", 0) or f.get("filesize", 0) for f in files)
