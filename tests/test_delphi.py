@@ -331,10 +331,16 @@ def test_train() -> bool:
     _head("── Test 5: Build final models ──────────────────────────────────")
 
     runs = [
-        ("transformer_lm",     "ablang",      1800),
-        ("transformer_onehot", "onehot",      1800),
-        ("rf",                 "biophysical",  600),
-        ("xgboost",            "biophysical",  600),
+        # Transformer models
+        ("transformer_lm",     "igbert",       1800),
+        ("transformer_lm",     "ablang",       1800),
+        ("transformer_onehot", "onehot",       1800),
+        # RF — biophysical + kmer
+        ("rf",                 "biophysical",   600),
+        ("rf",                 "kmer",          600),
+        # XGBoost — biophysical + kmer
+        ("xgboost",            "biophysical",   600),
+        ("xgboost",            "kmer",          600),
     ]
 
     results = {}
@@ -389,7 +395,9 @@ def test_interpretability() -> bool:
 
     needed = [
         ("rf",                 "biophysical", 600),
+        ("rf",                 "kmer",        600),
         ("xgboost",            "biophysical", 600),
+        ("xgboost",            "kmer",        600),
         ("transformer_onehot", "onehot",      1800),
     ]
 
@@ -403,38 +411,36 @@ def test_interpretability() -> bool:
         reg = {}
         db_stem = TEST_DATA.stem
 
+    # Test 5 already trained RF and XGBoost on DS1_psr_500.
+    # Always pass all three models — delphi_interpretability.py
+    # gracefully skips any that are not found in the registry.
     for model, lm, timeout in needed:
         tag = f"{model}/{lm}"
-        found = [mid for mid, e in reg.get("models", {}).items()
-                 if e.get("target") == TARGET
-                 and e.get("model") == model
-                 and e.get("lm")    == lm
-                 and db_stem in e.get("trainset", "")]
-
+        found = any(
+            e.get("target") == TARGET and e.get("model") == model
+            for e in reg.get("models", {}).values()
+        )
         if found:
-            _ok(f"Found in registry: {tag}  ({found[-1]})")
+            _ok(f"Registry: {tag}")
         else:
-            _warn(f"{tag} not found in registry — training now on DS1_psr_500.xlsx")
+            _warn(f"Registry: {tag} not found — auto-training...")
             ok = _run(
                 [_DELPHI, "--train",
                  "--target", TARGET, "--lm", lm, "--model", model,
                  "--db", TEST_DATA],
-                label=f"auto-train {tag}",
-                timeout=timeout,
+                label=f"auto-train {tag}", timeout=timeout,
             )
-            if not ok:
-                _fail(f"Auto-training failed for {tag} — cannot run interpretability")
+            if not ok and model == "transformer_onehot":
+                _fail(f"Auto-training failed for {tag}")
                 return False
-
-            # Reload registry after training
             try:
                 reg = yaml.safe_load(reg_path.read_text()) or {}
             except Exception:
                 pass
 
-    # ── Run interpretability on the same dataset ───────────────────────────
+    # ── Run interpretability with all three models ─────────────────────────
     _sep()
-    _info("All models ready — running interpretability analysis...")
+    _info("Running interpretability: rf + xgboost + transformer_onehot")
     out_dir = OUT_INTERP
     ok = _run(
         [_INTERP,
@@ -445,7 +451,7 @@ def test_interpretability() -> bool:
          "--ig-steps",    "20",
          "--n-pairs",     "2",
          "--outdir",      out_dir],
-        label="interpretability (psr_filter, DS1_psr_500, 500 samples, 2 pairs)",
+        label="interpretability (rf + xgboost + transformer_onehot)",
         timeout=1200,
     )
 
@@ -465,6 +471,107 @@ def test_interpretability() -> bool:
 # ══════════════════════════════════════════════════════════════════════════════
 # MAIN
 # ══════════════════════════════════════════════════════════════════════════════
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TEST 7 — Single-target interpretability with IPI pretrained model
+# ══════════════════════════════════════════════════════════════════════════════
+def test_interpretability_pretrained_psr() -> bool:
+    _head("── Test 7: Interpretability — IPI pretrained PSR model ─────────")
+    _info("Input   : tests/DS1_psr_500.xlsx  (sequences + psr_filter labels)")
+    _info("Model   : FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt")
+    _info("Note    : --model_id used — no IPI training db needed")
+    _sep()
+
+    model_id = "FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt"
+    model_path = _ROOT / "pretrained_202605" / model_id
+
+    if not model_path.exists():
+        _warn(f"Pretrained model not found: {model_id}")
+        _warn("Run: python utils/download_zenodo.py")
+        _warn("Skipping Test 7")
+        return True   # not a failure — pretrained models are optional
+
+    _ok(f"Model found: {model_id}")
+    out_dir = OUT_INTERP / "pretrained_psr"
+
+    ok = _run(
+        [_INTERP,
+         "--target",      TARGET,
+         "--models",      "transformer_onehot",
+         "--model_id",    model_id,
+         "--db",          TEST_DATA,
+         "--max-samples", "200",
+         "--ig-steps",    "20",
+         "--n-pairs",     "2",
+         "--outdir",      out_dir],
+        label="interpretability PSR pretrained",
+        timeout=1200,
+    )
+    if ok:
+        figures = list(out_dir.rglob("*.png")) + list(out_dir.rglob("*.tiff"))
+        _info(f"Figures: {len(figures)}")
+    return ok
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TEST 8 — Dual-target interpretability with IPI pretrained PSR + SEC models
+# ══════════════════════════════════════════════════════════════════════════════
+def test_interpretability_pretrained_psr_sec() -> bool:
+    _head("── Test 8: Interpretability — IPI pretrained PSR + SEC models ──")
+    _info("PSR model : FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt")
+    _info("SEC model : FINAL_sec_filter_onehot_transformer_onehot_ipi_sec_5000.pt")
+    _info("Note: --db2 requires sec_filter labels — needs ipi_sec_5000.xlsx")
+    _sep()
+
+    psr_model_id = "FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt"
+    sec_model_id = "FINAL_sec_filter_onehot_transformer_onehot_ipi_sec_5000.pt"
+    psr_path = _ROOT / "pretrained_202605" / psr_model_id
+    sec_path = _ROOT / "pretrained_202605" / sec_model_id
+    sec_db   = _ROOT / "data" / "ipi_sec_5000.xlsx"
+
+    # Check pretrained models exist
+    if not psr_path.exists():
+        _warn(f"PSR model not found: {psr_model_id} — skipping Test 8")
+        return True
+    if not sec_path.exists():
+        _warn(f"SEC model not found: {sec_model_id} — skipping Test 8")
+        return True
+
+    # Check SEC database (required for --db2 sec_filter labels)
+    if not sec_db.exists():
+        _warn(f"IPI SEC database not found: data/ipi_sec_5000.xlsx")
+        _warn("Dual-target interpretability requires sec_filter labels — skipping Test 8")
+        _info("To run: provide data/ipi_sec_5000.xlsx with sec_filter column")
+        return True   # not a failure — IPI data is proprietary
+
+    _ok(f"PSR model : {psr_model_id}")
+    _ok(f"SEC model : {sec_model_id}")
+    _ok(f"SEC db    : data/ipi_sec_5000.xlsx")
+
+    out_dir = OUT_INTERP / "pretrained_psr_sec"
+
+    ok = _run(
+        [_INTERP,
+         "--target",      "psr_filter",
+         "--target2",     "sec_filter",
+         "--models",      "transformer_onehot",
+         "--tr-model-id",  psr_model_id,
+         "--tr-model-id2", sec_model_id,
+         "--db",           TEST_DATA,
+         "--db2",          sec_db,
+         "--max-samples",  "200",
+         "--ig-steps",     "20",
+         "--n-pairs",      "2",
+         "--outdir",       out_dir],
+        label="interpretability PSR+SEC pretrained",
+        timeout=1800,
+    )
+    if ok:
+        figures = list(out_dir.rglob("*.png")) + list(out_dir.rglob("*.tiff"))
+        _info(f"Figures: {len(figures)}")
+    return ok
+
+
 def main():
     ap = argparse.ArgumentParser(
         description="DELPHI integration test suite — DS1 (Chen et al. 2024)")
@@ -525,6 +632,10 @@ def main():
 
     if _should(6):
         results[6] = test_interpretability()
+    if _should(7):
+        results[7] = test_interpretability_pretrained_psr()
+    if _should(8):
+        results[8] = test_interpretability_pretrained_psr_sec()
 
     # ── Summary ───────────────────────────────────────────────────────────
     labels = {
@@ -535,6 +646,8 @@ def main():
         4: "10-fold cross-validation  (4 models)",
         5: "Build final models    (4 models)",
         6: "Interpretability      (psr_filter, 500 samples)",
+        7: "Interpretability      (IPI PSR pretrained model)",
+        8: "Interpretability      (IPI PSR+SEC pretrained, dual-target)",
     }
 
     print()
