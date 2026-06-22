@@ -104,16 +104,16 @@
 # EXAMPLE 1 — RF biophysical (fastest, interpretable, no PLM needed)
 # ══════════════════════════════════════════════════════════════════════════════
 #
-#   python predict_developability.py --kfold 10 \
+#   python delphi.py --kfold 10 \
 #       --target psr_filter --lm biophysical --model rf \
 #       --db data/ipi_psr_trainset.xlsx \
 #       --cost_fn 3.0
 #
-#   python predict_developability.py --train \
+#   python delphi.py --train \
 #       --target psr_filter --lm biophysical --model rf \
 #       --db data/ipi_psr_trainset.xlsx
 #
-#   python predict_developability.py --predict data/new_cohort.xlsx \
+#   python delphi.py --predict data/new_cohort.xlsx \
 #       --target psr_filter --lm biophysical --model rf \
 #       --db data/ipi_psr_trainset.xlsx \
 #       --mutagenesis 50
@@ -122,12 +122,12 @@
 # EXAMPLE 2 — transformer_onehot (VH+VL+CDR3 one-hot, no PLM)
 # ══════════════════════════════════════════════════════════════════════════════
 #
-#   python predict_developability.py --kfold 10 \
+#   python delphi.py --kfold 10 \
 #       --target psr_filter --lm onehot --model transformer_onehot \
 #       --db data/ipi_psr_trainset.xlsx \
 #       --cluster 0.8
 #
-#   python predict_developability.py --train \
+#   python delphi.py --train \
 #       --target psr_filter --lm onehot --model transformer_onehot \
 #       --db data/ipi_psr_trainset.xlsx
 #
