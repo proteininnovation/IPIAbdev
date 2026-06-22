@@ -343,6 +343,36 @@ python delphi.py --predict tests/DS1_psr_500.xlsx \
     --outdir results/psr_rf
 ```
 
+Instead of pointing at a checkpoint with `--model_path`, you can let DELPHI
+locate the model from the training database stem with `--db`. DELPHI builds
+`FINAL_{target}_{lm}_{model}_{db_stem}` and finds it in the model directory
+(`MODEL_DIR` in `config.py`). These commands are equivalent to the ones above,
+provided the matching checkpoint lives in that directory:
+
+```bash
+# Predict PSR — model located by --db stem (ipi_psr_trainset)
+python delphi.py --predict tests/DS1_psr_500.xlsx \
+    --target psr_filter --lm onehot --model transformer_onehot \
+    --db data/ipi_psr_trainset.xlsx \
+    --outdir results/psr
+
+# Predict SEC — model located by --db stem (ipi_sec_5000)
+python delphi.py --predict tests/DS1_psr_500.xlsx \
+    --target sec_filter --lm onehot --model transformer_onehot \
+    --db data/ipi_sec_5000.xlsx \
+    --outdir results/sec
+
+# Predict PSR using RF model — located by --db stem
+python delphi.py --predict tests/DS1_psr_500.xlsx \
+    --target psr_filter --lm biophysical --model rf \
+    --db data/ipi_psr_trainset.xlsx \
+    --outdir results/psr_rf
+```
+
+> `--model_path` is the most reliable form because it points directly at the
+> checkpoint file. The `--db` form depends on the matching `FINAL_*` file being
+> present in the configured model directory.
+
 Output files written to `--outdir`:
 ```
 tests/predictions/
@@ -711,9 +741,9 @@ If a required model is not found, DELPHI prints the exact command to train it:
 
 ## Model Lookup Convention
 
-DELPHI locates models by filename convention in the model directory (set by
-`--model-dir`, default `build/pretrained_models`). There is no separate
-registry file: the filename itself encodes the lookup key.
+DELPHI locates models by filename convention. There is no separate registry
+driving the lookup: the filename itself encodes the key (the registry is a
+human-readable index, written on `--train` and shown by `--list-models`).
 
 ```
 FINAL_{target}_{lm}_{model}_{db_stem}.{pt|pkl}
@@ -723,9 +753,14 @@ FINAL_{target}_{lm}_{model}_{db_stem}.{pt|pkl}
 
 1. If `--model_path` is given, that exact checkpoint is used.
 2. Otherwise DELPHI builds `FINAL_{target}_{lm}_{model}_{db_stem}` using the
-   stem of `--db`, and looks for it in `--model-dir`.
-3. If the exact name is not found, DELPHI searches the directory for the
+   stem of `--db`, and looks for it in the model directory (`MODEL_DIR` in
+   `config.py`, default `build/pretrained_models`).
+3. If the exact name is not found, DELPHI searches that directory for the
    closest matching checkpoint and reports the candidates.
+
+`delphi_interpretability.py` uses the same filename convention but takes a
+`--model-dir` flag to choose the search directory, and `--model-path` to point
+directly at a checkpoint (parsing the `db_stem` from the filename).
 
 ```bash
 # List registered models
