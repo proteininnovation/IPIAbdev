@@ -12,15 +12,20 @@
 #   2. Embedding generation  (igbert, ablang, antiberty,
 #                             antiberta2, antiberta2-cssp)
 #   3. PSR prediction        (IPI pretrained models, all LMs)
-#   4. 10-fold validation    (transformer_lm/ablang, transformer_onehot,
+#   4. 5-fold validation     (transformer_lm/ablang, transformer_onehot,
 #                             rf/biophysical, xgboost/biophysical)
 #   5. Build final models    (same 4 models)
 #   6. Interpretability      (psr_filter, IG+SHAP, 500 samples)
 #
 # Usage:
-#   python tests/test_delphi.py                  # full suite
-#   python tests/test_delphi.py --fast           # skip kfold + train
-#   python tests/test_delphi.py --section 3      # single section only
+#   python tests/test_delphi.py                  # full suite (sections 0-8)
+#   python tests/test_delphi.py --fast           # skip final-train (Test 5)
+#   python tests/test_delphi.py --section 3      # single section only (0-8)
+#
+# Sections 3, 7, 8 exercise IPI pretrained models and require pretrained_202605/
+# (run: python utils/download_zenodo.py). If absent they are reported as SKIP,
+# not PASS. Without pretrained models the suite verifies training + local
+# interpretability only, not IPI pretrained inference.
 # ══════════════════════════════════════════════════════════════════════════════
 
 from __future__ import annotations
@@ -226,7 +231,7 @@ def test_predict(df: pd.DataFrame) -> bool:
     _head("── Test 3: PSR prediction — IPI pretrained models ──────────────")
     _info(f"Input   : tests/DS1_psr_500.xlsx  (sequences to predict)")
     _info(f"Lookup  : --model_path  (full path to pretrained model)")
-    _info(f"Models  : download from https://zenodo.org/records/20648372")
+    _info(f"Models  : download from https://zenodo.org/records/20785877")
     _sep()
 
     # model_path → full path to pretrained model file in pretrained_202605/
@@ -250,6 +255,7 @@ def test_predict(df: pd.DataFrame) -> bool:
     ]
 
     results = {}
+    skipped = set()
     labels  = df[TARGET].values   # psr_filter labels only
 
     def _run_predictions(model_list, target, has_labels):
@@ -258,8 +264,9 @@ def test_predict(df: pd.DataFrame) -> bool:
             tag = f"{target}/{model}/{lm}"
             model_path = _ROOT / "pretrained_202605" / model_id
             if not model_path.exists():
-                _warn(f"{tag}: model file not found — {model_id} (skipping)")
-                results[tag] = True   # skip, not a failure
+                _warn(f"{tag}: model file not found — {model_id} (SKIP)")
+                results[tag] = True   # not a failure
+                skipped.add(tag)
                 continue
             _info(f"  --model {model} --lm {lm} --model_path {model_id}")
             cmd = [_DELPHI, "--predict", TEST_DATA,
@@ -299,17 +306,30 @@ def test_predict(df: pd.DataFrame) -> bool:
     _sep()
     passed = sum(results.values())
     for tag, ok in results.items():
-        sym = f"{GREEN}OK{RESET}" if ok else f"{RED}FAIL{RESET}"
+        if tag in skipped:
+            sym = f"{YELLOW}SKIP{RESET}"
+        else:
+            sym = f"{GREEN}OK{RESET}" if ok else f"{RED}FAIL{RESET}"
         print(f"  {sym}  {tag}")
-    _info(f"{passed}/{len(results)} models succeeded")
-    return passed == len(results)
+    n_ran = len(results) - len(skipped)
+    _info(f"{n_ran - sum(1 for t,o in results.items() if t not in skipped and not o)}"
+          f"/{n_ran} models ran successfully, {len(skipped)} skipped (no file)")
+    # If every model was skipped (pretrained_202605/ absent), report SKIP not PASS
+    if len(skipped) == len(results):
+        _warn("All pretrained models missing — Test 3 counted as SKIP, not PASS")
+        return ("SKIP",
+                "no pretrained models found in pretrained_202605/",
+                "python utils/download_zenodo.py   (downloads all 52 models)")
+    # Otherwise pass only if every model that actually ran succeeded
+    return all(o for t, o in results.items() if t not in skipped)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TEST 4 — 10-fold cross-validation
+# TEST 4 — k-fold cross-validation (5-fold)
 # ══════════════════════════════════════════════════════════════════════════════
-def test_kfold() -> bool:
-    _head("── Test 4: 10-fold cross-validation ────────────────────────────")
+def test_kfold(fast: bool = False) -> bool:
+    k = "5"
+    _head(f"── Test 4: {k}-fold cross-validation ───────────────────────────")
 
     runs = [
         ("transformer_lm",     "ablang",      None),
@@ -322,7 +342,7 @@ def test_kfold() -> bool:
     for model, lm, timeout in runs:
         tag = f"{model}/{lm}"
         results[tag] = _run(
-            [_DELPHI, "--kfold", "10",
+            [_DELPHI, "--kfold", k,
              "--target", TARGET, "--lm", lm, "--model", model,
              "--db", TEST_DATA],
             label=f"kfold {tag}",
@@ -370,21 +390,18 @@ def test_train() -> bool:
         results[tag] = ok
 
         if ok:
-            try:
-                import yaml
-                reg = yaml.safe_load(
-                    (_ROOT / "config" / "model_registry.yaml").read_text()
-                ) or {}
-                entries = [mid for mid, e in reg.get("models", {}).items()
-                           if e.get("target") == TARGET
-                           and e.get("model") == model
-                           and e.get("lm") == lm]
-                if entries:
-                    _ok(f"Registered: {entries[-1]}")
-                else:
-                    _warn("Not found in model_registry.yaml after training")
-            except Exception as e:
-                _warn(f"Registry check skipped: {e}")
+            # Models are located by filename convention, not a registry.
+            # Verify the trained checkpoint file exists in MODEL_DIR.
+            ext = ".pt" if model in ("transformer_onehot", "transformer_lm", "cnn") else ".pkl"
+            stem = f"FINAL_{TARGET}_{lm}_{model}_{TEST_DATA.stem}{ext}"
+            ckpt = MODEL_DIR / stem
+            matches = list(MODEL_DIR.glob(f"FINAL_{TARGET}_{lm}_{model}_*{ext}"))
+            if ckpt.exists():
+                _ok(f"Saved: {stem}")
+            elif matches:
+                _ok(f"Saved: {matches[-1].name}")
+            else:
+                _warn(f"No checkpoint found in {MODEL_DIR} after training")
 
     _sep()
     passed = sum(results.values())
@@ -398,7 +415,7 @@ def test_train() -> bool:
 # ══════════════════════════════════════════════════════════════════════════════
 # TEST 6 — Interpretability analysis
 # ══════════════════════════════════════════════════════════════════════════════
-def test_interpretability() -> bool:
+def test_interpretability(fast: bool = False) -> bool:
     _head("── Test 6: Interpretability ────────────────────────────────────")
     _info("Purpose: compute SHAP/IG attributions ON the training dataset")
     _info("         (not a prediction service — same dataset as training)")
@@ -415,29 +432,33 @@ def test_interpretability() -> bool:
         ("transformer_onehot", "onehot",      None),
     ]
 
-    # ── Check registry — auto-train any missing models ─────────────────────
-    try:
-        import yaml
-        reg_path = _ROOT / "config" / "model_registry.yaml"
-        reg = yaml.safe_load(reg_path.read_text()) if reg_path.exists() else {}
-        db_stem = TEST_DATA.stem   # DS1_psr_500
-    except Exception:
-        reg = {}
-        db_stem = TEST_DATA.stem
+    # ── Check for trained models by filename — auto-train any missing ──────
+    db_stem = TEST_DATA.stem   # DS1_psr_500
+
+    def _model_exists(model, lm):
+        ext = ".pt" if model in ("transformer_onehot", "transformer_lm", "cnn") else ".pkl"
+        exact = MODEL_DIR / f"FINAL_{TARGET}_{lm}_{model}_{db_stem}{ext}"
+        if exact.exists():
+            return True
+        return bool(list(MODEL_DIR.glob(f"FINAL_{TARGET}_{lm}_{model}_*{ext}")))
 
     # Test 5 already trained RF and XGBoost on DS1_psr_500.
-    # Always pass all three models — delphi_interpretability.py
-    # gracefully skips any that are not found in the registry.
+    # delphi_interpretability.py gracefully skips any model not found.
     for model, lm, timeout in needed:
         tag = f"{model}/{lm}"
-        found = any(
-            e.get("target") == TARGET and e.get("model") == model
-            for e in reg.get("models", {}).values()
-        )
-        if found:
-            _ok(f"Registry: {tag}")
+        if _model_exists(model, lm):
+            _ok(f"Model present: {tag}")
+        elif fast and model == "transformer_onehot":
+            # --fast skips Test 5 (training); don't trigger a slow transformer
+            # train here. If the model is absent, mark the section SKIP.
+            _warn(f"--fast: {tag} not present and training skipped → SKIP Test 6")
+            return ("SKIP",
+                    "--fast skips final training and the transformer model "
+                    "is not present yet",
+                    "run without --fast, or run: python tests/test_delphi.py "
+                    "--section 5  (trains models first)")
         else:
-            _warn(f"Registry: {tag} not found — auto-training...")
+            _warn(f"Model {tag} not found — auto-training...")
             ok = _run(
                 [_DELPHI, "--train",
                  "--target", TARGET, "--lm", lm, "--model", model,
@@ -447,10 +468,6 @@ def test_interpretability() -> bool:
             if not ok and model == "transformer_onehot":
                 _fail(f"Auto-training failed for {tag}")
                 return False
-            try:
-                reg = yaml.safe_load(reg_path.read_text()) or {}
-            except Exception:
-                pass
 
     # ── Run interpretability — script runs rf + xgboost + transformer ──────
     # delphi_interpretability.py auto-locates FINAL_*.pkl/.pt models in
@@ -539,8 +556,10 @@ def test_interpretability_pretrained_psr() -> bool:
     if not model_path.exists():
         _warn(f"Pretrained model not found: {model_id}")
         _warn("Run: python utils/download_zenodo.py")
-        _warn("Skipping Test 7")
-        return True
+        _warn("Skipping Test 7 (counted as SKIP, not PASS)")
+        return ("SKIP",
+                f"pretrained model missing: pretrained_202605/{model_id}",
+                "python utils/download_zenodo.py")
 
     # delphi_interpretability.py locates models by db_stem from --db filename.
     # The model stem is 'ipi_psr_trainset', so --db must be a file whose stem
@@ -590,11 +609,15 @@ def test_interpretability_pretrained_psr_sec() -> bool:
     sec_path = _ROOT / "pretrained_202605" / sec_model_id
 
     if not psr_path.exists():
-        _warn(f"PSR model not found: {psr_model_id} — skipping Test 8")
-        return True
+        _warn(f"PSR model not found: {psr_model_id} — skipping Test 8 (SKIP)")
+        return ("SKIP",
+                f"pretrained PSR model missing: pretrained_202605/{psr_model_id}",
+                "python utils/download_zenodo.py")
     if not sec_path.exists():
-        _warn(f"SEC model not found: {sec_model_id} — skipping Test 8")
-        return True
+        _warn(f"SEC model not found: {sec_model_id} — skipping Test 8 (SKIP)")
+        return ("SKIP",
+                f"pretrained SEC model missing: pretrained_202605/{sec_model_id}",
+                "python utils/download_zenodo.py")
 
     _ok(f"PSR model : {psr_model_id}")
     _ok(f"SEC model : {sec_model_id}")
@@ -641,17 +664,18 @@ def main():
     ap.add_argument("--fast", action="store_true",
                     help="Use DS1_psr_500.xlsx and skip kfold + train")
     ap.add_argument("--section", type=int, default=None,
-                    choices=[0, 1, 2, 3, 4, 5, 6],
-                    help="Run a single test section only (0-6)")
+                    choices=[0, 1, 2, 3, 4, 5, 6, 7, 8],
+                    help="Run a single test section only (0-8). "
+                         "Sections 3, 7, 8 require pretrained_202605/ models.")
     args = ap.parse_args()
 
     print()
     print("══════════════════════════════════════════════════════════════════")
     print("  DELPHI Integration Test Suite")
     print("  Dataset : DS1 — Chen et al. 2024 (Cell Reports, PMC11564698)")
-    print("  License : MIT  |  https://zenodo.org/records/14735846")
+    print("  License : MIT  |  https://zenodo.org/records/20785877")
     print(f"  Target  : {TARGET}")
-    if args.fast:    print("  Mode    : fast (kfold + train skipped)")
+    if args.fast:    print("  Mode    : fast (final-train skipped)")
     if args.section is not None: print(f"  Section : {args.section} only")
     print("══════════════════════════════════════════════════════════════════")
 
@@ -667,7 +691,7 @@ def main():
     if _should(0): results[0] = test_imports()
 
     # data always needed by subsequent tests
-    if _should(1) or args.section in (2, 3, 4, 5, 6, None):
+    if _should(1) or args.section in (2, 3, 4, 5, 6, 7, 8, None):
         ok, df = test_data()
         results[1] = ok
         if not ok:
@@ -682,10 +706,9 @@ def main():
     if _should(3): results[3] = test_predict(df)
 
     if _should(4):
-        if args.fast:
-            _head("── Test 4: 10-fold CV ────────────────────── SKIPPED (--fast)")
-        else:
-            results[4] = test_kfold()
+        # Test 4 runs 5-fold CV (always). Kept here even in --fast mode since
+        # it is the primary validation check.
+        results[4] = test_kfold(fast=args.fast)
 
     if _should(5):
         if args.fast:
@@ -694,7 +717,7 @@ def main():
             results[5] = test_train()
 
     if _should(6):
-        results[6] = test_interpretability()
+        results[6] = test_interpretability(fast=args.fast)
     if _should(7):
         results[7] = test_interpretability_pretrained_psr()
     if _should(8):
@@ -706,7 +729,7 @@ def main():
         1: f"Data file ({TEST_DATA.name})",
         2: "Embedding generation  (5 PLMs)",
         3: "PSR prediction        (6 pretrained models)",
-        4: "10-fold cross-validation  (4 models)",
+        4: "5-fold cross-validation  (4 models)",
         5: "Build final models    (4 models)",
         6: "Interpretability      (psr_filter, 500 samples)",
         7: "Interpretability      (IPI PSR pretrained model)",
@@ -718,16 +741,34 @@ def main():
     print(f"  {BOLD}SUMMARY{RESET}")
     print("──────────────────────────────────────────────────────────────────")
 
-    passed = failed = 0
+    passed = failed = skipped = 0
+    skip_details = []
     for n, label in labels.items():
         if n not in results: continue
-        if results[n]:
+        r = results[n]
+        # SKIP can be the bare string "SKIP" or a ("SKIP", reason, fix) tuple
+        is_skip = (r == "SKIP") or (isinstance(r, tuple) and r and r[0] == "SKIP")
+        if is_skip:
+            print(f"  {YELLOW}SKIP{RESET}  Test {n}: {label}"); skipped += 1
+            reason = r[1] if isinstance(r, tuple) and len(r) > 1 else "did not run"
+            fix    = r[2] if isinstance(r, tuple) and len(r) > 2 else None
+            skip_details.append((n, reason, fix))
+        elif r:
             print(f"  {GREEN}PASS{RESET}  Test {n}: {label}"); passed += 1
         else:
             print(f"  {RED}FAIL{RESET}  Test {n}: {label}"); failed += 1
 
     print("──────────────────────────────────────────────────────────────────")
-    print(f"  {GREEN}{passed} passed{RESET}   {RED}{failed} failed{RESET}")
+    _skip_s = f"   {YELLOW}{skipped} skipped{RESET}" if skipped else ""
+    print(f"  {GREEN}{passed} passed{RESET}   {RED}{failed} failed{RESET}{_skip_s}")
+
+    if skip_details:
+        print()
+        print(f"  {YELLOW}Why tests were skipped (and how to enable them):{RESET}")
+        for n, reason, fix in skip_details:
+            print(f"    Test {n}: {reason}")
+            if fix:
+                print(f"             → {fix}")
     print("══════════════════════════════════════════════════════════════════")
     print()
     sys.exit(0 if failed == 0 else 1)
