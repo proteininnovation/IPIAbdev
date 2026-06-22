@@ -154,6 +154,13 @@ cd delphi
 source activate.sh
 ```
 
+**Troubleshooting (macOS):** if `install.sh` reports `No module named 'torch'`
+during verification, your shell's `python3` is resolving to the system
+interpreter (e.g. `/usr/bin/python3`) rather than the conda environment. The
+install script pins the environment interpreter explicitly, but if you run
+verification by hand, use `python` (which `source activate.sh` points at the
+env) rather than `python3`, or call `$CONDA_PREFIX/bin/python` directly.
+
 ---
 
 ### Step 2: Download IPI pretrained models from Zenodo
@@ -186,35 +193,47 @@ and extract them into `data/`. Models are located by filename convention
 ### Step 3: Run the integration test suite
 
 ```bash
-# Full test suite (recommended)
+# Full test suite (sections 0-8)
 python tests/test_delphi.py
 
-# Fast mode — skips kfold (Test 4) and training (Test 5)
+# Fast mode — 5-fold CV instead of 10 (Test 4), skips final training (Test 5)
 python tests/test_delphi.py --fast
 
-# Run a single section
+# Run a single section (0-8)
 python tests/test_delphi.py --section 0   # package imports only
-python tests/test_delphi.py --section 3   # prediction only
+python tests/test_delphi.py --section 3   # pretrained prediction only
 python tests/test_delphi.py --section 6   # interpretability only
 ```
 
 The test data (`tests/DS1_psr_500.xlsx`, 500 antibodies from
-Chen et al. 2024, MIT License) is committed to the repository —
-no additional download needed.
+Chen et al. 2024, MIT License) is committed to the repository, so no
+additional download is needed for sections 0-2 and 4-6.
+
+Sections 3, 7, and 8 exercise the **IPI pretrained models** and require
+`pretrained_202605/`. If those models are not present, those sections are
+reported as **SKIP** (not PASS), and the summary prints exactly why and how to
+enable them. To run them, download the models first:
+
+```bash
+python utils/download_zenodo.py
+```
 
 **Test sections:**
 
-| Section | What is tested |
-|---|---|
-| 0 | Package imports: PyTorch, SHAP, Captum, all PLMs |
-| 1 | Test data: `DS1_psr_500.xlsx` — 500 antibodies, balanced 50-50 |
-| 2 | Embedding generation: ABlang2, AntiBERTy, AntiBERTa2, IgBERT |
-| 3 | PSR + SEC prediction using IPI pretrained models via `--model_path` |
-| 4 | 10-fold cross-validation: transformer, RF, XGBoost |
-| 5 | Train final models (rf, xgboost, transformer_onehot) |
-| 6 | Interpretability: SHAP + Integrated Gradients + per-antibody waterfall + CDR3 mutagenesis |
+| Section | What is tested | Needs pretrained models |
+|---|---|---|
+| 0 | Package imports: PyTorch, SHAP, Captum, all PLMs | no |
+| 1 | Test data: `DS1_psr_500.xlsx` — 500 antibodies, balanced 50-50 | no |
+| 2 | Embedding generation: ABlang2, AntiBERTy, AntiBERTa2, IgBERT | no |
+| 3 | PSR + SEC prediction using IPI pretrained models via `--model_path` | yes |
+| 4 | k-fold cross-validation (10-fold, or 5-fold with `--fast`): transformer, RF, XGBoost | no |
+| 5 | Train final models (rf, xgboost, transformer_onehot) | no |
+| 6 | Interpretability: SHAP + Integrated Gradients + per-antibody waterfall + CDR3 mutagenesis | no |
+| 7 | Interpretability on an IPI pretrained PSR model | yes |
+| 8 | Interpretability on IPI pretrained PSR + SEC models (dual-target) | yes |
 
-**Expected output when all tests pass:**
+**Expected output (training/local sections pass, pretrained sections skipped
+because models were not downloaded):**
 
 ```
 ══════════════════════════════════════════════════════════════════
@@ -223,14 +242,27 @@ no additional download needed.
   PASS  Test 0: Package imports
   PASS  Test 1: Data file (DS1_psr_500.xlsx)
   PASS  Test 2: Embedding generation  (5 PLMs)
-  PASS  Test 3: PSR + SEC prediction  (12 pretrained models)
+  SKIP  Test 3: PSR prediction        (6 pretrained models)
   PASS  Test 4: 10-fold cross-validation  (4 models)
   PASS  Test 5: Build final models  (4 models)
   PASS  Test 6: Interpretability  (psr_filter, 500 samples)
+  SKIP  Test 7: Interpretability      (IPI PSR pretrained model)
+  SKIP  Test 8: Interpretability      (IPI PSR+SEC pretrained, dual-target)
 ──────────────────────────────────────────────────────────────────
-  7 passed   0 failed
+  6 passed   0 failed   3 skipped
+
+  Why tests were skipped (and how to enable them):
+    Test 3: no pretrained models found in pretrained_202605/
+             → python utils/download_zenodo.py   (downloads all 52 models)
+    Test 7: pretrained model missing: pretrained_202605/FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt
+             → python utils/download_zenodo.py
+    Test 8: pretrained PSR model missing: pretrained_202605/FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt
+             → python utils/download_zenodo.py
 ══════════════════════════════════════════════════════════════════
 ```
+
+After `python utils/download_zenodo.py`, re-running the suite turns the three
+SKIP sections into PASS (`9 passed, 0 failed`).
 
 ---
 
