@@ -75,7 +75,7 @@
 #   LEVEL 2 — Collaborator fine-tune  (--finetune --pretrained path.pt)
 #   ─────────────────────────────────────────────────────────────────────────
 #   Load YOUR pretrained .pt → fine-tune classifier on THEIR small dataset
-#   PLM: embedded in their local MLAbDev install (ablang2/transformers)
+#   PLM: embedded in their local DELPHI install (ablang2/transformers)
 #   Best for: 50–2,000 new antibodies from a collaborator lab
 #
 # ══════════════════════════════════════════════════════════════════════════════
@@ -116,6 +116,12 @@
 #   python delphi.py --predict data/new_cohort.xlsx \
 #       --target psr_filter --lm biophysical --model rf \
 #       --db data/ipi_psr_trainset.xlsx \
+#       --mutagenesis 50
+#
+#   # Predict with a pretrained model by direct path (no --db needed):
+#   python delphi.py --predict data/new_cohort.xlsx \
+#       --target psr_filter --lm biophysical --model rf \
+#       --model_path pretrained_202605/FINAL_psr_filter_biophysical_rf_ipi_psr_trainset.pkl \
 #       --mutagenesis 50
 #
 # ══════════════════════════════════════════════════════════════════════════════
@@ -898,7 +904,7 @@ def _run_cdr3_mutagenesis(
         _act_str   = (f"  |  Actual ({_label_col}) = {'PASS' if _actual==1 else 'FAIL'}"
                       if _actual is not None else "")
         ax.set_title(
-            f"IPI MLAbDev · CDR3 Mutagenesis Heatmap\n"
+            f"DELPHI · CDR3 Mutagenesis Heatmap\n"
             f"ID: {_bc}   {_score_str}{_act_str}\n"
             f"{model_type.upper()} | {lm} | {db_stem}",
             fontsize=9, loc='center', pad=8)

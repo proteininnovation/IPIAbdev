@@ -197,7 +197,7 @@ no additional download needed.
 | 0 | Package imports: PyTorch, SHAP, Captum, all PLMs |
 | 1 | Test data: `DS1_psr_500.xlsx` — 500 antibodies, balanced 50-50 |
 | 2 | Embedding generation: ABlang2, AntiBERTy, AntiBERTa2, IgBERT |
-| 3 | PSR + SEC prediction using IPI pretrained models via `--model_id` |
+| 3 | PSR + SEC prediction using IPI pretrained models via `--model_path` |
 | 4 | 10-fold cross-validation: transformer, RF, XGBoost |
 | 5 | Train final models and verify model registry entry |
 | 6 | Interpretability: SHAP + Integrated Gradients + per-antibody waterfall + CDR3 mutagenesis |
@@ -232,7 +232,11 @@ IPI provides pretrained models for PSR, SEC, HIC, and AC-SINS.
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20752840.svg)](https://doi.org/10.5281/zenodo.20752840)
 
 ```bash
+# Download all 52 pretrained models (PSR + SEC)
 python utils/download_zenodo.py
+
+# Download DS1 embedding files (optional — needed for training from embeddings)
+python utils/download_zenodo.py --embeddings   # extracts to data/
 ```
 
 Files download to `pretrained_202605/`. The `config/model_registry.yaml`
@@ -289,17 +293,20 @@ FINAL_sec_filter_biophysical_xgboost_ipi_sec_5000.pkl                 sec_filter
 ```bash
 # Predict PSR (polyreactivity) — Transformer onehot model
 python delphi.py --predict tests/DS1_psr_500.xlsx \
-    --model_id FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt \
+    --target psr_filter --lm onehot --model transformer_onehot \
+    --model_path pretrained_202605/FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt \
     --outdir results/psr
 
 # Predict SEC (size exclusion) — Transformer onehot model
 python delphi.py --predict tests/DS1_psr_500.xlsx \
-    --model_id FINAL_sec_filter_onehot_transformer_onehot_ipi_sec_5000.pt \
+    --target sec_filter --lm onehot --model transformer_onehot \
+    --model_path pretrained_202605/FINAL_sec_filter_onehot_transformer_onehot_ipi_sec_5000.pt \
     --outdir results/sec
 
 # Predict PSR using RF model instead
 python delphi.py --predict tests/DS1_psr_500.xlsx \
-    --model_id FINAL_psr_filter_biophysical_rf_ipi_psr_trainset.pkl \
+    --target psr_filter --lm biophysical --model rf \
+    --model_path pretrained_202605/FINAL_psr_filter_biophysical_rf_ipi_psr_trainset.pkl \
     --outdir results/psr_rf
 ```
 
@@ -315,31 +322,86 @@ tests/predictions/
 
 ### Tutorial Step 4: Interpretability analysis
 
-`delphi_interpretability.py` runs prediction internally — no separate
-`--predict` step needed. One command loads the model, predicts, and
-generates all figures.
+`delphi_interpretability.py` runs prediction internally, then generates
+interpretability figures. It supports three modes, auto-detected from the
+arguments you pass.
+
+DELPHI interprets three architectures: Transformer (one-hot) via Integrated
+Gradients, and Random Forest and XGBoost (biophysical features) via SHAP.
+
+**Mode C: predict new antibodies with an existing model, then interpret.**
+This is the most common workflow. The trained model is located either by its
+`--db` stem or by a direct `--model-path`. Both forms below produce the same
+prediction-set interpretation.
 
 ```bash
-# Single model, single filter — one command does everything
-python delphi_interpretability.py \
-    --target psr_filter \
-    --model_id FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt \
-    --db tests/DS1_psr_500.xlsx \
-    --outdir outputs/interp_psr
+# Transformer (one-hot) · Integrated Gradients
+python delphi_interpretability.py --predict tests/DS1_psr_1000.xlsx \
+    --target psr_filter --model transformer_onehot --lm onehot \
+    --model-path pretrained_202605/FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt \
+    --ig-max-samples 500 --n-antibodies 20 \
+    --outdir interpret_out_transformer
 
-# Full analysis — all three models, PSR + SEC
-# Note: --db and --db2 must contain the respective label columns
-# (psr_filter and sec_filter) — they are typically different datasets
+# Random Forest (biophysical) · SHAP
+python delphi_interpretability.py --predict tests/DS1_psr_500.xlsx \
+    --target psr_filter --model rf --lm biophysical \
+    --model-path pretrained_202605/FINAL_psr_filter_biophysical_rf_ipi_psr_trainset.pkl \
+    --n-antibodies 20 \
+    --outdir interpret_out_rf
+
+# XGBoost (biophysical) · SHAP
+python delphi_interpretability.py --predict tests/DS1_psr_500.xlsx \
+    --target psr_filter --model xgboost --lm biophysical \
+    --model-path pretrained_202605/FINAL_psr_filter_biophysical_xgboost_ipi_psr_trainset.pkl \
+    --n-antibodies 20 \
+    --outdir interpret_out_xgboost
+```
+
+The same run located by `--db` stem instead of `--model-path`:
+
+```bash
+python delphi_interpretability.py --predict tests/DS1_psr_1000.xlsx \
+    --db data/ipi_psr_trainset.xlsx --target psr_filter \
+    --model transformer_onehot --lm onehot \
+    --model-dir pretrained_202605 \
+    --ig-max-samples 500 --n-antibodies 20 \
+    --outdir interpret_out_transformer
+```
+
+**Mode B: single-target, all three architectures on one database.**
+
+```bash
+python delphi_interpretability.py \
+    --target psr_filter --db data/ipi_psr_trainset.xlsx \
+    --model-dir pretrained_202605 \
+    --ig-max-samples 500 --n-antibodies 20 \
+    --outdir outputs/interp_psr
+```
+
+**Mode A: dual-target manuscript figures (PSR + SEC).** Requires both
+`--db`/`--target` and `--db2`/`--target2` with their respective label columns.
+
+```bash
 python delphi_interpretability.py \
     --target psr_filter --target2 sec_filter \
     --db  data/ipi_psr_trainset.xlsx \
     --db2 data/ipi_sec_5000.xlsx \
+    --model-dir pretrained_202605 \
+    --ig-max-samples 0 --ig-steps 200 --n-pairs 20 \
     --outdir outputs/interp_psr_sec
 ```
 
-Output includes SHAP bar charts (RF, XGBoost), Integrated Gradients position
-plots, HCDR3 residue heatmaps, and CDR3 in silico mutagenesis — all in
-300 DPI TIFF/PDF/PNG format.
+**Per-antibody figures.** `--n-antibodies N` selects N PASS + N FAIL
+antibodies (0 = ALL), with no predictive-score filter. For each antibody and
+each architecture, DELPHI writes a waterfall plot plus a CDR3 mutagenesis
+heatmap, labelled with the BARCODE, the actual label (PASS=1 / FAIL=0 when
+available), and the DELPHI predicted score. For RF and XGBoost the
+transformer-only IG amino-acid heatmap panel is skipped.
+
+Output includes SHAP bar charts and beeswarms (RF, XGBoost), Integrated
+Gradients position profiles, HCDR3 residue heatmaps, the cross-method
+convergence panel, and per-antibody waterfall + CDR3 mutagenesis figures, all
+in 300 DPI TIFF/PDF and 150 DPI PNG.
 
 > `delphi.py --predict` is only needed when you want a standalone
 > predictions file (CSV/Excel) to share or run `--correlate` against.
@@ -528,7 +590,8 @@ python delphi.py --predict tests/DS1_psr_500.xlsx \
 
 # Specify a model by registry ID
 python delphi.py --predict tests/DS1_psr_500.xlsx \
-    --model_id FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt
+    --target psr_filter --lm onehot --model transformer_onehot \
+    --model_path pretrained_202605/FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt
 
 # Specify explicit path
 python delphi.py --predict tests/DS1_psr_500.xlsx \
@@ -583,17 +646,19 @@ python delphi_interpretability.py \
     --db2 data/ipi_sec_5000.xlsx \
     --outdir outputs/interp_psr_sec
 
-# Single model, single filter
-python delphi_interpretability.py \
-    --target psr_filter --models transformer_onehot \
-    --db tests/DS1_psr_500.xlsx \
+# Single architecture, single filter (Mode C — predict + interpret)
+python delphi_interpretability.py --predict tests/DS1_psr_500.xlsx \
+    --target psr_filter --model transformer_onehot --lm onehot \
+    --model-path pretrained_202605/FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt \
+    --ig-max-samples 500 --n-antibodies 20 \
     --outdir outputs/interp_psr_transformer
 
-# RF + Transformer only (skip XGBoost)
-python delphi_interpretability.py \
-    --target psr_filter --models rf transformer_onehot \
-    --db tests/DS1_psr_500.xlsx \
-    --outdir outputs/interp_psr_rf_tr
+# RF only (biophysical · SHAP)
+python delphi_interpretability.py --predict tests/DS1_psr_500.xlsx \
+    --target psr_filter --model rf --lm biophysical \
+    --model-path pretrained_202605/FINAL_psr_filter_biophysical_rf_ipi_psr_trainset.pkl \
+    --n-antibodies 20 \
+    --outdir outputs/interp_psr_rf
 
 # Any label pair (not limited to PSR/SEC)
 python delphi_interpretability.py \
@@ -649,9 +714,10 @@ python delphi.py --list-models --target psr_filter
 python delphi.py --predict tests/DS1_psr_500.xlsx \
     --target psr_filter --lm onehot --model transformer_onehot
 
-# Predict using a specific model_id
+# Predict using a specific model checkpoint
 python delphi.py --predict tests/DS1_psr_500.xlsx \
-    --model_id FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt
+    --target psr_filter --lm onehot --model transformer_onehot \
+    --model_path pretrained_202605/FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt
 ```
 
 **Example registry entry** (written automatically after `--train`):
