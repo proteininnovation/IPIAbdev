@@ -17,7 +17,7 @@ Applicable to any binary antibody property label including PSR (polyreactivity),
 
 > Code and full tutorial documentation accompanying the manuscript:
 > **"DELPHI: a unified interpretable ML platform for multi-objective antibody developability prediction"**
-> Hoan Nguyen, Andre Teixeira et al., *Nature Biotechnology* (in preparation)
+> Hoan Nguyen, Andre Teixeira et al., (in preparation)
 
 ---
 
