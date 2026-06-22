@@ -170,6 +170,123 @@ from embedding_generator import generate_embedding
 import sys
 import datetime
 
+
+def _list_registered_models(target: str = None, lm: str = None,
+                            model: str = None,
+                            registry_path: str = "config/model_registry.yaml") -> None:
+    """
+    Print models registered in config/model_registry.yaml, optionally filtered
+    by target / lm / model. Called by `delphi.py --list-models`.
+    """
+    import os as _os
+    import yaml as _yaml
+
+    if not _os.path.exists(registry_path):
+        print(f"[list-models] No registry found at {registry_path}")
+        print(f"[list-models] Train a model with --train to create it, or "
+              f"download pretrained models with utils/download_zenodo.py")
+        return
+
+    try:
+        with open(registry_path) as f:
+            reg = _yaml.safe_load(f) or {}
+    except Exception as e:
+        print(f"[list-models] Could not read {registry_path}: {e}")
+        return
+
+    models = reg.get("models", {})
+    if not models:
+        print(f"[list-models] Registry {registry_path} contains no models.")
+        return
+
+    rows = []
+    for mid, e in models.items():
+        if target and e.get("target") != target:
+            continue
+        if lm and e.get("lm") != lm:
+            continue
+        if model and e.get("model") != model:
+            continue
+        rows.append((mid, e))
+
+    filt = []
+    if target: filt.append(f"target={target}")
+    if lm:     filt.append(f"lm={lm}")
+    if model:  filt.append(f"model={model}")
+    filt_s = ("  [filter: " + ", ".join(filt) + "]") if filt else ""
+
+    print(f"\n  Registered models in {registry_path}{filt_s}")
+    print(f"  {'-'*108}")
+    print(f"  {'model_id':<60} {'target':<11} {'lm':<14} {'model':<18} {'type'}")
+    print(f"  {'-'*108}")
+    for mid, e in rows:
+        print(f"  {mid:<60} {e.get('target',''):<11} {e.get('lm',''):<14} "
+              f"{e.get('model',''):<18} {e.get('type','')}")
+    print(f"  {'-'*108}")
+    print(f"  {len(rows)} model(s)"
+          + (f" of {len(models)} total" if len(rows) != len(models) else "")
+          + "\n")
+
+
+def _register_model(model_path: str, target: str, lm: str, model: str,
+                    trainset: str, model_type_tag: str = "full_train",
+                    registry_path: str = "config/model_registry.yaml",
+                    **extra) -> None:
+    """
+    Add or update an entry in config/model_registry.yaml after --train.
+
+    The registry key is the model filename (basename of model_path).
+    Required fields: trainset, target, lm, model, model_path.
+    Optional fields (trained_at, kfold_auc, threshold, epochs, notes, ...)
+    are passed via **extra. Existing 'notes' is preserved on update.
+    """
+    import os as _os
+    import yaml as _yaml
+
+    key = _os.path.basename(model_path)
+    _os.makedirs(_os.path.dirname(registry_path) or ".", exist_ok=True)
+
+    # Load existing registry (preserve all other entries)
+    reg = {}
+    if _os.path.exists(registry_path):
+        try:
+            with open(registry_path) as f:
+                reg = _yaml.safe_load(f) or {}
+        except Exception as e:
+            print(f"[registry] WARNING: could not read {registry_path} ({e}); "
+                  f"starting fresh")
+            reg = {}
+    if "models" not in reg or not isinstance(reg.get("models"), dict):
+        reg["models"] = {}
+
+    # Preserve a user-edited notes field if the entry already exists
+    prior = reg["models"].get(key, {})
+    entry = {
+        "trainset":   str(trainset),
+        "target":     target,
+        "lm":         lm,
+        "model":      model,
+        "model_path": str(model_path),
+        "type":       model_type_tag,
+        "trained_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "notes":      prior.get("notes", ""),
+    }
+    # Merge any extra metadata (kfold_auc, threshold, epochs, ...)
+    for k, v in extra.items():
+        if v is not None:
+            entry[k] = v
+
+    reg["models"][key] = entry
+
+    try:
+        with open(registry_path, "w") as f:
+            _yaml.safe_dump(reg, f, default_flow_style=False,
+                            sort_keys=False, allow_unicode=True)
+        print(f"[registry] registered '{key}' → {registry_path}")
+    except Exception as e:
+        print(f"[registry] WARNING: failed to write {registry_path} ({e})")
+
+
 def _dbname_from_model_id(model_id_or_path: str, target: str = "",
                            lm: str = "", model: str = "") -> str:
     """
@@ -1463,6 +1580,9 @@ def main():
     group.add_argument("--train",           action="store_true", help="Train final model")
     group.add_argument("--split-dataset",   action="store_true", dest="split_dataset",
                        help="Split --db into train + val files.")
+    group.add_argument("--list-models",      action="store_true", dest="list_models",
+                       help="List models registered in config/model_registry.yaml "
+                            "and exit. Optionally filter with --target / --lm / --model.")
 
     parser.add_argument("--target", type=str, default="psr_filter")
     parser.add_argument("--lm", default="antiberta2")
@@ -1497,6 +1617,17 @@ def main():
     parser.add_argument("--cost_fp", type=float, default=1.0, metavar="W")
 
     args    = parser.parse_args()
+
+    # ── --list-models: read config/model_registry.yaml and exit ──────────
+    if getattr(args, 'list_models', False):
+        # Detect which filters the user explicitly passed (vs argparse defaults)
+        import sys as _sys
+        _argv = " ".join(_sys.argv)
+        _f_target = args.target if "--target" in _argv else None
+        _f_lm     = args.lm     if "--lm"     in _argv else None
+        _f_model  = args.model  if "--model"  in _argv else None
+        _list_registered_models(target=_f_target, lm=_f_lm, model=_f_model)
+        return
 
     _raw_db = args.db or get_default_db_path()
     if _raw_db and str(_raw_db).lower().endswith(('.pt', '.pkl')):
@@ -1764,6 +1895,18 @@ def main():
         path = f"{MODEL_DIR}/FINAL_{args.target}_{args.lm}_{args.model}_{db_stem}{_task_suffix}{ext}"
         model.save(path)
         print(f"FINAL MODEL SAVED: {path}")
+
+        # ── Register in model_registry.yaml ──────────────────────────────
+        _reg_thresh = getattr(model, 'recommended_threshold', None)
+        _register_model(
+            model_path=path,
+            target=args.target,
+            lm=args.lm,
+            model=args.model,
+            trainset=(args.db or ""),
+            threshold=(_reg_thresh if _reg_thresh not in (None, 0.5) else None),
+            epochs=getattr(args, 'finetune_epochs', None) if False else None,
+        )
 
     if args.predict:
         _VALID_PLM_LMS = {"ablang","antiberty","antiberta2","antiberta2-cssp","igbert"}

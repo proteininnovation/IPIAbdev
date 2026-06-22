@@ -274,16 +274,31 @@ Your input file must be an Excel (`.xlsx`) or CSV with these columns:
 
 ### Tutorial Step 2: Discover available models
 
-Pretrained models are stored as `FINAL_*.pt` (transformer) and `FINAL_*.pkl`
-(rf/xgboost) files in the `pretrained_202605/` directory. List them directly:
+Models are tracked in `config/model_registry.yaml`. List them with
+`--list-models`, optionally filtered by target, lm, or model:
 
 ```bash
-# List all downloaded IPI pretrained models
-ls pretrained_202605/FINAL_*
+# List all registered models
+python delphi.py --list-models
 
 # Filter by target property
-ls pretrained_202605/FINAL_psr_filter_*
-ls pretrained_202605/FINAL_sec_filter_*
+python delphi.py --list-models --target psr_filter
+python delphi.py --list-models --target sec_filter
+
+# Filter by architecture
+python delphi.py --list-models --model xgboost
+python delphi.py --list-models --target psr_filter --lm onehot
+```
+
+Example output:
+
+```
+  model_id                                                       target      lm          model               type
+  -------------------------------------------------------------------------------------------------------------
+  FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt psr_filter  onehot      transformer_onehot  full_train
+  FINAL_psr_filter_biophysical_rf_ipi_psr_trainset.pkl           psr_filter  biophysical rf                  full_train
+  FINAL_psr_filter_biophysical_xgboost_ipi_psr_trainset.pkl      psr_filter  biophysical xgboost             full_train
+  ...
 ```
 
 The filename encodes everything needed to use a model:
@@ -398,16 +413,8 @@ python delphi_interpretability.py \
 
 **Mode A: dual-target manuscript figures (PSR + SEC).** Requires both
 `--db`/`--target` and `--db2`/`--target2` with their respective label columns.
-
-```bash
-python delphi_interpretability.py \
-    --target psr_filter --target2 sec_filter \
-    --db  data/ipi_psr_trainset.xlsx \
-    --db2 data/ipi_sec_5000.xlsx \
-    --model-dir pretrained_202605 \
-    --ig-max-samples 0 --ig-steps 200 --n-pairs 20 \
-    --outdir outputs/interp_psr_sec
-```
+The full publication command (all antibodies, 200 IG steps) is in the
+[Interpretability Analysis](#interpretability-analysis) section below.
 
 **Per-antibody figures.** `--n-antibodies N` selects N PASS + N FAIL
 antibodies (0 = ALL), with no predictive-score filter. For each antibody and
@@ -595,10 +602,11 @@ python delphi.py --train \
     --db tests/DS1_psr_500.xlsx
 ```
 
-After training, the model is saved to the model directory. List it:
+After training, the model is saved to the model directory and registered in
+`config/model_registry.yaml`. Verify with:
 
 ```bash
-ls build/pretrained_models/FINAL_psr_filter_*
+python delphi.py --list-models --target psr_filter
 ```
 
 ---
@@ -661,41 +669,20 @@ Generate publication-quality SHAP and Integrated Gradients figures (Nature Biote
 
 Missing models render their panel blank with a note — the script continues with available models.
 
+The day-to-day commands (Mode A dual-target, Mode B single-target all-architectures,
+and Mode C predict-and-interpret per architecture) are covered in
+[Tutorial Step 4](#tutorial-step-4-interpretability-analysis). The examples below
+cover label pairs beyond PSR/SEC and the high-resolution publication settings.
+
 ```bash
-# Full analysis: all models, PSR + SEC (requires separate datasets per filter)
+# For final publication figures (all antibodies, 200 IG steps).
+# Works for any label pair, not just PSR/SEC — swap targets and databases.
 python delphi_interpretability.py \
     --target psr_filter --target2 sec_filter \
     --db  data/ipi_psr_trainset.xlsx \
     --db2 data/ipi_sec_5000.xlsx \
-    --outdir outputs/interp_psr_sec
-
-# Single architecture, single filter (Mode C — predict + interpret)
-python delphi_interpretability.py --predict tests/DS1_psr_500.xlsx \
-    --target psr_filter --model transformer_onehot --lm onehot \
-    --model-path pretrained_202605/FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt \
-    --ig-max-samples 500 --n-antibodies 20 \
-    --outdir outputs/interp_psr_transformer
-
-# RF only (biophysical · SHAP)
-python delphi_interpretability.py --predict tests/DS1_psr_500.xlsx \
-    --target psr_filter --model rf --lm biophysical \
-    --model-path pretrained_202605/FINAL_psr_filter_biophysical_rf_ipi_psr_trainset.pkl \
-    --n-antibodies 20 \
-    --outdir outputs/interp_psr_rf
-
-# Any label pair (not limited to PSR/SEC)
-python delphi_interpretability.py \
-    --target hic_filter --target2 acsins_filter \
-    --db  data/ipi_hic_trainset.xlsx \
-    --db2 data/ipi_acsins_trainset.xlsx \
-    --outdir outputs/interp_hic_acsins
-
-# For final publication figures
-python delphi_interpretability.py \
-    --target psr_filter --target2 sec_filter \
-    --db  data/ipi_psr_trainset.xlsx \
-    --db2 data/ipi_sec_5000.xlsx \
-    --ig-max-samples 500 --ig-steps 200 \
+    --model-dir pretrained_202605 \
+    --ig-max-samples 0 --ig-steps 200 --n-pairs 20 \
     --outdir outputs/interp_publication
 ```
 
@@ -724,8 +711,6 @@ If a required model is not found, DELPHI prints the exact command to train it:
 
 ## Model Lookup Convention
 
-## Model Lookup Convention
-
 DELPHI locates models by filename convention in the model directory (set by
 `--model-dir`, default `build/pretrained_models`). There is no separate
 registry file: the filename itself encodes the lookup key.
@@ -743,9 +728,9 @@ FINAL_{target}_{lm}_{model}_{db_stem}.{pt|pkl}
    closest matching checkpoint and reports the candidates.
 
 ```bash
-# List available models in the model directory
-ls build/pretrained_models/FINAL_*
-ls pretrained_202605/FINAL_psr_filter_*
+# List registered models
+python delphi.py --list-models
+python delphi.py --list-models --target psr_filter
 
 # Predict by --db stem lookup
 python delphi.py --predict tests/DS1_psr_500.xlsx \
