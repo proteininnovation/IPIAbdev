@@ -456,8 +456,8 @@ def test_interpretability() -> bool:
     # delphi_interpretability.py auto-locates FINAL_*.pkl/.pt models in
     # --model-dir matching db_stem from --db. No --models flag needed.
     _sep()
-    _info("Running interpretability: rf + xgboost + transformer_onehot")
-    out_dir = OUT_INTERP
+    _info("Mode B: single-target, all 3 architectures on the training db")
+    out_dir = OUT_INTERP / "modeB_all"
     ok = _run(
         [_INTERP,
          "--target",       TARGET,
@@ -465,9 +465,9 @@ def test_interpretability() -> bool:
          "--model-dir",    str(MODEL_DIR),
          "--max-samples",  "200",
          "--ig-steps",     "20",
-         "--n-pairs",      "2",
+         "--n-antibodies", "2",
          "--outdir",       str(out_dir)],
-        label="interpretability (rf + xgboost + transformer_onehot)",
+        label="interpretability Mode B (rf + xgboost + transformer_onehot)",
         timeout=None,
     )
 
@@ -476,12 +476,47 @@ def test_interpretability() -> bool:
         csvs    = list(out_dir.rglob("*.csv"))
         _info(f"Figures  : {len(figures)}")
         _info(f"CSV files: {len(csvs)}")
+        per_ab = list(out_dir.rglob("per_antibody_*/*.tiff"))
+        _info(f"Per-antibody figures: {len(per_ab)}")
         if figures:
-            _ok(f"Output written to outputs/test_interp/")
+            _ok(f"Mode B output written to {out_dir}/")
         else:
             _warn("No figure files found — check output directory")
 
-    return ok
+    # ── Mode C: single-architecture predict + interpret via --model-path ───
+    # Uses Test 5's DS1_psr_500-trained models. Each architecture predicts on
+    # the same file and produces per-antibody waterfall + CDR3 mutagenesis.
+    _sep()
+    _info("Mode C: single-architecture predict + interpret (--model-path)")
+    mode_c = [
+        ("transformer_onehot", "onehot",
+         f"FINAL_{TARGET}_onehot_transformer_onehot_{TEST_DATA.stem}.pt"),
+        ("rf", "biophysical",
+         f"FINAL_{TARGET}_biophysical_rf_{TEST_DATA.stem}.pkl"),
+        ("xgboost", "biophysical",
+         f"FINAL_{TARGET}_biophysical_xgboost_{TEST_DATA.stem}.pkl"),
+    ]
+    c_ok = True
+    for model, lm, fname in mode_c:
+        mpath = MODEL_DIR / fname
+        if not mpath.exists():
+            _warn(f"Mode C {model}: checkpoint not found ({fname}) — skipping")
+            continue
+        c_out = OUT_INTERP / f"modeC_{model}"
+        cmd = [_INTERP, "--predict", str(TEST_DATA),
+               "--target", TARGET, "--model", model, "--lm", lm,
+               "--model-path", str(mpath),
+               "--n-antibodies", "2",
+               "--outdir", str(c_out)]
+        if model == "transformer_onehot":
+            cmd += ["--ig-max-samples", "100", "--ig-steps", "20"]
+        sub = _run(cmd, label=f"interpretability Mode C ({model})", timeout=None)
+        c_ok = c_ok and sub
+        if sub:
+            per_ab = list(c_out.rglob("per_antibody_*/*.tiff"))
+            _info(f"  {model}: {len(per_ab)} per-antibody figures")
+
+    return ok and c_ok
 
 
 # ══════════════════════════════════════════════════════════════════════════════
