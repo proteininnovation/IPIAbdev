@@ -107,7 +107,21 @@ else
 fi
 
 conda activate $ENV_NAME
-echo "  Activated : $ENV_NAME  (Python $(python3 --version))"
+
+# [FIX] After `conda activate`, `python3` can still resolve to the system
+#   interpreter on macOS (e.g. /usr/bin/python3 = 3.9), while the env's Python
+#   lives at $CONDA_PREFIX/bin/python. Using `python3` for verification then
+#   reports "No module named 'torch'" even though torch installed fine into the
+#   env. Pin PY/PIP to the env explicitly and use them everywhere below.
+PY="${CONDA_PREFIX:-/opt/anaconda3/envs/$ENV_NAME}/bin/python"
+PIP="$PY -m pip"
+if [ ! -x "$PY" ]; then
+    # Fallback: ask conda for the env's python
+    PY="$($CONDA_BIN run -n $ENV_NAME python -c 'import sys; print(sys.executable)' 2>/dev/null || echo python)"
+    PIP="$PY -m pip"
+fi
+echo "  Activated : $ENV_NAME  (Python $("$PY" --version 2>&1))"
+echo "  Using interpreter: $PY"
 
 # Initialize conda for zsh too (macOS default shell)
 "$CONDA_BIN" init zsh 2>/dev/null || true
@@ -159,12 +173,12 @@ esac
 
 echo "  Platform : $NOTE"
 if [ -n "$TORCH_URL" ]; then
-    pip install torch torchvision torchaudio --index-url "$TORCH_URL"
+    $PIP install torch torchvision torchaudio --index-url "$TORCH_URL"
 else
-    pip install torch torchvision torchaudio
+    $PIP install torch torchvision torchaudio
 fi
 
-python3 -c "
+"$PY" -c "
 import torch
 print(f'  PyTorch {torch.__version__}')
 if torch.cuda.is_available():
@@ -184,13 +198,13 @@ echo "  HMMER + ANARCI installed"
 # ── Step 5: Install pip packages ─────────────────────────────────────────────
 echo ""
 echo "── Step 5: Install pip packages ────────────────────────────────"
-pip install -r requirements.txt
+$PIP install -r requirements.txt
 echo "  All packages installed"
 
 # ── Step 6: Pre-download IgBERT weights ──────────────────────────────────────
 echo ""
 echo "── Step 6: Pre-download IgBERT weights ─────────────────────────"
-python3 -c "
+"$PY" -c "
 import subprocess, sys, os
 r = subprocess.run([sys.executable, '-c',
     'from transformers import AutoTokenizer, AutoModel; '
@@ -205,7 +219,7 @@ print(r.stdout.strip() if r.returncode == 0 else
 # ── Step 7: Verify installation ───────────────────────────────────────────────
 echo ""
 echo "── Step 7: Verify installation ─────────────────────────────────"
-python3 - << 'PYEOF'
+"$PY" - << 'PYEOF'
 import sys, subprocess, os
 
 env = os.environ.copy()
