@@ -50,6 +50,14 @@ OUT_PRED   = _TESTS / "predictions"
 OUT_INTERP = _TESTS / "interpretability"
 OUT_LOGS   = _TESTS / "logs"
 
+# MODEL_DIR — where delphi.py --train saves models (from config.py)
+try:
+    sys.path.insert(0, str(_ROOT))
+    from config import MODEL_DIR as _MD
+    MODEL_DIR = Path(_MD)
+except Exception:
+    MODEL_DIR = _ROOT / "build" / "pretrained_models"
+
 GREEN  = "\033[92m"; RED    = "\033[91m"
 YELLOW = "\033[93m"; BOLD   = "\033[1m"; RESET = "\033[0m"
 
@@ -217,13 +225,13 @@ def test_embeddings() -> bool:
 def test_predict(df: pd.DataFrame) -> bool:
     _head("── Test 3: PSR prediction — IPI pretrained models ──────────────")
     _info(f"Input   : tests/DS1_psr_500.xlsx  (sequences to predict)")
-    _info(f"Lookup  : --model_id  (no IPI training db needed)")
+    _info(f"Lookup  : --model_path  (full path to pretrained model)")
     _info(f"Models  : download from https://zenodo.org/records/20648372")
     _sep()
 
-    # model_id → directly from registry (no --db needed)
-    # External users use --model_id so they don't need IPI training databases
-    # (model, lm, model_id)
+    # model_path → full path to pretrained model file in pretrained_202605/
+    # External users use --model_path so they don't need IPI training databases
+    # (model, lm, model_filename)
     PSR_MODELS = [
         ("transformer_lm",     "igbert",         "FINAL_psr_filter_igbert_transformer_lm_ipi_psr_trainset.pt"),
         ("transformer_lm",     "ablang",          "FINAL_psr_filter_ablang_transformer_lm_ipi_psr_trainset.pt"),
@@ -248,12 +256,17 @@ def test_predict(df: pd.DataFrame) -> bool:
         _info(f"Target: {target}")
         for model, lm, model_id in model_list:
             tag = f"{target}/{model}/{lm}"
-            _info(f"  --model {model} --lm {lm} --model_id {model_id}")
+            model_path = _ROOT / "pretrained_202605" / model_id
+            if not model_path.exists():
+                _warn(f"{tag}: model file not found — {model_id} (skipping)")
+                results[tag] = True   # skip, not a failure
+                continue
+            _info(f"  --model {model} --lm {lm} --model_path {model_id}")
             cmd = [_DELPHI, "--predict", TEST_DATA,
                    "--target", target,
                    "--lm",      lm,
                    "--model",   model,
-                   "--model_id", model_id]
+                   "--model_path", str(model_path)]
             ok = _run(cmd, label=f"predict {tag}", timeout=None)
             results[tag] = ok
 
@@ -439,19 +452,21 @@ def test_interpretability() -> bool:
             except Exception:
                 pass
 
-    # ── Run interpretability with all three models ─────────────────────────
+    # ── Run interpretability — script runs rf + xgboost + transformer ──────
+    # delphi_interpretability.py auto-locates FINAL_*.pkl/.pt models in
+    # --model-dir matching db_stem from --db. No --models flag needed.
     _sep()
     _info("Running interpretability: rf + xgboost + transformer_onehot")
     out_dir = OUT_INTERP
     ok = _run(
         [_INTERP,
-         "--target",      TARGET,
-         "--models",      "rf", "xgboost", "transformer_onehot",
-         "--db",          TEST_DATA,
-         "--max-samples", "200",
-         "--ig-steps",    "20",
-         "--n-pairs",     "2",
-         "--outdir",      out_dir],
+         "--target",       TARGET,
+         "--db",           TEST_DATA,
+         "--model-dir",    str(MODEL_DIR),
+         "--max-samples",  "200",
+         "--ig-steps",     "20",
+         "--n-pairs",      "2",
+         "--outdir",       str(out_dir)],
         label="interpretability (rf + xgboost + transformer_onehot)",
         timeout=None,
     )
@@ -478,33 +493,43 @@ def test_interpretability() -> bool:
 # ══════════════════════════════════════════════════════════════════════════════
 def test_interpretability_pretrained_psr() -> bool:
     _head("── Test 7: Interpretability — IPI pretrained PSR model ─────────")
-    _info("Input   : tests/DS1_psr_500.xlsx  (sequences + psr_filter labels)")
+    _info("Input   : tests/DS1_psr_500.xlsx  (via --predict, new sequences)")
     _info("Model   : FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt")
-    _info("Note    : --model_id used — no IPI training db needed")
+    _info("Lookup  : --db stem 'ipi_psr_trainset' + --model-dir pretrained_202605")
     _sep()
 
-    model_id = "FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt"
+    model_id   = "FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt"
     model_path = _ROOT / "pretrained_202605" / model_id
 
     if not model_path.exists():
         _warn(f"Pretrained model not found: {model_id}")
         _warn("Run: python utils/download_zenodo.py")
         _warn("Skipping Test 7")
-        return True   # not a failure — pretrained models are optional
+        return True
+
+    # delphi_interpretability.py locates models by db_stem from --db filename.
+    # The model stem is 'ipi_psr_trainset', so --db must be a file whose stem
+    # is 'ipi_psr_trainset'. We provide DS1 sequences via --predict.
+    # Create a stem-matching stub if the real IPI db is absent.
+    stub_db = _ROOT / "pretrained_202605" / "ipi_psr_trainset.xlsx"
+    if not stub_db.exists():
+        import shutil
+        shutil.copy(TEST_DATA, stub_db)   # DS1 sequences, used only for model lookup
 
     _ok(f"Model found: {model_id}")
     out_dir = OUT_INTERP / "pretrained_psr"
 
     ok = _run(
         [_INTERP,
-         "--target",      TARGET,
-         "--models",      "transformer_onehot",
-         "--model_id",    model_id,
-         "--db",          TEST_DATA,
-         "--max-samples", "200",
-         "--ig-steps",    "20",
-         "--n-pairs",     "2",
-         "--outdir",      out_dir],
+         "--target",        "psr_filter",
+         "--db",            str(stub_db),
+         "--predict",       str(TEST_DATA),
+         "--model-dir",     str(_ROOT / "pretrained_202605"),
+         "--transformer-lm", "onehot",
+         "--max-samples",   "200",
+         "--ig-steps",      "20",
+         "--n-pairs",       "2",
+         "--outdir",        str(out_dir)],
         label="interpretability PSR pretrained",
         timeout=None,
     )
@@ -521,16 +546,14 @@ def test_interpretability_pretrained_psr_sec() -> bool:
     _head("── Test 8: Interpretability — IPI pretrained PSR + SEC models ──")
     _info("PSR model : FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt")
     _info("SEC model : FINAL_sec_filter_onehot_transformer_onehot_ipi_sec_5000.pt")
-    _info("Note: --db2 requires sec_filter labels — needs ipi_sec_5000.xlsx")
+    _info("Input     : DS1_psr_500.xlsx via --predict (dual-target PSR+SEC)")
     _sep()
 
     psr_model_id = "FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt"
     sec_model_id = "FINAL_sec_filter_onehot_transformer_onehot_ipi_sec_5000.pt"
     psr_path = _ROOT / "pretrained_202605" / psr_model_id
     sec_path = _ROOT / "pretrained_202605" / sec_model_id
-    sec_db   = _ROOT / "data" / "ipi_sec_5000.xlsx"
 
-    # Check pretrained models exist
     if not psr_path.exists():
         _warn(f"PSR model not found: {psr_model_id} — skipping Test 8")
         return True
@@ -538,32 +561,36 @@ def test_interpretability_pretrained_psr_sec() -> bool:
         _warn(f"SEC model not found: {sec_model_id} — skipping Test 8")
         return True
 
-    # Check SEC database (required for --db2 sec_filter labels)
-    if not sec_db.exists():
-        _warn(f"IPI SEC database not found: data/ipi_sec_5000.xlsx")
-        _warn("Dual-target interpretability requires sec_filter labels — skipping Test 8")
-        _info("To run: provide data/ipi_sec_5000.xlsx with sec_filter column")
-        return True   # not a failure — IPI data is proprietary
-
     _ok(f"PSR model : {psr_model_id}")
     _ok(f"SEC model : {sec_model_id}")
-    _ok(f"SEC db    : data/ipi_sec_5000.xlsx")
+
+    # delphi_interpretability.py locates models by db_stem from --db / --db2.
+    # PSR model stem = 'ipi_psr_trainset', SEC model stem = 'ipi_sec_5000'.
+    # Provide stem-matching stub dbs (DS1 sequences) for model lookup,
+    # and run prediction on DS1 via --predict.
+    import shutil
+    psr_stub = _ROOT / "pretrained_202605" / "ipi_psr_trainset.xlsx"
+    sec_stub = _ROOT / "pretrained_202605" / "ipi_sec_5000.xlsx"
+    if not psr_stub.exists():
+        shutil.copy(TEST_DATA, psr_stub)
+    if not sec_stub.exists():
+        shutil.copy(TEST_DATA, sec_stub)
 
     out_dir = OUT_INTERP / "pretrained_psr_sec"
 
     ok = _run(
         [_INTERP,
-         "--target",      "psr_filter",
-         "--target2",     "sec_filter",
-         "--models",      "transformer_onehot",
-         "--tr-model-id",  psr_model_id,
-         "--tr-model-id2", sec_model_id,
-         "--db",           TEST_DATA,
-         "--db2",          sec_db,
-         "--max-samples",  "200",
-         "--ig-steps",     "20",
-         "--n-pairs",      "2",
-         "--outdir",       out_dir],
+         "--target",         "psr_filter",
+         "--target2",        "sec_filter",
+         "--db",             str(psr_stub),
+         "--db2",            str(sec_stub),
+         "--predict",        str(TEST_DATA),
+         "--model-dir",      str(_ROOT / "pretrained_202605"),
+         "--transformer-lm", "onehot",
+         "--max-samples",    "200",
+         "--ig-steps",       "20",
+         "--n-pairs",        "2",
+         "--outdir",         str(out_dir)],
         label="interpretability PSR+SEC pretrained",
         timeout=None,
     )
