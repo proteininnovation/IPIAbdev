@@ -38,7 +38,7 @@ Applicable to any binary antibody property label including PSR (polyreactivity),
 - [Predict on New Antibodies](#predict-on-new-antibodies)
 - [Correlate with Experimental Assays](#correlate-with-experimental-assays)
 - [Interpretability Analysis](#interpretability-analysis)
-- [Model Registry](#model-registry)
+- [Model Lookup Convention](#model-lookup-convention)
 - [Supported Models and Embeddings](#supported-models-and-embeddings)
 - [Data-Adaptive Hyperparameter Configuration](#data-adaptive-hyperparameter-configuration)
 - [Key Results](#key-results)
@@ -78,7 +78,7 @@ delphi/
 ├── install.sh                         # One-command environment setup
 ├── requirements.txt                   # All Python dependencies
 ├── config/
-│   ├── model_registry.yaml            # Model registry (auto-updated by --train)
+│   ├── *.yaml                          # Per-model config files (rf, xgboost, transformer)
 │   ├── transformer_onehot.yaml        # Hyperparameters for TransformerOneHot
 │   ├── transformer_lm.yaml            # Hyperparameters for TransformerLM
 │   ├── random_forest.yaml             # Hyperparameters for Random Forest
@@ -141,29 +141,41 @@ The install script:
 
 After `./install.sh` completes, your environment is fully ready.
 
+> **Always activate with `source activate.sh`, not `conda activate delphi`.**
+> The generated `activate.sh` activates the conda environment *and*, on macOS,
+> exports `OMP_NUM_THREADS=1`. This single setting prevents an OpenMP conflict
+> between XGBoost and PyTorch that otherwise causes a hard segmentation fault
+> the moment an XGBoost model trains or predicts. Run `source activate.sh` at
+> the start of every new terminal session before any `delphi.py` command.
+
+```bash
+# Every new terminal session:
+cd delphi
+source activate.sh
+```
+
 ---
 
 ### Step 2: Download IPI pretrained models from Zenodo
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20752840.svg)](https://doi.org/10.5281/zenodo.20752840)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20785877.svg)](https://doi.org/10.5281/zenodo.20785877)
 
 ```bash
-# Download all IPI pretrained models to pretrained_202605/
+# Download all 52 pretrained models to pretrained_202605/
 python utils/download_zenodo.py
 
 # Preview what will be downloaded first (recommended)
 python utils/download_zenodo.py --dry-run
 
-# Download only PSR models
-python utils/download_zenodo.py --filter psr_filter
-
-# Download only SEC models
-python utils/download_zenodo.py --filter sec_filter
+# Download the DS1 embedding files (optional — extracts to data/)
+python utils/download_zenodo.py --embeddings
 ```
 
 This downloads all pretrained model files (`.pt` and `.pkl`) to
-`pretrained_202605/`. The `config/model_registry.yaml` already
-contains registry entries for all models pointing to this folder.
+`pretrained_202605/`. The large DS1 data files (`DS1.xlsx`,
+`DS1_embedding.tar.gz`) are skipped by default; use `--embeddings` to fetch
+and extract them into `data/`. Models are located by filename convention
+(FINAL_{target}_{lm}_{model}_{db_stem}) in that folder.
 
 > Models are trained on proprietary IPI antibody datasets.
 > Training sequences cannot be shared. Model weights are provided for
@@ -199,7 +211,7 @@ no additional download needed.
 | 2 | Embedding generation: ABlang2, AntiBERTy, AntiBERTa2, IgBERT |
 | 3 | PSR + SEC prediction using IPI pretrained models via `--model_path` |
 | 4 | 10-fold cross-validation: transformer, RF, XGBoost |
-| 5 | Train final models and verify model registry entry |
+| 5 | Train final models (rf, xgboost, transformer_onehot) |
 | 6 | Interpretability: SHAP + Integrated Gradients + per-antibody waterfall + CDR3 mutagenesis |
 
 **Expected output when all tests pass:**
@@ -229,7 +241,7 @@ IPI provides pretrained models for PSR, SEC, HIC, and AC-SINS.
 
 **Download pretrained models** from Zenodo:
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20752840.svg)](https://doi.org/10.5281/zenodo.20752840)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20785877.svg)](https://doi.org/10.5281/zenodo.20785877)
 
 ```bash
 # Download all 52 pretrained models (PSR + SEC)
@@ -239,8 +251,8 @@ python utils/download_zenodo.py
 python utils/download_zenodo.py --embeddings   # extracts to data/
 ```
 
-Files download to `pretrained_202605/`. The `config/model_registry.yaml`
-already contains registry entries for all models.
+Files download to `pretrained_202605/`. Models are located by filename
+convention in that folder (no separate registry file is needed).
 
 ---
 
@@ -262,29 +274,35 @@ Your input file must be an Excel (`.xlsx`) or CSV with these columns:
 
 ### Tutorial Step 2: Discover available models
 
+Pretrained models are stored as `FINAL_*.pt` (transformer) and `FINAL_*.pkl`
+(rf/xgboost) files in the `pretrained_202605/` directory. List them directly:
+
 ```bash
-# List all registered IPI pretrained models
-python delphi.py --list-models
+# List all downloaded IPI pretrained models
+ls pretrained_202605/FINAL_*
 
 # Filter by target property
-python delphi.py --list-models --target psr_filter
-python delphi.py --list-models --target sec_filter
+ls pretrained_202605/FINAL_psr_filter_*
+ls pretrained_202605/FINAL_sec_filter_*
 ```
 
-Example output:
+The filename encodes everything needed to use a model:
 
 ```
-model_id                                                               target       lm         model                type
-──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt        psr_filter   onehot     transformer_onehot   full_train
-FINAL_psr_filter_igbert_transformer_lm_ipi_psr_trainset.pt            psr_filter   igbert     transformer_lm       full_train
-FINAL_psr_filter_biophysical_rf_ipi_psr_trainset.pkl                  psr_filter   biophs.    rf                   full_train
-FINAL_psr_filter_biophysical_xgboost_ipi_psr_trainset.pkl             psr_filter   biophs.    xgboost              full_train
-FINAL_sec_filter_onehot_transformer_onehot_ipi_sec_5000.pt            sec_filter   onehot     transformer_onehot   full_train
-FINAL_sec_filter_igbert_transformer_lm_ipi_sec_5000.pt                sec_filter   igbert     transformer_lm       full_train
-FINAL_sec_filter_biophysical_rf_ipi_sec_5000.pkl                      sec_filter   biophs.    rf                   full_train
-FINAL_sec_filter_biophysical_xgboost_ipi_sec_5000.pkl                 sec_filter   biophs.    xgboost              full_train
+FINAL_{target}_{lm}_{model}_{db_stem}.{pt|pkl}
+
+FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt
+      └─ target ──┘└ lm ─┘└──── model ─────┘└── train set ──┘
+
+FINAL_psr_filter_biophysical_rf_ipi_psr_trainset.pkl
+FINAL_psr_filter_biophysical_xgboost_ipi_psr_trainset.pkl
+FINAL_sec_filter_onehot_transformer_onehot_ipi_sec_5000.pt
+FINAL_sec_filter_biophysical_rf_ipi_sec_5000.pkl
+FINAL_sec_filter_biophysical_xgboost_ipi_sec_5000.pkl
 ```
+
+Pass the chosen file to `--model_path` (delphi.py) or `--model-path`
+(delphi_interpretability.py).
 
 ---
 
@@ -403,30 +421,35 @@ Gradients position profiles, HCDR3 residue heatmaps, the cross-method
 convergence panel, and per-antibody waterfall + CDR3 mutagenesis figures, all
 in 300 DPI TIFF/PDF and 150 DPI PNG.
 
-> `delphi.py --predict` is only needed when you want a standalone
-> predictions file (CSV/Excel) to share or run `--correlate` against.
+> `delphi.py --predict` produces a standalone predictions file (CSV/Excel)
+> to share or to feed into `developability_correlation.py`.
 
 ---
 
 ### Tutorial Step 5: Correlate with experimental assays (optional)
 
-Compare DELPHI scores against your own experimental measurements:
+Compare DELPHI scores against your own experimental measurements using the
+`developability_correlation.py` script:
 
 ```bash
-# Discover score columns in the prediction file
-python delphi.py --correlate tests/DS1_psr_500_psr_filter_predictions.xlsx \
-    --target psr_filter --list-scores
+# Discover score and assay columns in the prediction file
+python developability_correlation.py \
+    --files tests/DS1_psr_500_psr_filter_predictions.xlsx \
+    --assay dummy --list-scores
 
 # Correlate against a single assay
-python delphi.py --correlate tests/DS1_psr_500_psr_filter_predictions.xlsx \
-    --target psr_filter --assay psr_norm_smp \
-    --outdir tests/psr_correlation
+python developability_correlation.py \
+    --files tests/DS1_psr_500_psr_filter_predictions.xlsx \
+    --assay psr_norm_smp \
+    --target psr_filter \
+    --out tests/psr_correlation
 
 # Correlate against multiple assays
-python delphi.py --correlate tests/DS1_psr_500_psr_filter_predictions.xlsx \
-    --target psr_filter \
+python developability_correlation.py \
+    --files tests/DS1_psr_500_psr_filter_predictions.xlsx \
     --assay psr_norm_dna psr_norm_avidin psr_norm_smp \
-    --outdir tests/psr_correlation
+    --target psr_filter \
+    --out tests/psr_correlation
 ```
 
 
@@ -553,7 +576,7 @@ Set `epochs: 32` in the relevant YAML config, then proceed to training.
 
 ### Step 4: Train final model
 
-Train on the full dataset using the epoch count from cross-validation. The model is automatically registered in `config/model_registry.yaml`.
+Train on the full dataset using the epoch count from cross-validation. The model is saved to the model directory as FINAL_{target}_{lm}_{model}_{db_stem}.{pt|pkl}.
 
 ```bash
 # Transformer + one-hot
@@ -572,11 +595,10 @@ python delphi.py --train \
     --db tests/DS1_psr_500.xlsx
 ```
 
-After training, verify registration:
+After training, the model is saved to the model directory. List it:
 
 ```bash
-python delphi.py --list-models
-python delphi.py --list-models --target psr_filter
+ls build/pretrained_models/FINAL_psr_filter_*
 ```
 
 ---
@@ -584,17 +606,14 @@ python delphi.py --list-models --target psr_filter
 ## Predict on New Antibodies
 
 ```bash
-# Auto-lookup from registry (uses most recent model for this target+lm+model)
-python delphi.py --predict tests/DS1_psr_500.xlsx \
-    --target psr_filter --lm onehot --model transformer_onehot
-
-# Specify a model by registry ID
+# Locate the model by --db stem (looks up FINAL_*.{pt,pkl} in the model dir)
 python delphi.py --predict tests/DS1_psr_500.xlsx \
     --target psr_filter --lm onehot --model transformer_onehot \
-    --model_path pretrained_202605/FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt
+    --db data/ipi_psr_trainset.xlsx
 
-# Specify explicit path
+# Or specify the checkpoint path directly (no --db needed)
 python delphi.py --predict tests/DS1_psr_500.xlsx \
+    --target psr_filter --lm onehot --model transformer_onehot \
     --model_path pretrained_202605/FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt
 ```
 
@@ -602,24 +621,28 @@ python delphi.py --predict tests/DS1_psr_500.xlsx \
 
 ## Correlate with Experimental Assays
 
-Compare DELPHI scores against experimental measurements:
+Compare DELPHI scores against experimental measurements using
+`developability_correlation.py`:
 
 ```bash
-# Discover available score columns in the prediction file
-python delphi.py --correlate tests/DS1_psr_500_psr_filter_predictions.xlsx \
-    --target psr_filter --list-scores
+# Discover available score/assay columns in the prediction file
+python developability_correlation.py \
+    --files tests/DS1_psr_500_psr_filter_predictions.xlsx \
+    --assay dummy --list-scores
 
 # Single assay
-python delphi.py --correlate tests/DS1_psr_500_psr_filter_predictions.xlsx \
-    --target psr_filter --assay psr_norm_smp
+python developability_correlation.py \
+    --files tests/DS1_psr_500_psr_filter_predictions.xlsx \
+    --assay psr_norm_smp --target psr_filter
 
 # Multiple assays with logit transform
-python delphi.py --correlate tests/DS1_psr_500_psr_filter_predictions.xlsx \
-    --target psr_filter \
+python developability_correlation.py \
+    --files tests/DS1_psr_500_psr_filter_predictions.xlsx \
     --assay psr_norm_dna psr_norm_avidin psr_norm_smp \
+    --target psr_filter \
     --logit-trans \
     --title "DELPHI PSR vs normalised PSR panel" \
-    --outdir tests/psr_correlation
+    --out tests/psr_correlation
 ```
 
 ---
@@ -699,45 +722,45 @@ If a required model is not found, DELPHI prints the exact command to train it:
 
 ---
 
-## Model Registry
+## Model Lookup Convention
 
-DELPHI maintains a central model registry at `config/model_registry.yaml`. Every model trained with `--train` is automatically registered. The registry drives model lookup for `--predict`, `--correlate`, and `delphi_interpretability.py`.
+## Model Lookup Convention
+
+DELPHI locates models by filename convention in the model directory (set by
+`--model-dir`, default `build/pretrained_models`). There is no separate
+registry file: the filename itself encodes the lookup key.
+
+```
+FINAL_{target}_{lm}_{model}_{db_stem}.{pt|pkl}
+```
+
+`delphi.py --predict` resolves a model in this order:
+
+1. If `--model_path` is given, that exact checkpoint is used.
+2. Otherwise DELPHI builds `FINAL_{target}_{lm}_{model}_{db_stem}` using the
+   stem of `--db`, and looks for it in `--model-dir`.
+3. If the exact name is not found, DELPHI searches the directory for the
+   closest matching checkpoint and reports the candidates.
 
 ```bash
-# List all registered models
-python delphi.py --list-models
+# List available models in the model directory
+ls build/pretrained_models/FINAL_*
+ls pretrained_202605/FINAL_psr_filter_*
 
-# Filter by target
-python delphi.py --list-models --target psr_filter
-
-# Predict using registry auto-lookup (no --db needed after training)
+# Predict by --db stem lookup
 python delphi.py --predict tests/DS1_psr_500.xlsx \
-    --target psr_filter --lm onehot --model transformer_onehot
+    --target psr_filter --lm onehot --model transformer_onehot \
+    --db data/ipi_psr_trainset.xlsx
 
-# Predict using a specific model checkpoint
+# Predict by explicit checkpoint path
 python delphi.py --predict tests/DS1_psr_500.xlsx \
     --target psr_filter --lm onehot --model transformer_onehot \
     --model_path pretrained_202605/FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt
 ```
 
-**Example registry entry** (written automatically after `--train`):
-
-```yaml
-FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt:
-  trainset:        tests/DS1_psr_500.xlsx
-  target:          psr_filter
-  lm:              onehot
-  model:           transformer_onehot
-  model_path:      pretrained_202605/FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt
-  type:            full_train
-  trained_at:      "2026-05-18 14:23:00"
-  kfold_auc:       0.9341
-  threshold:       0.4812
-  epochs:          32
-  notes:           ""
-```
-
-> Users can manually edit `model_id`, `model_path`, and `notes`. To register a best-fold checkpoint from `--kfold`, add an entry manually with `type: best_fold`.
+The same convention drives model lookup in `delphi_interpretability.py`, where
+`--model-path` additionally parses the `db_stem` and `model-dir` straight from
+the filename.
 
 ---
 
