@@ -16,7 +16,7 @@ Nature Biotechnology figure specifications:
 
 Usage
 -----
-    python utils/Figure2_physicochemical --data_path /Users/Hoan.Nguyen/ComBio/IPIAbMLPred/manuscripts/figures_tables --dpi 300
+    python utils/Figure2_physicochemical.py --data_path /Users/Hoan.Nguyen/ComBio/delphi/data --dpi 300
 
 Or import in a notebook:
     from ipiabdev_figures import generate_all_figures
@@ -36,14 +36,13 @@ from matplotlib.gridspec import GridSpec
 import seaborn as sns
 from pathlib import Path
 
-#sys.path.append('/Users/Hoan.Nguyen/ComBio/IPIAbDiscov/utilities/')
 import liabilities
 import utilities
 
 warnings.filterwarnings("ignore")
 
 # Output directory
-OUT_DIR = Path("/Users/Hoan.Nguyen/ComBio/IPIAbMLPred/manuscripts/figures_tables")
+OUT_DIR = Path("/Users/Hoan.Nguyen/ComBio/delphi/manuscripts/figures_tables")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # ─── Nature Biotechnology style constants ────────────────────────────────────
@@ -247,7 +246,7 @@ def generate_figure1(
 ):
     """
     Figure 2 -- HCDR3 determinants are conserved across polyreactivity
-    and aggregation datasets.
+    and SEC monomoric datasets.
 
     Layout  : 3 rows x 5 data columns + 1 dedicated label column
     Row 1   : IPI PSR (ELISA+NGS)  -- panels a-e   (psr_filter)
@@ -334,8 +333,8 @@ def generate_figure1(
     )
     fig.legend(
         handles=_legend_handles(
-            label_pass="Pass (1) -- non-aggregating",
-            label_fail="Fail (0) -- aggregating",
+            label_pass="Pass (1) -- monomeric",
+            label_fail="Fail (0) -- non-monomeric",
         ),
         loc="lower center", ncol=2,
         fontsize=SIZE_LEGEND,
@@ -421,7 +420,7 @@ def generate_figure2(
     output_prefix="ExtendedDataFig2",
 ):
     """
-    Figure 2 -- Biophysical profiling of the IPI SEC aggregation dataset.
+    Figure 2 -- Biophysical profiling of the IPI SEC dataset.
     Identical panel layout to Extended Data Figure 1 but with SEC labels.
 
     Panels  : a Arginine  | b Aspartic acid | c Tryptophan (Arg=1) | d Glutamic acid
@@ -478,8 +477,8 @@ def generate_figure2(
 # ─── Data loading helpers ─────────────────────────────────────────────────────
 def load_ipi_psr_trainset(main_path):
     """PSR trainset (ELISA + NGS combined) -- used for Figure 1 top row."""
-    data = pd.read_excel(f"{main_path}/ipi_psr.xlsx")
-    data.loc[data["CDR3"].str.startswith("C"), "CDR3"] = data["CDR3"].str[1:]
+    data = pd.read_excel(f"{main_path}/ipi_psr_trainset.xlsx")
+    #data.loc[data["CDR3"].str.startswith("C"), "CDR3"] = data["CDR3"].str[1:]
     data = liabilities.annotate_liabilities_2(data, cdr3_col="HSEQ", label="VH")
     data = liabilities.annotate_liabilities_2(data, cdr3_col="CDR3", label="HCDR3")
     return data
@@ -487,8 +486,8 @@ def load_ipi_psr_trainset(main_path):
 
 def load_ds1(main_path):
     """Public DS1 library -- used for Figure 2 bottom row."""
-    data = pd.read_excel(f"{main_path}/dataset1.xlsx")
-    data.loc[data["CDR3"].str.startswith("C"), "CDR3"] = data["CDR3"].str[1:]
+    data = pd.read_excel(f"{main_path}/DS1.xlsx")
+    #data.loc[data["CDR3"].str.startswith("C"), "CDR3"] = data["CDR3"].str[1:]
     data = liabilities.annotate_liabilities_2(data, cdr3_col="HSEQ", label="VH")
     data = liabilities.annotate_liabilities_2(data, cdr3_col="CDR3", label="HCDR3")
     return data
@@ -572,12 +571,12 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Generate IPIAbDev publication figures (Nature Biotechnology format)"
+        description="Generate DELPHI publication figures (Nature Biotechnology format)"
     )
     parser.add_argument(
         "--data_path",
         type=str,
-        default="/Users/Hoan.Nguyen/ComBio/MachineLearning",
+        default="/Users/Hoan.Nguyen/ComBio/delphi",
         help="Root path containing the /data/ directory",
     )
     parser.add_argument(

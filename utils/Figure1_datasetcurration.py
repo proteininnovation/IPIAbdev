@@ -18,8 +18,8 @@ Style
 Usage
 -----
     python utils/Figure1_datasetcurration.py \
-        --elisa_path /Users/Hoan.Nguyen/ComBio/IPIAbMLPred/manuscripts/figures_tables/elisa_score_figure1.xlsx  \
-        --sec_path   /Users/Hoan.Nguyen/ComBio/IPIAbMLPred/manuscripts/figures_tables/sec_retention_time_figure1.xlsx \
+        --elisa_path /Users/Hoan.Nguyen/ComBio/delphi/manuscripts/data/elisa_score_figure1.xlsx  \
+        --sec_path   /Users/Hoan.Nguyen/ComBio/delphi/manuscripts/data/sec_retention_time_figure1.xlsx \
         --output_prefix Figure1 \
         --dpi 300
 """
@@ -41,7 +41,7 @@ from scipy.stats import spearmanr, mannwhitneyu
 warnings.filterwarnings("ignore")
 
 
-OUT_DIR = Path("/Users/Hoan.Nguyen/ComBio/IPIAbMLPred/manuscripts/figures_tables")
+OUT_DIR = Path("/Users/Hoan.Nguyen/ComBio/delphi/manuscripts/figures_tables")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # ─── Nature Biotechnology style constants ────────────────────────────────────
@@ -500,7 +500,7 @@ def generate_dataset_summary_figure(
     _panel_header(
         ax_table,
         letter="a",
-        title="Polyreactivity and aggregation dataset curation",
+        title="Polyreactivity and monomer purity dataset curation",
         y=1.02, x_letter=-0.044, x_title=-0.022,
     )
 
