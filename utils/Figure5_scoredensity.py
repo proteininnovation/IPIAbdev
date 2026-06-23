@@ -3,6 +3,15 @@
 Figure 5— AbLang2 embedding performance across 4 classifier
 architectures on within-distribution (IPI val) vs cross-library (DS1) data.
 
+QUICK START
+───────────
+  # Default (uses data/Suppl_Table2_prediction_score_val.xlsx)
+  python utils/Figure5_scoredensity.py
+
+  # Explicit path
+  python utils/Figure5_scoredensity.py \
+      data/Suppl_Table2_prediction_score_val.xlsx
+
 
 
 Layout: 2 x 5 grid
@@ -17,12 +26,12 @@ Each panel shows:
   - AUC in title
   - TWO threshold lines:
       * Youden's J-optimal threshold (black dash-dot)    — standard benchmark
-      * MLAbDev optimized threshold (green solid)        — from _optimallabel
+      * DELPHI optimized threshold (green solid)        — from _optimallabel
   - Per-class mean (dashed) and median (dotted)
 
-The MLAbDev threshold is back-derived per model as the minimum score
+The DELPHI threshold is back-derived per model as the minimum score
 classified as Pass by the _optimallabel column (i.e., the decision boundary
-used by the MLAbDev threshold-optimisation module).
+used by the DELPHI threshold-optimisation module).
 
 Outputs: .tiff (300 DPI LZW), .pdf (vector), .png (150 DPI)
 """
@@ -37,7 +46,7 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from sklearn.metrics import roc_auc_score, roc_curve
 
-OUTPUT_STEM = "Extended_Fig3_ablang2_arch_cross_library"
+OUTPUT_STEM = "Figure5_ablang2_arch_cross_library"
 OUTPUT_DIR = Path(".")
 
 # A4 portrait usable width ≈ 7.09 in (210 mm page − 2×15 mm margins = 180 mm)
@@ -53,7 +62,7 @@ COLOR_YOUDEN = "#222222"
 COLOR_STD = "#b85c00"   # orange-brown for standard 0.5 cutoff
 
 # Panel specification: (score_col, optimallabel_col, sheet, title, letter)
-# optimallabel_col=None means no MLAbDev threshold (Trans_OneHot on DS1)
+# optimallabel_col=None means no DELPHI threshold (Trans_OneHot on DS1)
 PANELS_ROW1_IPI = [
     ("transformer_lm_ablang_ipi_psr_trainset_train_score",
      "transformer_lm_ablang_ipi_psr_trainset_train_optimallabel",
@@ -76,7 +85,7 @@ PANELS_ROW2_DS1 = [
      "transformer_lm_ablang_ipi_psr_trainset_train_optimallabel",
      "Transformer + AbLang2",  "f"),
     ("cnn_ablang_ipi_psr_trainset_train_score",
-     None,   # CNN_AbLang2 optimallabel is not in DS1 sheet — will skip MLAbDev line
+     None,   # CNN_AbLang2 optimallabel is not in DS1 sheet — will skip DELPHI threshold line
      "CNN + AbLang2",          "g"),
     ("xgboost_ablang_ipi_psr_trainset_train_score",
      None,
@@ -283,6 +292,6 @@ def build_figure(xlsx_path: Path):
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument('xlsx', nargs='?',
-                    default='Suppl_Table2_prediction_score_val.xlsx')
+                    default='data/Suppl_Table2_prediction_score_val.xlsx')
     args = ap.parse_args()
     build_figure(Path(args.xlsx))
