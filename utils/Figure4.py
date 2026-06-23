@@ -1,8 +1,22 @@
-
 """
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║   figure4_bar.py  —  Delphi Platform  ·  Nature Biotech Figure 4          ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
+
+QUICK START
+───────────
+  python utils/Figure4.py \
+      --excel  /Users/Hoan.Nguyen/ComBio/delphi/data/Figure4_data.xlsx \
+      --jain   /Users/Hoan.Nguyen/ComBio/delphi/data/Jain2017_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx \
+      --gdpa1  /Users/Hoan.Nguyen/ComBio/delphi/data/GDPa1_v1.3_20251027_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx \
+      --gdpa3  /Users/Hoan.Nguyen/ComBio/delphi/data/GDPa3_20260106_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx \
+      --out    Figure4 \
+      --dpi    300
+
+  # Separate panels only
+  python utils/Figure4.py \\
+      --excel  ... --jain ... --gdpa1 ... --gdpa3 ...
+      --out Figure4 --dpi 300 --panels-only
 
 DESCRIPTION
 ───────────
@@ -29,7 +43,7 @@ Generates a 4-panel Nature Biotech figure (183 x 216 mm, 300 DPI) showing:
 
 REQUIRED INPUT FILES
 ────────────────────
-  --excel    Figure5_data.xlsx
+  --excel    Figure4_data.xlsx
                Two sheets (auto-read):
                  • Fig5A_IPI_10fold_CV   → panels a, b (bar charts)
                  • Fig5B_Cross_Dataset   → panels a, b (bar charts)
@@ -87,11 +101,11 @@ USAGE
   python figure4_bar.py
 
   # Full explicit paths
-  python utils/Figure5.py \\
-      --excel  /Users/Hoan.Nguyen/ComBio/IPIAbMLPred/manuscripts/figures_tables/Figure4_data.xlsx \\
-      --jain   /Users/Hoan.Nguyen/ComBio/IPIAbMLPred/manuscripts/data/public_clinical/Jain2017_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx \\
-      --gdpa1  /Users/Hoan.Nguyen/ComBio/IPIAbMLPred/manuscripts/data/public_clinical/GDPa1_v1.3_20251027_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx \\
-      --gdpa3  /Users/Hoan.Nguyen/ComBio/IPIAbMLPred/manuscripts/data/public_clinical/GDPa3_20260106_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx \\
+  python utils/Figure4.py \\
+      --excel  /Users/Hoan.Nguyen/ComBio/delphi/manuscripts/figures_tables/Figure4_data.xlsx \\
+      --jain   /Users/Hoan.Nguyen/ComBio/delphi/manuscripts/data/public_clinical/Jain2017_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx \\
+      --gdpa1  /Users/Hoan.Nguyen/ComBio/delphi/manuscripts/data/public_clinical/GDPa1_v1.3_20251027_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx \\
+      --gdpa3  /Users/Hoan.Nguyen/ComBio/delphi/manuscripts/data/public_clinical/GDPa3_20260106_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx \\
       --out    Figure4 \\
       --dpi    300
 
@@ -495,6 +509,99 @@ def save_panel(fig, stem, dpi):
 
 # ── ONLY CHANGE IS HERE: main() saves each panel separately ──────────────────
 
+
+def save_combined(fig, stem, dpi):
+    """Save combined figure as TIFF + preview PNG."""
+    tiff = f"{stem}.tiff"
+    png  = f"{stem}_preview.png"
+    fig.savefig(tiff, dpi=dpi, format='tiff',
+                bbox_inches='tight', pad_inches=0.05, facecolor='white')
+    fig.savefig(png, dpi=150,
+                bbox_inches='tight', pad_inches=0.05, facecolor='white')
+    w, h = fig.get_size_inches()
+    print(f"  → {tiff}  ({int(w*dpi)}×{int(h*dpi)} px, {dpi} DPI, {os.path.getsize(tiff)//1024} KB)")
+    print(f"  → {png}  (preview)")
+    plt.close(fig)
+
+
+def make_combined_figure(groups_a, groups_b, auc_mat, rho_mat, pval_mat, out, dpi):
+    """
+    Generate combined 4-panel Nature Biotech Figure 4.
+    Layout:
+      Row 1: [panel a (wide) | panel b (narrow)]
+      Row 2: [panel c (full width)             ]
+      Row 3: [panel d (full width)             ]
+    """
+    FW_C = 183 * MM          # full NB text width
+    FH_C = 230 * MM          # full page height
+
+    fig = plt.figure(figsize=(FW_C, FH_C))
+    gs  = GridSpec(
+        3, 2,
+        figure    = fig,
+        height_ratios = [1.2, 0.9, 0.9],
+        width_ratios  = [1.55, 1.0],
+        hspace    = 0.55,
+        wspace    = 0.12,
+        left      = 0.09,
+        right     = 0.97,
+        top       = 0.97,
+        bottom    = 0.07,
+    )
+
+    # Panel a — IPI PSR 10-fold CV (spans col 0, row 0)
+    ax_a = fig.add_subplot(gs[0, 0])
+    draw_bar_panel(
+        ax_a, groups_a,
+        title        = "IPI PSR Dataset · 10-Fold HCDR3-Stratified CV",
+        panel_letter = "a",
+        ylim         = (0.0, 1.02),
+        ref_auc      = 0.960,
+        ref_acc      = 0.900,
+        group_col    = ARCH_COL,
+    )
+
+    # Panel b — Cross-dataset (spans col 1, row 0)
+    ax_b = fig.add_subplot(gs[0, 1])
+    draw_bar_panel(
+        ax_b, groups_b,
+        title        = "Cross-Dataset Generalization · Transformer",
+        panel_letter = "b",
+        ylim         = (0.0, 1.02),
+        ref_auc      = 0.90,
+        ref_acc      = None,
+        group_col    = COND_COL,
+    )
+
+    # Panel c — AUC-ROC heatmap (spans both cols, row 1)
+    ax_c = fig.add_subplot(gs[1, :])
+    draw_heatmap(
+        ax_c, auc_mat, HM_LM_DISPLAY, DATASETS_AUC,
+        title        = (f"IPI PSR Transformer Model Validation on External Clinical Antibodies  —  "
+                        f"AUC-ROC  (PASS: PSR/PR score <{THRESH}; ELISA <{THRESH_ELISA})"),
+        panel_letter = "c",
+        vmin=0.20, vmax=0.90, vcenter=0.55,
+        cmap="RdBu_r", fmt=".3f", cbar_label="AUC-ROC",
+        col_sep=[1, 3],
+    )
+
+    # Panel d — Spearman ρ heatmap (spans both cols, row 2)
+    ax_d = fig.add_subplot(gs[2, :])
+    draw_heatmap(
+        ax_d, rho_mat, HM_LM_DISPLAY, DATASETS_RHO,
+        title        = ("IPI PSR Transformer Model Validation on External Clinical Antibodies  —  "
+                        "Spearman ρ  (P(PASS) vs polyreactivity assay score)"),
+        panel_letter = "d",
+        vmin=-0.80, vmax=0.20, vcenter=0.0,
+        cmap="RdBu_r", fmt=".2f", cbar_label="Spearman ρ",
+        cbar_ticks   = [-0.8, -0.6, -0.4, -0.2, 0.0, 0.1, 0.2],
+        pval_mat     = pval_mat,
+        col_sep      = [1, 3],
+    )
+
+    print(f"\n[Combined Figure 4]")
+    save_combined(fig, out, dpi)
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--excel", default="Figure4_data.xlsx")
@@ -502,6 +609,8 @@ def main():
     parser.add_argument("--dpi",   type=int, default=300)
     parser.add_argument("--jain",  default="Jain2017_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx")
     parser.add_argument("--gdpa1", default="GDPa1_v1_3_20251027_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx")
+    parser.add_argument("--panels-only", dest="panels_only", action="store_true",
+                        help="Save only separate panel files, skip combined figure")
     parser.add_argument("--gdpa3", default="GDPa3_20260106_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx")
     args = parser.parse_args()
 
@@ -592,6 +701,18 @@ def main():
     save_panel(fig_d, f"{args.out}_panel_d", args.dpi)
 
     print(f"\n✓  All 4 panels saved.  Re-run with --dpi 600 for print quality.")
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # COMBINED FIGURE — all 4 panels in one file (default: also generated)
+    # ─────────────────────────────────────────────────────────────────────────
+    if not args.panels_only:
+        make_combined_figure(
+            groups_a, groups_b,
+            auc_mat, rho_mat, pval_mat,
+            out = args.out,
+            dpi = args.dpi,
+        )
+        print(f"\n✓  Combined Figure 4 saved.")
 
 
 if __name__ == "__main__":
