@@ -17,7 +17,7 @@ Applicable to any binary antibody property label including PSR (polyreactivity),
 
 > Code and full tutorial documentation accompanying the manuscript:
 > **"DELPHI: a unified interpretable ML platform for multi-objective antibody developability prediction"**
-> Hoan Nguyen, Andre Teixeira et al., (in preparation)
+> Hoan Nguyen, Andre Teixeira et al., *Nature Biotechnology* (in preparation)
 
 ---
 
@@ -37,6 +37,7 @@ Applicable to any binary antibody property label including PSR (polyreactivity),
   - [Step 4: Train final model](#step-4-train-final-model)
 - [Predict on New Antibodies](#predict-on-new-antibodies)
 - [Correlate with Experimental Assays](#correlate-with-experimental-assays)
+- [Threshold Optimization](#threshold-optimization)
 - [Interpretability Analysis](#interpretability-analysis)
 - [Model Lookup Convention](#model-lookup-convention)
 - [Supported Models and Embeddings](#supported-models-and-embeddings)
@@ -58,6 +59,7 @@ DELPHI is a unified interpretable machine learning platform for sequence-based p
 | **Multiple embeddings** | One-hot, biophysical descriptors, ABlang2, AntiBERTy, AntiBERTa2, IgBERT |
 | **Training set curation** | Automated denoising via CDR3 clustering and OOF confidence filtering |
 | **Data-adaptive configuration** | Model architecture and hyperparameters derived automatically from dataset size and class balance |
+| **Automated threshold optimization** | Optimal decision threshold calibrated from pooled out-of-fold predictions using multiple objectives (Youden's J, F1, cost-sensitive); embedded in each checkpoint for immediate deployment |
 | **Multi-resolution interpretability** | SHAP (RF, XGBoost) and Integrated Gradients (Transformer) with per-residue CDR3 attribution |
 
 **Two entry points:**
@@ -641,6 +643,14 @@ At the end of `--kfold`, DELPHI prints:
 
 Set `epochs: 32` in the relevant YAML config, then proceed to training.
 
+**Example output — 10-fold HCDR3-stratified ROC curve** (TransformerLM + AbLang2, IPI PSR, n = 11,265):
+
+<p align="center">
+  <img src="images/CV_ROC_PSR_AbLang2_TransformerLM_10fold.png" alt="10-fold CV ROC curve" width="600"/>
+</p>
+
+Mean AUC = 0.946 ± 0.007 (range 0.936–0.957 across folds), confirming stable generalization with low fold-to-fold variance. Per-fold threshold optimization and calibration diagnostics are shown in the [Threshold Optimization](#threshold-optimization) section.
+
 ---
 
 ### Step 4: Train final model
@@ -713,6 +723,97 @@ python developability_correlation.py \
     --logit-trans \
     --title "DELPHI PSR vs normalised PSR panel" \
     --out tests/psr_correlation
+```
+
+---
+
+## Threshold Optimization
+
+DELPHI automatically optimizes the decision threshold after every `--kfold` run using pooled out-of-fold (OOF) predictions. Rather than relying on the arbitrary default of 0.5, DELPHI finds the threshold that best balances sensitivity and specificity for your specific dataset and assay type.
+
+### How it works
+
+Threshold optimization runs automatically at the end of `--kfold` — no additional commands needed. It evaluates eight objective functions on pooled OOF predictions and embeds the recommended threshold directly into the model checkpoint:
+
+| Method | Description | Best for |
+|---|---|---|
+| **Youden's J** (default) | Maximizes sensitivity + specificity − 1 | Balanced cost of FP and FN |
+| **F1 optimum** | Maximizes F1 score | Equal precision and recall |
+| **F2 optimum** | Emphasizes recall (β=2) | Missing a bad antibody is costly |
+| **F0.5 optimum** | Emphasizes precision (β=0.5) | False positives are costly |
+| **Recall ≥ 90%** | Highest threshold achieving ≥90% sensitivity | High-recall screening |
+| **Precision ≥ 80%** | Highest threshold achieving ≥80% precision | High-precision confirmation |
+| **Cost-sensitive** | Minimizes user-defined FP/FN cost matrix | Custom cost weighting |
+
+### Output files
+
+After `--kfold`, four files are written to your model directory:
+
+| File | Description |
+|---|---|
+| `thresh_report_{target}_{lm}.png` | 4-panel diagnostic: ROC curve, PR curve, metrics vs threshold, cost surface |
+| `thresh_stability_{target}_{lm}_auto.png` | Per-fold threshold stability and per-fold metrics at optimal threshold |
+| `thresh_report_{target}_{lm}.json` | All threshold values and metrics for each objective function (machine-readable) |
+| `fold_preds_{target}_{lm}_k{N}.csv` | Pooled OOF predictions used for threshold computation |
+
+Example outputs for TransformerLM + AbLang2 (PSR, n = 11,265, 10-fold CV):
+
+<p align="center">
+  <img src="images/SupplFig_ThresholdAnalysis_PSR_AbLang2_TransformerLM.png" alt="Threshold analysis" width="700"/>
+</p>
+
+<p align="center">
+  <img src="images/SupplFig_ThresholdStability_PSR_AbLang2_TransformerLM.png" alt="Threshold stability" width="700"/>
+</p>
+
+Key results for this model: AUC-ROC = 0.946, AUC-PR = 0.937; Youden-optimal threshold = 0.586 (sensitivity = 0.931, specificity = 0.831, F1 = 0.894).
+
+### Using the optimal threshold
+
+The Youden-optimal pooled threshold is automatically embedded in the model checkpoint and used by `--predict` without any extra flags:
+
+```bash
+# Uses the embedded optimal threshold automatically
+python delphi.py --predict my_library.xlsx \
+    --target psr_filter --lm ablang --model transformer_lm \
+    --db data/ipi_psr_trainset.xlsx
+
+# Override with a custom threshold (e.g. for high-recall screening)
+python delphi.py --predict my_library.xlsx \
+    --target psr_filter --lm ablang --model transformer_lm \
+    --db data/ipi_psr_trainset.xlsx \
+    --threshold 0.3
+
+# Use standard 0.5 threshold (for cross-model comparison)
+python delphi.py --predict my_library.xlsx \
+    --target psr_filter --lm ablang --model transformer_lm \
+    --db data/ipi_psr_trainset.xlsx \
+    --threshold 0.5
+```
+
+> **Note:** All performance metrics in the DELPHI manuscript (accuracy, F1, precision, recall) are reported at the standard threshold of 0.5 to enable consistent cross-model comparison across all 25 model combinations. The Youden-optimal threshold is recommended for deployment and pre-screening applications where sensitivity-specificity balance matters.
+
+### Reading the JSON output
+
+```python
+import json
+
+with open('thresh_report_psr_filter_ablang_transformer_lm_ipi_psr_trainset_k10.json') as f:
+    report = json.load(f)
+
+# Recommended threshold (Youden's J)
+print(f"Recommended threshold: {report['youden']['threshold']:.3f}")
+print(f"Sensitivity: {report['youden']['sensitivity']:.3f}")
+print(f"Specificity: {report['youden']['specificity']:.3f}")
+print(f"F1: {report['youden']['f1']:.3f}")
+print(f"AUC-ROC: {report['youden']['auc_roc']:.3f}")
+
+# For high-recall screening (miss fewer bad antibodies)
+print(f"\nHigh-recall threshold (F2): {report['f2']['threshold']:.3f}")
+print(f"Sensitivity: {report['f2']['sensitivity']:.3f}")
+
+# For cost-sensitive deployment (FN costs 3x FP)
+print(f"\nCost-sensitive threshold: {report['cost(fp=1.0,fn=3.0)']['threshold']:.3f}")
 ```
 
 ---
@@ -869,12 +970,23 @@ Loss function is also auto-selected based on class balance: `ce` for balanced da
 
 ## Key Results
 
+**PSR polyreactivity prediction (IPI PSR, n = 11,265, 10-fold HCDR3-stratified CV):**
+All 20 PLM embedding-based model combinations achieve mean AUC 0.959 ± 0.005 (range 0.946–0.967). Best model: XGBoost + IgBert (AUC = 0.967).
+
+**Cross-library transfer:**
+IPI-trained models generalize to 246,293 public antibodies (AUC up to 0.950, AbLang2) and three independent clinical cohorts (AUC up to 0.805), demonstrating broad generalization beyond the training library.
+
+**SEC monomer purity failure prediction (IPI SEC, n = 5,045):**
+All 25 model combinations achieve AUC 0.877–0.960, with the majority of PLM embedding-based models between 0.91–0.96, confirming DELPHI's flexibility to any biophysical label.
+
+**Threshold optimization (TransformerLM + AbLang2, PSR):**
+
 <p align="center">
-  <img src="images/optimal_threshold.png" alt="Threshold optimisation" width="600"/>
+  <img src="images/SupplFig_ThresholdAnalysis_PSR_AbLang2_TransformerLM.png" alt="Threshold analysis" width="700"/>
 </p>
 
 <p align="center">
-  <img src="images/thresh_report_psr_filter_antiberta2-cssp.png" alt="Threshold report" width="600"/>
+  <img src="images/SupplFig_ThresholdStability_PSR_AbLang2_TransformerLM.png" alt="Threshold stability" width="700"/>
 </p>
 
 ---
