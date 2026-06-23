@@ -820,6 +820,45 @@ print(f"\nCost-sensitive threshold: {report['cost(fp=1.0,fn=3.0)']['threshold']:
 
 ## Interpretability Analysis
 
+Interpretability is a core scientific contribution of DELPHI, not just a diagnostic tool. By combining SHAP (tree-based models) and Integrated Gradients (TransformerOneHot), DELPHI reveals the sequence-level determinants of antibody developability at three resolutions: population-level feature importance, residue-level position attribution, and individual antibody engineering guidance.
+
+### Why multi-resolution interpretability matters
+
+SHAP and Integrated Gradients operate on orthogonal feature spaces — biophysical descriptors and amino acid counts (SHAP) versus full position-resolved one-hot encoding (IG). When both methods converge on the same features, that convergence provides architecture-independent validation of the biological signal. Divergence highlights architecture-specific effects or assay-specific patterns.
+
+### What DELPHI finds
+
+**PSR polyreactivity (Extended Data Fig. 5):**
+
+<p align="center">
+  <img src="images/Extended_Fig5_psr_filter_biophysical_biophysical_onehot_ipi_psr_trainset_3beeswarms.png" alt="SHAP and IG interpretability — PSR" width="750"/>
+</p>
+
+SHAP (RF and XGBoost) and TransformerOneHot Integrated Gradients independently identify the same HCDR3 electrostatic risk signature: CDR3 net charge (protective when negative), arginine count (risk when high), HCDR3 isoelectric point (risk when elevated), and tryptophan in arginine-containing antibodies (aromatic hydrophobic risk). IG additionally resolves lysine and tyrosine at individual HCDR3 positions — residue-level specificity unavailable from aggregated biophysical descriptors.
+
+**SEC monomer purity failure (Extended Data Fig. 6):**
+
+<p align="center">
+  <img src="images/Extended_Fig6_sec_filter_biophysical_biophysical_onehot_ipi_sec_3beeswarms.png" alt="SHAP and IG interpretability — SEC" width="750"/>
+</p>
+
+All three models converge strongly on HCDR3 (>80% attribution), with arginine enrichment and aspartate depletion as primary risk features — the same electrostatic failure signature as PSR, despite independent training sets and a different biophysical assay. Cross-assay convergence of this signature confirms it reflects fundamental sequence-level grammar rather than assay-specific artefacts.
+
+**Individual antibody resolution (Extended Data Fig. 7):**
+
+<p align="center">
+  <img src="images/Extended_Fig7_IG_Intepretability_individual.png" alt="Per-antibody IG waterfall and CDR3 mutagenesis" width="750"/>
+</p>
+
+Per-antibody IG waterfall plots identify the exact HCDR3 positions and residues driving each prediction, and CDR3 in silico mutagenesis heatmaps show which substitutions increase model-predicted P(Pass) — providing computationally actionable pre-screening guidance across thousands of candidate sequences.
+
+> **High-resolution tiff figures** are available for download in `images/` for publication use:
+> - [`Extended_Fig5_psr_filter_biophysical_biophysical_onehot_ipi_psr_trainset_3beeswarms.tiff`](images/Extended_Fig5_psr_filter_biophysical_biophysical_onehot_ipi_psr_trainset_3beeswarms.tiff)
+> - [`Extended_Fig6_sec_filter_biophysical_biophysical_onehot_ipi_sec_3beeswarms.tiff`](images/Extended_Fig6_sec_filter_biophysical_biophysical_onehot_ipi_sec_3beeswarms.tiff)
+> - [`Extended_Fig7_IG_Intepretability_individual.tiff`](images/Extended_Fig7_IG_Intepretability_individual.tiff)
+
+### Running interpretability analysis
+
 Generate publication-quality SHAP and Integrated Gradients figures (Nature Biotechnology style).
 
 **Minimum required models per filter:**
