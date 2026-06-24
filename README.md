@@ -196,6 +196,13 @@ sources, unless already cached locally. Offline or restricted-network
 environments should pre-cache those assets or use sequence-only models for
 smoke testing.
 
+For release maintenance, check that the public Zenodo model artifacts and the
+local model registry agree before publishing a new record or README:
+
+```bash
+python utils/validate_zenodo_registry.py
+```
+
 ---
 
 ### Step 3: Run the integration test suite
