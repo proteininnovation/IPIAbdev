@@ -36,7 +36,7 @@ dependencies:
 
     # ML frameworks
     - torch
-    - scikit-learn
+    - scikit-learn==1.8.0
     - xgboost==2.1.1
     - joblib
 
