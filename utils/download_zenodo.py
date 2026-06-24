@@ -4,7 +4,7 @@
 # Institute for Protein Innovation (IPI)
 #
 # Two modes:
-#   Default          : download all 52 pretrained models from Zenodo v3
+#   Default          : download all non-DS1 files exposed by the Zenodo record
 #   --embeddings     : download DS1_embedding.tar.gz → extract to data/
 #
 # Usage:
@@ -176,7 +176,7 @@ def main():
     ap.add_argument("--embeddings", action="store_true",
                     help="Download DS1_embedding.tar.gz and extract all "
                          "DS1 embedding CSVs + sequence xlsx to data/. "
-                         "Default mode downloads all 52 pretrained models.")
+                         "Default mode downloads all non-DS1 files exposed by the Zenodo record.")
     ap.add_argument("--outdir",  default=str(OUT_DIR),
                     help=f"Output directory (default: pretrained_202605/)")
     ap.add_argument("--token",   default=None,
@@ -189,7 +189,7 @@ def main():
 
     mode = ("DS1 embeddings → data/  (DS1_embedding.tar.gz)"
             if args.embeddings else
-            "all 52 pretrained models  (no DS1 embeddings)")
+            "all non-DS1 Zenodo files (no DS1 embeddings)")
 
     print()
     print("══════════════════════════════════════════════════════════════════")
@@ -266,7 +266,9 @@ def main():
         return
 
     else:
-        # Default: all pretrained models — skip DS1 data files
+        # Default: released model files and any other non-DS1 record files.
+        # The live Zenodo record may contain more files than the registry; do
+        # not hard-code a model count here.
         emb_count = sum(1 for f in files if IS_DS1_DATA(f))
         files     = [f for f in files if not IS_DS1_DATA(f)]
         if emb_count:

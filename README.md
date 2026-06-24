@@ -59,7 +59,7 @@ DELPHI is a unified interpretable machine learning platform for sequence-based p
 | **Multiple embeddings** | One-hot, biophysical descriptors, ABlang2, AntiBERTy, AntiBERTa2, IgBERT |
 | **Training set curation** | Automated denoising via CDR3 clustering and OOF confidence filtering |
 | **Data-adaptive configuration** | Model architecture and hyperparameters derived automatically from dataset size and class balance |
-| **Automated threshold optimization** | Optimal decision threshold calibrated from pooled out-of-fold predictions using multiple objectives (Youden's J, F1, cost-sensitive); embedded in each checkpoint for immediate deployment |
+| **Automated threshold optimization** | Threshold diagnostics from pooled out-of-fold predictions using multiple objectives (Youden's J, F1, cost-sensitive); recommended operating points are reported separately and can be applied with `--threshold` |
 | **Multi-resolution interpretability** | SHAP (RF, XGBoost) and Integrated Gradients (Transformer) with per-residue CDR3 attribution |
 
 **Two entry points:**
@@ -170,7 +170,7 @@ env) rather than `python3`, or call `$CONDA_PREFIX/bin/python` directly.
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20785877.svg)](https://doi.org/10.5281/zenodo.20785877)
 
 ```bash
-# Download all 52 pretrained models to pretrained_202605/
+# Download released non-DS1 files from the Zenodo record to pretrained_202605/
 python utils/download_zenodo.py
 
 # Preview what will be downloaded first (recommended)
@@ -180,15 +180,22 @@ python utils/download_zenodo.py --dry-run
 python utils/download_zenodo.py --embeddings
 ```
 
-This downloads all pretrained model files (`.pt` and `.pkl`) to
-`pretrained_202605/`. The large DS1 data files (`DS1.xlsx`,
+By default this downloads all non-DS1 files exposed by the Zenodo record
+into `pretrained_202605/`. The large DS1 data files (`DS1.xlsx`,
 `DS1_embedding.tar.gz`) are skipped by default; use `--embeddings` to fetch
 and extract them into `data/`. Models are located by filename convention
-(FINAL_{target}_{lm}_{model}_{db_stem}) in that folder.
+(`FINAL_{target}_{lm}_{model}_{db_stem}`) in that folder.
 
 > Models are trained on proprietary IPI antibody datasets.
 > Training sequences cannot be shared. Model weights are provided for
 > inference only.
+
+PLM-backed prediction from raw sequences also requires the upstream PLM
+assets used by the selected embedding model. These are downloaded by their
+respective packages on first use, for example from Hugging Face or ABLang2
+sources, unless already cached locally. Offline or restricted-network
+environments should pre-cache those assets or use sequence-only models for
+smoke testing.
 
 ---
 
@@ -278,7 +285,7 @@ IPI provides pretrained models for PSR, SEC, HIC, and AC-SINS.
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20785877.svg)](https://doi.org/10.5281/zenodo.20785877)
 
 ```bash
-# Download all 52 pretrained models (PSR + SEC)
+# Download released non-DS1 files from Zenodo (PSR + SEC weights)
 python utils/download_zenodo.py
 
 # Download DS1 embedding files (optional — needed for training from embeddings)
@@ -768,30 +775,27 @@ Example outputs for TransformerLM + AbLang2 (PSR, n = 11,265, 10-fold CV):
 
 Key results for this model: AUC-ROC = 0.946, AUC-PR = 0.937; Youden-optimal threshold = 0.586 (sensitivity = 0.931, specificity = 0.831, F1 = 0.894).
 
-### Using the optimal threshold
+### Using optimal threshold
 
-The Youden-optimal pooled threshold is automatically embedded in the model checkpoint and used by `--predict` without any extra flags:
+Threshold diagnostics are reported separately from the released checkpoints.
+The current public checkpoints use the default 0.5 threshold unless a custom
+threshold is supplied with `--threshold`.
 
 ```bash
-# Uses the embedded optimal threshold automatically
+# Apply a custom threshold (e.g. high-recall screening)
 python delphi.py --predict my_library.xlsx \
-    --target psr_filter --lm ablang --model transformer_lm \
-    --db data/ipi_psr_trainset.xlsx
-
-# Override with a custom threshold (e.g. for high-recall screening)
-python delphi.py --predict my_library.xlsx \
-    --target psr_filter --lm ablang --model transformer_lm \
-    --db data/ipi_psr_trainset.xlsx \
-    --threshold 0.3
+ --target psr_filter --lm ablang --model transformer_lm \
+ --db data/ipi_psr_trainset.xlsx \
+ --threshold 0.3
 
 # Use standard 0.5 threshold (for cross-model comparison)
 python delphi.py --predict my_library.xlsx \
-    --target psr_filter --lm ablang --model transformer_lm \
-    --db data/ipi_psr_trainset.xlsx \
-    --threshold 0.5
+ --target psr_filter --lm ablang --model transformer_lm \
+ --db data/ipi_psr_trainset.xlsx \
+ --threshold 0.5
 ```
 
-> **Note:** All performance metrics in the DELPHI manuscript (accuracy, F1, precision, recall) are reported at the standard threshold of 0.5 to enable consistent cross-model comparison across all 25 model combinations. The Youden-optimal threshold is recommended for deployment and pre-screening applications where sensitivity-specificity balance matters.
+> **Note:** performance metrics in DELPHI manuscript (accuracy, F1, precision, recall) are reported at standard threshold 0.5 for consistent cross-model comparison across all 25 model combinations, unless explicitly stated otherwise. Youden-optimal thresholds are recommended operating points for deployment pre-screening applications where sensitivity-specificity balance matters; apply them explicitly with `--threshold`.
 
 ### Reading the JSON output
 
