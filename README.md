@@ -271,7 +271,7 @@ because models were not downloaded):**
 
   Why tests were skipped (and how to enable them):
     Test 3: no pretrained models found in pretrained_202605/
-             → python utils/download_zenodo.py   (downloads all 52 models)
+             → python utils/download_zenodo.py   (downloads released DELPHI model artifacts)
     Test 7: pretrained model missing: pretrained_202605/FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt
              → python utils/download_zenodo.py
     Test 8: pretrained PSR model missing: pretrained_202605/FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt
@@ -749,7 +749,7 @@ DELPHI automatically optimizes the decision threshold after every `--kfold` run 
 
 ### How it works
 
-Threshold optimization runs automatically at the end of `--kfold` — no additional commands needed. It evaluates eight objective functions on pooled OOF predictions and embeds the recommended threshold directly into the model checkpoint:
+Threshold optimization runs automatically at the end of `--kfold` — no additional commands needed. It evaluates eight objective functions on pooled OOF predictions and writes threshold diagnostics plus recommended operating points:
 
 | Method | Description | Best for |
 |---|---|---|

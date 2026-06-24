@@ -320,7 +320,7 @@ def test_predict(df: pd.DataFrame) -> bool:
         _warn("All pretrained models missing — Test 3 counted as SKIP, not PASS")
         return ("SKIP",
                 "no pretrained models found in pretrained_202605/",
-                "python utils/download_zenodo.py   (downloads all 52 models)")
+                "python utils/download_zenodo.py   (downloads released DELPHI model artifacts)")
     # Otherwise pass only if every model that actually ran succeeded
     return all(o for t, o in results.items() if t not in skipped)
 
