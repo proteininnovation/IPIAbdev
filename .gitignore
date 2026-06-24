@@ -1,0 +1,20 @@
+__pycache__/
+*.py[cod]
+
+# Local environments and generated activation helper.
+.venv/
+venv/
+env/
+activate.sh
+
+# Downloaded public model artifacts and local/private data.
+pretrained_202605/
+data/
+
+# Test and tutorial outputs.
+build/
+outputs/
+figures/
+tests/*.emb.csv
+tests/*_pred_*
+tests/predict_*.log
