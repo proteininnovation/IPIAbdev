@@ -170,7 +170,7 @@ env) rather than `python3`, or call `$CONDA_PREFIX/bin/python` directly.
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20785877.svg)](https://doi.org/10.5281/zenodo.20785877)
 
 ```bash
-# Download released non-DS1 files from the Zenodo record to pretrained_202605/
+# Download released DELPHI model artifacts to pretrained_202605/
 python utils/download_zenodo.py
 
 # Preview what will be downloaded first (recommended)
@@ -180,10 +180,9 @@ python utils/download_zenodo.py --dry-run
 python utils/download_zenodo.py --embeddings
 ```
 
-By default this downloads all non-DS1 files exposed by the Zenodo record
-into `pretrained_202605/`. The large DS1 data files (`DS1.xlsx`,
-`DS1_embedding.tar.gz`) are skipped by default; use `--embeddings` to fetch
-and extract them into `data/`. Models are located by filename convention
+By default, this downloads the released DELPHI model artifacts from the Zenodo
+record into `pretrained_202605/`. Use `--embeddings` to fetch and extract the
+DS1 public data and embedding archive into `data/`. Models are located by filename convention
 (`FINAL_{target}_{lm}_{model}_{db_stem}`) in that folder.
 
 > Models are trained on proprietary IPI antibody datasets.
@@ -285,7 +284,7 @@ IPI provides pretrained models for PSR, SEC, HIC, and AC-SINS.
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20785877.svg)](https://doi.org/10.5281/zenodo.20785877)
 
 ```bash
-# Download released non-DS1 files from Zenodo (PSR + SEC weights)
+# Download released DELPHI model artifacts from Zenodo
 python utils/download_zenodo.py
 
 # Download DS1 embedding files (optional — needed for training from embeddings)

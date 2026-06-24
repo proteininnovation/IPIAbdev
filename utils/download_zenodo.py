@@ -4,7 +4,7 @@
 # Institute for Protein Innovation (IPI)
 #
 # Two modes:
-#   Default          : download all non-DS1 files exposed by the Zenodo record
+#   Default          : download released DELPHI model artifacts from Zenodo
 #   --embeddings     : download DS1_embedding.tar.gz → extract to data/
 #
 # Usage:
@@ -176,7 +176,7 @@ def main():
     ap.add_argument("--embeddings", action="store_true",
                     help="Download DS1_embedding.tar.gz and extract all "
                          "DS1 embedding CSVs + sequence xlsx to data/. "
-                         "Default mode downloads all non-DS1 files exposed by the Zenodo record.")
+                         "Default mode downloads released DELPHI model artifacts from Zenodo.")
     ap.add_argument("--outdir",  default=str(OUT_DIR),
                     help=f"Output directory (default: pretrained_202605/)")
     ap.add_argument("--token",   default=None,
@@ -189,7 +189,7 @@ def main():
 
     mode = ("DS1 embeddings → data/  (DS1_embedding.tar.gz)"
             if args.embeddings else
-            "all non-DS1 Zenodo files (no DS1 embeddings)")
+            "released DELPHI model artifacts")
 
     print()
     print("══════════════════════════════════════════════════════════════════")
@@ -266,14 +266,14 @@ def main():
         return
 
     else:
-        # Default: released model files and any other non-DS1 record files.
+        # Default: released DELPHI model artifacts.
         # The live Zenodo record may contain more files than the registry; do
         # not hard-code a model count here.
         emb_count = sum(1 for f in files if IS_DS1_DATA(f))
         files     = [f for f in files if not IS_DS1_DATA(f)]
+        print(f" Selected {len(files)} released DELPHI model artifact file(s).")
         if emb_count:
-            print(f"  Skipped {emb_count} DS1 data file(s)  "
-                  f"(use --embeddings to download DS1_embedding.tar.gz → data/)")
+            print(" DS1 public data and embeddings are available with --embeddings.")
 
     # ── Print file list ───────────────────────────────────────────────────
     total_size = sum(f.get("size", 0) or f.get("filesize", 0) for f in files)
