@@ -20,6 +20,7 @@
 # Usage:
 #   python tests/test_delphi.py                  # full suite (sections 0-8)
 #   python tests/test_delphi.py --fast           # skip final-train (Test 5)
+#   python tests/test_delphi.py --smoke          # imports, data, one bounded one-hot prediction
 #   python tests/test_delphi.py --section 3      # single section only (0-8)
 #
 # Sections 3, 7, 8 exercise IPI pretrained models and require pretrained_202605/
@@ -658,16 +659,51 @@ def test_interpretability_pretrained_psr_sec() -> bool:
     return ok
 
 
+def test_smoke_predict() -> bool | tuple[str, str, str]:
+    _head("── Smoke: one-hot pretrained PSR prediction ───────────────────")
+    model_id = "FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt"
+    model_path = _ROOT / "pretrained_202605" / model_id
+    if not model_path.exists():
+        _warn(f"Model file not found: {model_id} — skipping smoke prediction (SKIP)")
+        return (
+            "SKIP",
+            f"pretrained one-hot PSR model missing: pretrained_202605/{model_id}",
+            "python utils/download_zenodo.py",
+        )
+
+    return _run(
+        [
+            _DELPHI,
+            "--predict",
+            TEST_DATA,
+            "--target",
+            TARGET,
+            "--lm",
+            "onehot",
+            "--model",
+            "transformer_onehot",
+            "--model_path",
+            str(model_path),
+        ],
+        label="smoke predict psr_filter/transformer_onehot/onehot",
+        timeout=300,
+    )
+
+
 def main():
     ap = argparse.ArgumentParser(
         description="DELPHI integration test suite — DS1 (Chen et al. 2024)")
     ap.add_argument("--fast", action="store_true",
                     help="Use DS1_psr_500.xlsx and skip kfold + train")
+    ap.add_argument("--smoke", action="store_true",
+                    help="Run imports, data validation, and one bounded one-hot prediction")
     ap.add_argument("--section", type=int, default=None,
                     choices=[0, 1, 2, 3, 4, 5, 6, 7, 8],
                     help="Run a single test section only (0-8). "
                          "Sections 3, 7, 8 require pretrained_202605/ models.")
     args = ap.parse_args()
+    if args.smoke and args.section is not None:
+        ap.error("--smoke cannot be combined with --section")
 
     print()
     print("══════════════════════════════════════════════════════════════════")
@@ -675,6 +711,7 @@ def main():
     print("  Dataset : DS1 — Chen et al. 2024 (Cell Reports, PMC11564698)")
     print("  License : MIT  |  https://zenodo.org/records/20785877")
     print(f"  Target  : {TARGET}")
+    if args.smoke: print(" Mode : smoke (imports, data, one bounded one-hot prediction)")
     if args.fast:    print("  Mode    : fast (final-train skipped)")
     if args.section is not None: print(f"  Section : {args.section} only")
     print("══════════════════════════════════════════════════════════════════")
@@ -702,33 +739,36 @@ def main():
                   f"--input tests/DS1.xlsx --target psr_filter\n")
             sys.exit(1)
 
-    if _should(2): results[2] = test_embeddings()
-    if _should(3): results[3] = test_predict(df)
+    if args.smoke:
+        results[3] = test_smoke_predict()
+    else:
+        if _should(2): results[2] = test_embeddings()
+        if _should(3): results[3] = test_predict(df)
 
-    if _should(4):
-        # Test 4 runs 5-fold CV (always). Kept here even in --fast mode since
-        # it is the primary validation check.
-        results[4] = test_kfold(fast=args.fast)
+        if _should(4):
+            # Test 4 runs 5-fold CV (always). Kept here even in --fast mode since
+            # it is the primary validation check.
+            results[4] = test_kfold(fast=args.fast)
 
-    if _should(5):
-        if args.fast:
-            _head("── Test 5: Build final models ─────────────── SKIPPED (--fast)")
-        else:
-            results[5] = test_train()
+        if _should(5):
+            if args.fast:
+                _head("── Test 5: Build final models ─────────────── SKIPPED (--fast)")
+            else:
+                results[5] = test_train()
 
-    if _should(6):
-        results[6] = test_interpretability(fast=args.fast)
-    if _should(7):
-        results[7] = test_interpretability_pretrained_psr()
-    if _should(8):
-        results[8] = test_interpretability_pretrained_psr_sec()
+        if _should(6):
+            results[6] = test_interpretability(fast=args.fast)
+        if _should(7):
+            results[7] = test_interpretability_pretrained_psr()
+        if _should(8):
+            results[8] = test_interpretability_pretrained_psr_sec()
 
     # ── Summary ───────────────────────────────────────────────────────────
     labels = {
         0: "Package imports",
         1: f"Data file ({TEST_DATA.name})",
         2: "Embedding generation  (5 PLMs)",
-        3: "PSR prediction        (6 pretrained models)",
+        3: "Smoke pretrained one-hot prediction" if args.smoke else "PSR prediction        (6 pretrained models)",
         4: "5-fold cross-validation  (4 models)",
         5: "Build final models    (4 models)",
         6: "Interpretability      (psr_filter, 500 samples)",

@@ -211,7 +211,10 @@ python utils/validate_zenodo_registry.py
 # Full test suite (sections 0-8)
 python tests/test_delphi.py
 
-# Fast mode — 5-fold CV instead of 10 (Test 4), skips final training (Test 5)
+# Bounded smoke check: imports, data validation, one one-hot pretrained prediction
+python tests/test_delphi.py --smoke
+
+# Fast mode — 5-fold CV instead of 10-fold (Test 4), skips final training (Test 5)
 python tests/test_delphi.py --fast
 
 # Run a single section (0-8)
