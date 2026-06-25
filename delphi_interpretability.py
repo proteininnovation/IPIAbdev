@@ -137,9 +137,7 @@ else:
 # Single-column, 5 stacked panels. Panel E narrower than A-D.
 FIG_WIDTH_IN  = 6.3
 FIG_HEIGHT_IN = 11.0
-DPI_TIFF = 300
-DPI_PDF  = 300
-DPI_PNG  = 150
+DPI_PNG  = 300   # [FIX] PNG-only output at 300 DPI (tiff/pdf removed to save disk space)
 
 plt.rcParams.update({
     "font.family":       "DejaVu Sans",
@@ -970,13 +968,12 @@ def _make_fig_scaffold(target, db_stem):
 
 
 def _save_fig(fig, out_stem: str, log: _Log):
-    for ext, dpi in [('tiff', DPI_TIFF), ('pdf', DPI_PDF), ('png', DPI_PNG)]:
-        path = f"{out_stem}.{ext}"
-        save_kw = dict(dpi=dpi, bbox_inches='tight')
-        if ext == 'tiff':
-            save_kw['pil_kwargs'] = {'compression': 'tiff_lzw'}
-        fig.savefig(path, **save_kw)
-        log(f"[figure] {path}  ({dpi} DPI)")
+    # [FIX] PNG-only output (300 DPI) — tiff and pdf removed to save disk space.
+    # Replace with: for ext, dpi in [('tiff', 300), ('pdf', 300), ('png', 300)]
+    # if you need publication-quality tiff/pdf for a specific figure.
+    path = f"{out_stem}.png"
+    fig.savefig(path, dpi=DPI_PNG, bbox_inches='tight')
+    log(f"[figure] {path}  ({DPI_PNG} DPI)")
     plt.close(fig)
 
 
@@ -1271,7 +1268,7 @@ def _render_3region_beeswarm(ig_data: Optional[dict],
         _ig_legend(ax, fontsize=6.0)
 
     fig.suptitle(title, fontsize=12.2, y=1.005)
-    for ext, dpi in [('tiff', DPI_TIFF), ('pdf', DPI_PDF), ('png', DPI_PNG)]:
+    for ext, dpi in [('png', DPI_PNG)]:
         path = f"{out_stem}.{ext}"
         kw = dict(dpi=dpi, bbox_inches='tight')
         if ext == 'tiff': kw['pil_kwargs'] = {'compression': 'tiff_lzw'}
@@ -1312,7 +1309,7 @@ def _standalone_ig_residue_beeswarm(ig_data: Optional[dict],
         ax.set_title(fig_title, fontsize=12.2, pad=8)
         _ig_legend(ax, fontsize=6.0)
         plt.tight_layout()
-        for ext, dpi in [('tiff', DPI_TIFF), ('pdf', DPI_PDF), ('png', DPI_PNG)]:
+        for ext, dpi in [('png', DPI_PNG)]:
             path = f"{out_path}.{ext}"
             save_kw = dict(dpi=dpi, bbox_inches='tight')
             if ext == 'tiff':
@@ -1780,11 +1777,10 @@ def _standalone_shap_beeswarm(shap_data: Optional[dict],
     cbar.ax.tick_params(width=0.5, length=2)
 
     plt.tight_layout()
-    for ext, dpi in [('tiff', DPI_TIFF), ('pdf', DPI_PDF), ('png', DPI_PNG)]:
+    for ext, dpi in [('png', DPI_PNG)]:
         path = f"{out_stem}.{ext}"
         save_kw = dict(dpi=dpi, bbox_inches='tight')
-        if ext == 'tiff':
-            save_kw['pil_kwargs'] = {'compression': 'tiff_lzw'}
+        # tiff compression removed (PNG-only output)
         fig.savefig(path, **save_kw)
         log(f"[beeswarm] {path}  ({dpi} DPI)")
     plt.close(fig)
@@ -1889,11 +1885,10 @@ def _standalone_ig_beeswarm(ig_data: Optional[dict],
     cbar.ax.tick_params(width=0.5, length=2)
 
     plt.tight_layout()
-    for ext, dpi in [('tiff', DPI_TIFF), ('pdf', DPI_PDF), ('png', DPI_PNG)]:
+    for ext, dpi in [('png', DPI_PNG)]:
         path = f"{out_stem}.{ext}"
         save_kw = dict(dpi=dpi, bbox_inches='tight')
-        if ext == 'tiff':
-            save_kw['pil_kwargs'] = {'compression': 'tiff_lzw'}
+        # tiff compression removed (PNG-only output)
         fig.savefig(path, **save_kw)
         log(f"[ig_beeswarm] {path}  ({dpi} DPI)")
     plt.close(fig)
@@ -2031,7 +2026,7 @@ def _plot_pass_fail_ig(ig_data: Optional[dict],
         f"(top {top_n} positions by mean |IG|)",
         fontsize=13.5, y=0.98)
 
-    for ext, dpi in [('tiff', DPI_TIFF), ('pdf', DPI_PDF), ('png', DPI_PNG)]:
+    for ext, dpi in [('png', DPI_PNG)]:
         path = f"{out_stem}_pass_fail_ig.{ext}"
         kw = dict(dpi=dpi, bbox_inches='tight')
         if ext == 'tiff': kw['pil_kwargs'] = {'compression': 'tiff_lzw'}
@@ -3245,6 +3240,43 @@ def _run_predict_dataset(args, predict_path: str, target: str,
     csv_path = outdir / f"predictions_{target}.csv"
     pred_df.to_csv(csv_path, index=False)
     log(f"[predict] predictions → {csv_path.name}")
+
+    # ── Prediction summary — PASS/FAIL rate per model ─────────────────────
+    n_total = len(pred_df)
+    THRESH  = 0.5
+    sep  = "═" * 58
+    sep2 = "─" * 58
+    summary_lines = [
+        "",
+        sep,
+        f"  PREDICTION SUMMARY — {target}",
+        f"  Input   : {Path(predict_path).name}  (n={n_total:,})",
+        f"  Threshold: {THRESH}  (PASS = score >= {THRESH})",
+        sep2,
+        f"  {'Model':<28}  {'PASS':>6}  {'FAIL':>6}  {'% PASS':>7}",
+        f"  {'─'*28}  {'─'*6}  {'─'*6}  {'─'*7}",
+    ]
+    for col, label in [
+        ('rf_biophysical_score',      'RF (biophysical)'),
+        ('xgboost_biophysical_score', 'XGBoost (biophysical)'),
+        ('transformer_onehot_score',  'Transformer (onehot)'),
+        (f'predicted_{target}',        'Ensemble (majority vote)'),
+    ]:
+        if col not in pred_df.columns:
+            continue
+        vals  = pred_df[col].dropna()
+        if col == f'predicted_{target}':
+            n_pass = int((vals == 1).sum())
+        else:
+            n_pass = int((vals >= THRESH).sum())
+        n_fail   = len(vals) - n_pass
+        pct_pass = 100 * n_pass / max(len(vals), 1)
+        summary_lines.append(
+            f"  {label:<28}  {n_pass:>6,}  {n_fail:>6,}  {pct_pass:>6.1f}%")
+    summary_lines += [sep2, ""]
+    for line in summary_lines:
+        log(line)
+        print(line)
 
     # ── Run full interpretability pipeline on prediction set ───────────────
     # Inject df (with pseudo-labels) + the model paths resolved in the training
