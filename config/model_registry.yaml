@@ -1,31 +1,4 @@
-# ══════════════════════════════════════════════════════════════════════════════
-# DELPHI — Model Registry
-# config/model_registry.yaml
-# ══════════════════════════════════════════════════════════════════════════════
-#
-# REQUIRED FIELDS
-#   model_id (key)  unique — used by --model_id. Defaults to filename.
-#   trainset        training database path
-#   target          label column (psr_filter, sec_filter, ...)
-#   lm              embedding (onehot, igbert, biophysical, ...)
-#   model           architecture (transformer_onehot, transformer_lm, rf, ...)
-#   model_path      .pt / .pkl file path
-#
-# OPTIONAL FIELDS
-#   type             full_train | best_fold
-#   trained_at       timestamp
-#   kfold_auc        mean AUC from --kfold
-#   kfold_std        std across folds
-#   kfold_folds      number of folds
-#   kfold_best_fold  fold with highest AUC
-#   threshold        classification threshold (default 0.5 if omitted)
-#   epochs           training epochs
-#   notes            free text
-#
-# ══════════════════════════════════════════════════════════════════════════════
-
 models:
-  # ── PSR filter models ──────────────────────────────────────────────────────
   FINAL_psr_filter_ablang_cnn_ipi_psr_trainset.pt:
     trainset: data/ipi_psr_trainset.xlsx
     target: psr_filter
@@ -34,7 +7,6 @@ models:
     model_path: pretrained_202605/FINAL_psr_filter_ablang_cnn_ipi_psr_trainset.pt
     type: full_train
     notes: ''
-
   FINAL_psr_filter_ablang_rf_ipi_psr_trainset.pkl:
     trainset: data/ipi_psr_trainset.xlsx
     target: psr_filter
@@ -43,7 +15,6 @@ models:
     model_path: pretrained_202605/FINAL_psr_filter_ablang_rf_ipi_psr_trainset.pkl
     type: full_train
     notes: ''
-
   FINAL_psr_filter_ablang_transformer_lm_DS1.pt:
     trainset: tests/DS1.xlsx
     target: psr_filter
@@ -52,7 +23,6 @@ models:
     model_path: pretrained_202605/FINAL_psr_filter_ablang_transformer_lm_DS1.pt
     type: full_train
     notes: ''
-
   FINAL_psr_filter_ablang_transformer_lm_ipi_psr_trainset.pt:
     trainset: data/ipi_psr_trainset.xlsx
     target: psr_filter
@@ -61,7 +31,6 @@ models:
     model_path: pretrained_202605/FINAL_psr_filter_ablang_transformer_lm_ipi_psr_trainset.pt
     type: full_train
     notes: ''
-
   FINAL_psr_filter_ablang_xgboost_ipi_psr_trainset.pkl:
     trainset: data/ipi_psr_trainset.xlsx
     target: psr_filter
@@ -70,7 +39,6 @@ models:
     model_path: pretrained_202605/FINAL_psr_filter_ablang_xgboost_ipi_psr_trainset.pkl
     type: full_train
     notes: ''
-
   FINAL_psr_filter_antiberta2-cssp_cnn_ipi_psr_trainset.pt:
     trainset: data/ipi_psr_trainset.xlsx
     target: psr_filter
@@ -79,7 +47,6 @@ models:
     model_path: pretrained_202605/FINAL_psr_filter_antiberta2-cssp_cnn_ipi_psr_trainset.pt
     type: full_train
     notes: ''
-
   FINAL_psr_filter_antiberta2-cssp_rf_ipi_psr_trainset.pkl:
     trainset: data/ipi_psr_trainset.xlsx
     target: psr_filter
@@ -88,7 +55,6 @@ models:
     model_path: pretrained_202605/FINAL_psr_filter_antiberta2-cssp_rf_ipi_psr_trainset.pkl
     type: full_train
     notes: ''
-
   FINAL_psr_filter_antiberta2-cssp_transformer_lm_DS1.pt:
     trainset: tests/DS1.xlsx
     target: psr_filter
@@ -97,7 +63,6 @@ models:
     model_path: pretrained_202605/FINAL_psr_filter_antiberta2-cssp_transformer_lm_DS1.pt
     type: full_train
     notes: ''
-
   FINAL_psr_filter_antiberta2-cssp_transformer_lm_ipi_psr_trainset.pt:
     trainset: data/ipi_psr_trainset.xlsx
     target: psr_filter
@@ -106,7 +71,6 @@ models:
     model_path: pretrained_202605/FINAL_psr_filter_antiberta2-cssp_transformer_lm_ipi_psr_trainset.pt
     type: full_train
     notes: ''
-
   FINAL_psr_filter_antiberta2_cnn_ipi_psr_trainset.pt:
     trainset: data/ipi_psr_trainset.xlsx
     target: psr_filter
@@ -115,7 +79,6 @@ models:
     model_path: pretrained_202605/FINAL_psr_filter_antiberta2_cnn_ipi_psr_trainset.pt
     type: full_train
     notes: ''
-
   FINAL_psr_filter_antiberta2_rf_ipi_psr_trainset.pkl:
     trainset: data/ipi_psr_trainset.xlsx
     target: psr_filter
@@ -124,7 +87,6 @@ models:
     model_path: pretrained_202605/FINAL_psr_filter_antiberta2_rf_ipi_psr_trainset.pkl
     type: full_train
     notes: ''
-
   FINAL_psr_filter_antiberta2_transformer_lm_DS1.pt:
     trainset: tests/DS1.xlsx
     target: psr_filter
@@ -133,7 +95,6 @@ models:
     model_path: pretrained_202605/FINAL_psr_filter_antiberta2_transformer_lm_DS1.pt
     type: full_train
     notes: ''
-
   FINAL_psr_filter_antiberta2_transformer_lm_ipi_psr_trainset.pt:
     trainset: data/ipi_psr_trainset.xlsx
     target: psr_filter
@@ -142,7 +103,6 @@ models:
     model_path: pretrained_202605/FINAL_psr_filter_antiberta2_transformer_lm_ipi_psr_trainset.pt
     type: full_train
     notes: ''
-
   FINAL_psr_filter_antiberty_cnn_ipi_psr_trainset.pt:
     trainset: data/ipi_psr_trainset.xlsx
     target: psr_filter
@@ -151,7 +111,6 @@ models:
     model_path: pretrained_202605/FINAL_psr_filter_antiberty_cnn_ipi_psr_trainset.pt
     type: full_train
     notes: ''
-
   FINAL_psr_filter_antiberty_rf_ipi_psr_trainset.pkl:
     trainset: data/ipi_psr_trainset.xlsx
     target: psr_filter
@@ -160,7 +119,6 @@ models:
     model_path: pretrained_202605/FINAL_psr_filter_antiberty_rf_ipi_psr_trainset.pkl
     type: full_train
     notes: ''
-
   FINAL_psr_filter_antiberty_transformer_lm_DS1.pt:
     trainset: tests/DS1.xlsx
     target: psr_filter
@@ -169,7 +127,6 @@ models:
     model_path: pretrained_202605/FINAL_psr_filter_antiberty_transformer_lm_DS1.pt
     type: full_train
     notes: ''
-
   FINAL_psr_filter_antiberty_transformer_lm_ipi_psr_trainset.pt:
     trainset: data/ipi_psr_trainset.xlsx
     target: psr_filter
@@ -178,7 +135,6 @@ models:
     model_path: pretrained_202605/FINAL_psr_filter_antiberty_transformer_lm_ipi_psr_trainset.pt
     type: full_train
     notes: ''
-
   FINAL_psr_filter_biophysical_rf_ipi_psr_trainset.pkl:
     trainset: data/ipi_psr_trainset.xlsx
     target: psr_filter
@@ -187,7 +143,6 @@ models:
     model_path: pretrained_202605/FINAL_psr_filter_biophysical_rf_ipi_psr_trainset.pkl
     type: full_train
     notes: ''
-
   FINAL_psr_filter_biophysical_xgboost_ipi_psr_trainset.pkl:
     trainset: data/ipi_psr_trainset.xlsx
     target: psr_filter
@@ -196,7 +151,6 @@ models:
     model_path: pretrained_202605/FINAL_psr_filter_biophysical_xgboost_ipi_psr_trainset.pkl
     type: full_train
     notes: ''
-
   FINAL_psr_filter_igbert_rf_ipi_psr_trainset.pkl:
     trainset: data/ipi_psr_trainset.xlsx
     target: psr_filter
@@ -205,7 +159,6 @@ models:
     model_path: pretrained_202605/FINAL_psr_filter_igbert_rf_ipi_psr_trainset.pkl
     type: full_train
     notes: ''
-
   FINAL_psr_filter_igbert_transformer_lm_ipi_psr_trainset.pt:
     trainset: data/ipi_psr_trainset.xlsx
     target: psr_filter
@@ -220,8 +173,7 @@ models:
     kfold_best_fold: 2
     threshold: 0.4621
     epochs: 28
-    notes: 'LoRA fine-tuned on GPU'
-
+    notes: LoRA fine-tuned on GPU
   FINAL_psr_filter_igbert_xgboost_ipi_psr_trainset.pkl:
     trainset: data/ipi_psr_trainset.xlsx
     target: psr_filter
@@ -230,7 +182,6 @@ models:
     model_path: pretrained_202605/FINAL_psr_filter_igbert_xgboost_ipi_psr_trainset.pkl
     type: full_train
     notes: ''
-
   FINAL_psr_filter_kmer_rf_ipi_psr_trainset.pkl:
     trainset: data/ipi_psr_trainset.xlsx
     target: psr_filter
@@ -239,7 +190,6 @@ models:
     model_path: pretrained_202605/FINAL_psr_filter_kmer_rf_ipi_psr_trainset.pkl
     type: full_train
     notes: ''
-
   FINAL_psr_filter_onehot_rf_ipi_psr_trainset.pkl:
     trainset: data/ipi_psr_trainset.xlsx
     target: psr_filter
@@ -248,7 +198,6 @@ models:
     model_path: pretrained_202605/FINAL_psr_filter_onehot_rf_ipi_psr_trainset.pkl
     type: full_train
     notes: ''
-
   FINAL_psr_filter_onehot_transformer_onehot_DS1.pt:
     trainset: tests/DS1.xlsx
     target: psr_filter
@@ -257,7 +206,6 @@ models:
     model_path: pretrained_202605/FINAL_psr_filter_onehot_transformer_onehot_DS1.pt
     type: full_train
     notes: ''
-
   FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt:
     trainset: data/ipi_psr_trainset.xlsx
     target: psr_filter
@@ -273,8 +221,6 @@ models:
     threshold: 0.4812
     epochs: 32
     notes: ''
-
-  # ── SEC filter models ──────────────────────────────────────────────────────
   FINAL_sec_filter_ablang_cnn_ipi_sec_5000.pt:
     trainset: manuscripts/data/ipi_sec_5000.xlsx
     target: sec_filter
@@ -288,7 +234,6 @@ models:
     kfold_best_fold: 9
     epochs: 20
     notes: ''
-
   FINAL_sec_filter_ablang_rf_ipi_sec_5000.pkl:
     trainset: manuscripts/data/ipi_sec_5000.xlsx
     target: sec_filter
@@ -297,7 +242,6 @@ models:
     model_path: pretrained_202605/FINAL_sec_filter_ablang_rf_ipi_sec_5000.pkl
     type: full_train
     notes: ''
-
   FINAL_sec_filter_ablang_transformer_lm_ipi_sec_5000.pt:
     trainset: manuscripts/data/ipi_sec_5000.xlsx
     target: sec_filter
@@ -306,7 +250,6 @@ models:
     model_path: pretrained_202605/FINAL_sec_filter_ablang_transformer_lm_ipi_sec_5000.pt
     type: full_train
     notes: ''
-
   FINAL_sec_filter_ablang_xgboost_ipi_sec_5000.pkl:
     trainset: manuscripts/data/ipi_sec_5000.xlsx
     target: sec_filter
@@ -315,7 +258,6 @@ models:
     model_path: pretrained_202605/FINAL_sec_filter_ablang_xgboost_ipi_sec_5000.pkl
     type: full_train
     notes: ''
-
   FINAL_sec_filter_antiberta2-cssp_cnn_ipi_sec_5000.pt:
     trainset: manuscripts/data/ipi_sec_5000.xlsx
     target: sec_filter
@@ -324,7 +266,6 @@ models:
     model_path: pretrained_202605/FINAL_sec_filter_antiberta2-cssp_cnn_ipi_sec_5000.pt
     type: full_train
     notes: ''
-
   FINAL_sec_filter_antiberta2-cssp_rf_ipi_sec_5000.pkl:
     trainset: manuscripts/data/ipi_sec_5000.xlsx
     target: sec_filter
@@ -333,7 +274,6 @@ models:
     model_path: pretrained_202605/FINAL_sec_filter_antiberta2-cssp_rf_ipi_sec_5000.pkl
     type: full_train
     notes: ''
-
   FINAL_sec_filter_antiberta2-cssp_transformer_lm_ipi_sec_5000.pt:
     trainset: manuscripts/data/ipi_sec_5000.xlsx
     target: sec_filter
@@ -347,7 +287,6 @@ models:
     kfold_best_fold: 3
     epochs: 55
     notes: ''
-
   FINAL_sec_filter_antiberta2-cssp_xgboost_ipi_sec_5000.pkl:
     trainset: manuscripts/data/ipi_sec_5000.xlsx
     target: sec_filter
@@ -356,7 +295,6 @@ models:
     model_path: pretrained_202605/FINAL_sec_filter_antiberta2-cssp_xgboost_ipi_sec_5000.pkl
     type: full_train
     notes: ''
-
   FINAL_sec_filter_antiberta2_cnn_ipi_sec_5000.pt:
     trainset: manuscripts/data/ipi_sec_5000.xlsx
     target: sec_filter
@@ -365,7 +303,6 @@ models:
     model_path: pretrained_202605/FINAL_sec_filter_antiberta2_cnn_ipi_sec_5000.pt
     type: full_train
     notes: ''
-
   FINAL_sec_filter_antiberta2_rf_ipi_sec_5000.pkl:
     trainset: manuscripts/data/ipi_sec_5000.xlsx
     target: sec_filter
@@ -374,7 +311,6 @@ models:
     model_path: pretrained_202605/FINAL_sec_filter_antiberta2_rf_ipi_sec_5000.pkl
     type: full_train
     notes: ''
-
   FINAL_sec_filter_antiberta2_transformer_lm_ipi_sec_5000.pt:
     trainset: manuscripts/data/ipi_sec_5000.xlsx
     target: sec_filter
@@ -388,7 +324,6 @@ models:
     kfold_best_fold: 3
     epochs: 55
     notes: ''
-
   FINAL_sec_filter_antiberta2_xgboost_ipi_sec_5000.pkl:
     trainset: manuscripts/data/ipi_sec_5000.xlsx
     target: sec_filter
@@ -397,7 +332,6 @@ models:
     model_path: pretrained_202605/FINAL_sec_filter_antiberta2_xgboost_ipi_sec_5000.pkl
     type: full_train
     notes: ''
-
   FINAL_sec_filter_antiberty_cnn_ipi_sec_5000.pt:
     trainset: manuscripts/data/ipi_sec_5000.xlsx
     target: sec_filter
@@ -406,7 +340,6 @@ models:
     model_path: pretrained_202605/FINAL_sec_filter_antiberty_cnn_ipi_sec_5000.pt
     type: full_train
     notes: ''
-
   FINAL_sec_filter_antiberty_rf_ipi_sec_5000.pkl:
     trainset: manuscripts/data/ipi_sec_5000.xlsx
     target: sec_filter
@@ -415,7 +348,6 @@ models:
     model_path: pretrained_202605/FINAL_sec_filter_antiberty_rf_ipi_sec_5000.pkl
     type: full_train
     notes: ''
-
   FINAL_sec_filter_antiberty_transformer_lm_ipi_sec_5000.pt:
     trainset: manuscripts/data/ipi_sec_5000.xlsx
     target: sec_filter
@@ -429,7 +361,6 @@ models:
     kfold_best_fold: 9
     epochs: 55
     notes: ''
-
   FINAL_sec_filter_antiberty_xgboost_ipi_sec_5000.pkl:
     trainset: manuscripts/data/ipi_sec_5000.xlsx
     target: sec_filter
@@ -438,7 +369,6 @@ models:
     model_path: pretrained_202605/FINAL_sec_filter_antiberty_xgboost_ipi_sec_5000.pkl
     type: full_train
     notes: ''
-
   FINAL_sec_filter_biophysical_rf_ipi_sec_5000.pkl:
     trainset: manuscripts/data/ipi_sec_5000.xlsx
     target: sec_filter
@@ -447,7 +377,6 @@ models:
     model_path: pretrained_202605/FINAL_sec_filter_biophysical_rf_ipi_sec_5000.pkl
     type: full_train
     notes: ''
-
   FINAL_sec_filter_biophysical_xgboost_ipi_sec_5000.pkl:
     trainset: manuscripts/data/ipi_sec_5000.xlsx
     target: sec_filter
@@ -456,7 +385,6 @@ models:
     model_path: pretrained_202605/FINAL_sec_filter_biophysical_xgboost_ipi_sec_5000.pkl
     type: full_train
     notes: ''
-
   FINAL_sec_filter_igbert_cnn_ipi_sec_5000.pt:
     trainset: manuscripts/data/ipi_sec_5000.xlsx
     target: sec_filter
@@ -470,7 +398,6 @@ models:
     kfold_best_fold: 3
     epochs: 20
     notes: ''
-
   FINAL_sec_filter_igbert_rf_ipi_sec_5000.pkl:
     trainset: manuscripts/data/ipi_sec_5000.xlsx
     target: sec_filter
@@ -479,7 +406,6 @@ models:
     model_path: pretrained_202605/FINAL_sec_filter_igbert_rf_ipi_sec_5000.pkl
     type: full_train
     notes: ''
-
   FINAL_sec_filter_igbert_transformer_lm_ipi_sec.pt:
     trainset: data/ipi_sec_trainset.xlsx
     target: sec_filter
@@ -492,8 +418,7 @@ models:
     kfold_folds: 10
     kfold_best_fold: 1
     threshold: 0.473
-    notes: 'fold 1 outperforms full_train on external validation cohort GDPa3'
-
+    notes: fold 1 outperforms full_train on external validation cohort GDPa3
   FINAL_sec_filter_igbert_transformer_lm_ipi_sec_5000.pt:
     trainset: manuscripts/data/ipi_sec_5000.xlsx
     target: sec_filter
@@ -507,7 +432,6 @@ models:
     kfold_best_fold: 9
     epochs: 55
     notes: ''
-
   FINAL_sec_filter_igbert_xgboost_ipi_sec_5000.pkl:
     trainset: manuscripts/data/ipi_sec_5000.xlsx
     target: sec_filter
@@ -516,7 +440,6 @@ models:
     model_path: pretrained_202605/FINAL_sec_filter_igbert_xgboost_ipi_sec_5000.pkl
     type: full_train
     notes: ''
-
   FINAL_sec_filter_kmer_rf_ipi_sec_5000.pkl:
     trainset: manuscripts/data/ipi_sec_5000.xlsx
     target: sec_filter
@@ -525,7 +448,6 @@ models:
     model_path: pretrained_202605/FINAL_sec_filter_kmer_rf_ipi_sec_5000.pkl
     type: full_train
     notes: ''
-
   FINAL_sec_filter_kmer_xgboost_ipi_sec_5000.pkl:
     trainset: manuscripts/data/ipi_sec_5000.xlsx
     target: sec_filter
@@ -534,7 +456,6 @@ models:
     model_path: pretrained_202605/FINAL_sec_filter_kmer_xgboost_ipi_sec_5000.pkl
     type: full_train
     notes: ''
-
   FINAL_sec_filter_onehot_transformer_onehot_ipi_sec_5000.pt:
     trainset: manuscripts/data/ipi_sec_5000.xlsx
     target: sec_filter
@@ -549,5 +470,4 @@ models:
     kfold_best_fold: 7
     threshold: 0.495
     epochs: 28
-    notes: 'April baseline — before May data refresh and CDR3 prefix fix'
-
+    notes: April baseline — before May data refresh and CDR3 prefix fix
