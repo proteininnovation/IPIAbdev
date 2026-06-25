@@ -56,7 +56,7 @@ DELPHI is a unified interpretable machine learning platform for sequence-based p
 | Capability | Description |
 |---|---|
 | **Multiple ML architectures** | Transformer (one-hot and PLM), Random Forest, XGBoost, CNN — all in one CLI |
-| **Multiple embeddings** | One-hot, biophysical descriptors, ABlang2, AntiBERTy, AntiBERTa2, IgBERT |
+| **Multiple embeddings** | One-hot, biophysical descriptors, ABlang2, AntiBERTy, AntiBERTa2, AntiBERTa2-CSSP, IgBERT |
 | **Training set curation** | Automated denoising via CDR3 clustering and OOF confidence filtering |
 | **Data-adaptive configuration** | Model architecture and hyperparameters derived automatically from dataset size and class balance |
 | **Automated threshold optimization** | Optimal decision threshold calibrated from pooled out-of-fold predictions using multiple objectives (Youden's J, F1, cost-sensitive); embedded in each checkpoint for immediate deployment |
@@ -226,7 +226,7 @@ python utils/download_zenodo.py
 |---|---|---|
 | 0 | Package imports: PyTorch, SHAP, Captum, all PLMs | no |
 | 1 | Test data: `DS1_psr_500.xlsx` — 500 antibodies, balanced 50-50 | no |
-| 2 | Embedding generation: ABlang2, AntiBERTy, AntiBERTa2, IgBERT | no |
+| 2 | Embedding generation: ABlang2, AntiBERTy, AntiBERTa2, AntiBERTa2-CSSP, IgBERT | no |
 | 3 | PSR + SEC prediction using IPI pretrained models via `--model_path` | yes |
 | 4 | k-fold cross-validation (10-fold, or 5-fold with `--fast`): transformer, RF, XGBoost | no |
 | 5 | Train final models (rf, xgboost, transformer_onehot) | no |
@@ -363,12 +363,29 @@ Point at the downloaded checkpoint with `--model_path`. (The IPI training sets
 such as `ipi_psr_trainset.xlsx` are not distributed, so do not reference them
 with `--db` when predicting.)
 
-```bash
-# Full DS1.xlsx — IgBERT transformer (best AUC)
-python delphi.py --predict data/DS1.xlsx \
-    --target psr_filter --lm igbert --model transformer_lm \
-    --model_path pretrained_202605/FINAL_psr_filter_igbert_transformer_lm_ipi_psr_trainset.pt
+When the checkpoint follows the DELPHI naming convention
+`FINAL_{target}_{lm}_{model}_{db_stem}.{pt|pkl}`, DELPHI reads `--target`,
+`--lm`, and `--model` straight from the filename, so `--model_path` alone is
+enough:
 
+```bash
+python delphi.py --predict tests/DS1_psr_500.xlsx \
+    --model_path pretrained_202605/FINAL_psr_filter_antiberta2_transformer_lm_ipi_psr_trainset.pt
+# [infer] target = psr_filter  (from model filename)
+# [infer] lm     = antiberta2  (from model filename)
+# [infer] model  = transformer_lm  (from model filename)
+```
+
+You can still pass `--target`/`--lm`/`--model` explicitly to override the
+inferred values. DELPHI has no silent defaults for these: if the filename is
+not in DELPHI convention and you do not pass them, it stops with an error
+rather than guessing.
+
+DELPHI ships pretrained models for five protein language models (PLMs):
+IgBERT, ABlang2, AntiBERTy, AntiBERTa2, and AntiBERTa2-CSSP. All run through the
+`transformer_lm` architecture; pick the `--lm` that matches the checkpoint.
+
+```bash
 # 500-antibody subset — ABlang2 transformer
 python delphi.py --predict tests/DS1_psr_500.xlsx \
     --target psr_filter --lm ablang --model transformer_lm \
@@ -379,10 +396,30 @@ python delphi.py --predict tests/DS1_psr_500.xlsx \
     --target psr_filter --lm antiberty --model transformer_lm \
     --model_path pretrained_202605/FINAL_psr_filter_antiberty_transformer_lm_ipi_psr_trainset.pt
 
+# 500-antibody subset — AntiBERTa2 transformer
+python delphi.py --predict tests/DS1_psr_500.xlsx \
+    --target psr_filter --lm antiberta2 --model transformer_lm \
+    --model_path pretrained_202605/FINAL_psr_filter_antiberta2_transformer_lm_ipi_psr_trainset.pt
+
+# 500-antibody subset — AntiBERTa2-CSSP transformer
+python delphi.py --predict tests/DS1_psr_500.xlsx \
+    --target psr_filter --lm antiberta2-cssp --model transformer_lm \
+    --model_path pretrained_202605/FINAL_psr_filter_antiberta2-cssp_transformer_lm_ipi_psr_trainset.pt
+
 # 500-antibody subset — one-hot transformer (no PLM required)
 python delphi.py --predict tests/DS1_psr_500.xlsx \
     --target psr_filter --lm onehot --model transformer_onehot \
     --model_path pretrained_202605/FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt
+
+# SEC, CNN architecture — AntiBERTa2-CSSP
+python delphi.py --predict tests/DS1_psr_500.xlsx \
+    --target sec_filter --lm antiberta2-cssp --model cnn \
+    --model_path pretrained_202605/FINAL_sec_filter_antiberta2-cssp_cnn_ipi_sec_5000.pt
+
+# Full DS1.xlsx — IgBERT transformer (best AUC, slowest: large set + PLM)
+python delphi.py --predict data/DS1.xlsx \
+    --target psr_filter --lm igbert --model transformer_lm \
+    --model_path pretrained_202605/FINAL_psr_filter_igbert_transformer_lm_ipi_psr_trainset.pt
 ```
 
 > `transformer_onehot` needs no protein language model and is convenient for a
@@ -975,6 +1012,7 @@ the filename.
 | ABlang2 | `ablang` | 480 | `pip install ablang2` |
 | AntiBERTy | `antiberty` | 512 | `pip install antiberty` |
 | AntiBERTa2 | `antiberta2` | 1,024 | `pip install transformers` |
+| AntiBERTa2-CSSP | `antiberta2-cssp` | 1,024 | `pip install transformers` |
 | IgBERT | `igbert` | 1,024 | `pip install transformers` (weights from HuggingFace Hub) |
 
 ---

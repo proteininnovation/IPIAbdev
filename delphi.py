@@ -287,6 +287,57 @@ def _register_model(model_path: str, target: str, lm: str, model: str,
         print(f"[registry] WARNING: failed to write {registry_path} ({e})")
 
 
+def _parse_model_filename(model_path: str):
+    """
+    Parse a DELPHI-convention checkpoint filename into its components.
+
+    Pattern: FINAL_{target}_{lm}_{model}_{db_stem}.{pt|pkl}
+
+    Because target ('psr_filter'), lm ('transformer'... no, lm is e.g.
+    'antiberta2-cssp') and model ('transformer_lm') can all contain
+    underscores, we anchor on the known model and lm vocabularies rather than
+    splitting blindly on '_'.
+
+    Returns dict(target, lm, model, db_stem) or None if the name does not
+    follow the convention.
+    """
+    import os as _os
+    _VALID_MODELS = ["transformer_onehot", "transformer_lm", "xgboost", "rf", "cnn"]
+    _VALID_LMS = ["antiberta2-cssp", "antiberta2", "antiberty", "ablang", "igbert",
+                  "onehot_hcdr3", "onehot_cdr3", "onehot_vh", "onehot",
+                  "biophysical", "kmer", "seq", "none"]
+
+    name = _os.path.splitext(_os.path.basename(str(model_path)))[0]
+    if not name.startswith("FINAL_"):
+        return None
+    body = name[len("FINAL_"):]   # {target}_{lm}_{model}_{db_stem}
+
+    # 1) Find the model token (longest match first so transformer_* wins).
+    model = None
+    for m in _VALID_MODELS:
+        tok = f"_{m}_"
+        idx = body.find(tok)
+        if idx != -1:
+            model = m
+            left = body[:idx]                       # {target}_{lm}
+            db_stem = body[idx + len(tok):]         # {db_stem}
+            break
+    if model is None:
+        return None
+
+    # 2) From the left part, the lm is the known-LM token at its end.
+    lm = None
+    for cand in _VALID_LMS:
+        if left == cand or left.endswith("_" + cand):
+            lm = cand
+            target = left[:len(left) - len(cand)].rstrip("_")
+            break
+    if lm is None or not target:
+        return None
+
+    return {"target": target, "lm": lm, "model": model, "db_stem": db_stem}
+
+
 def _dbname_from_model_id(model_id_or_path: str, target: str = "",
                            lm: str = "", model: str = "") -> str:
     """
@@ -353,10 +404,12 @@ class _Tee:
 
 def _setup_logging(args, db_path: str) -> str:
     ts      = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    lm_tag  = args.lm.replace(",", "_")
+    _lm     = args.lm or "none"
+    lm_tag  = _lm.replace(",", "_")
     _LM_NORM = {"onehot_cdr3": "onehot_hcdr3"}
-    args.lm  = _LM_NORM.get(args.lm, args.lm)
-    lm_tag   = args.lm.replace(",", "_")
+    if args.lm is not None:
+        args.lm  = _LM_NORM.get(args.lm, args.lm)
+    lm_tag   = (args.lm or "none").replace(",", "_")
     db_stem = (Path(db_path).stem if db_path
              else _dbname_from_model_id(
                  getattr(args, "model_id", None) or
@@ -1117,6 +1170,44 @@ def _find_matching_checkpoints(model_dir: str, target: str, lm: str,
     return _found
 
 
+def _lookup_registry_path(target, lm, model, db_stem,
+                          registry_path="config/model_registry.yaml"):
+    """
+    Resolve a model checkpoint path from config/model_registry.yaml.
+
+    Matches on target + lm + model (+ db_stem when provided) and returns the
+    registered model_path if the file exists on disk. Returns None if there is
+    no registry, no matching entry, or the registered file is missing.
+    """
+    import os as _os
+    import yaml as _yaml
+    if not _os.path.exists(registry_path):
+        return None
+    try:
+        with open(registry_path) as f:
+            reg = _yaml.safe_load(f) or {}
+    except Exception:
+        return None
+
+    models = reg.get("models", {})
+    # Prefer an exact match including db_stem; fall back to target+lm+model
+    exact, loose = [], []
+    for mid, e in models.items():
+        if (e.get("target") == target and e.get("lm") == lm
+                and e.get("model") == model):
+            mp = e.get("model_path", "")
+            if db_stem and db_stem in mid:
+                exact.append(mp)
+            else:
+                loose.append(mp)
+
+    for mp in exact + loose:
+        if mp and _os.path.exists(mp):
+            print(f"[registry] resolved model → {mp}")
+            return mp
+    return None
+
+
 def auto_predict(input_file, target="sec_filter", lm="antiberta2",
                  model_type="xgboost", db_path=None, test_target=None,
                  run_mutagenesis=False, mutagenesis_n=None, threshold=None,
@@ -1225,26 +1316,36 @@ def auto_predict(input_file, target="sec_filter", lm="antiberta2",
         model_path = _explicit_path
         print(f"[load] Using explicit model path: {model_path}")
     else:
-        _base_path = f"{MODEL_DIR}/FINAL_{target}_{lm}{_chain_tag}_{model_type}_{db_stem}"
-        if os.path.exists(f"{_base_path}_regression{ext}"):
-            model_path = f"{_base_path}_regression{ext}"
+        # Resolution order:
+        #   1. --model_path (handled above)
+        #   2. config/model_registry.yaml  (registered model_path, any directory)
+        #   3. {MODEL_DIR}/FINAL_..._{db_stem}{ext}  (filename convention)
+        #   4. fuzzy match in MODEL_DIR
+        _reg_path = _lookup_registry_path(target, lm, model_type, db_stem)
+        if _reg_path:
+            model_path = _reg_path
         else:
-            model_path = f"{_base_path}{ext}"
-        if not os.path.exists(model_path):
-            _candidates = _find_matching_checkpoints(
-                MODEL_DIR, target, lm, model_type, db_stem, ext)
-            if _candidates:
-                print(f"\n[load] Exact checkpoint not found: {Path(model_path).name}")
-                print(f"[load] Found {len(_candidates)} matching checkpoint(s):")
-                for i, c in enumerate(_candidates):
-                    print(f"  [{i}] {Path(c).name}")
-                print(f"[load] Using: [{0}] {Path(_candidates[0]).name}")
-                model_path = _candidates[0]
+            _base_path = f"{MODEL_DIR}/FINAL_{target}_{lm}{_chain_tag}_{model_type}_{db_stem}"
+            if os.path.exists(f"{_base_path}_regression{ext}"):
+                model_path = f"{_base_path}_regression{ext}"
             else:
-                raise FileNotFoundError(
-                    f"Model not found: {model_path}\n"
-                    f"Searched in: {MODEL_DIR}\n"
-                    f"Run --train first, or use --model_path to specify explicitly.")
+                model_path = f"{_base_path}{ext}"
+            if not os.path.exists(model_path):
+                _candidates = _find_matching_checkpoints(
+                    MODEL_DIR, target, lm, model_type, db_stem, ext)
+                if _candidates:
+                    print(f"\n[load] Exact checkpoint not found: {Path(model_path).name}")
+                    print(f"[load] Found {len(_candidates)} matching checkpoint(s):")
+                    for i, c in enumerate(_candidates):
+                        print(f"  [{i}] {Path(c).name}")
+                    print(f"[load] Using: [{0}] {Path(_candidates[0]).name}")
+                    model_path = _candidates[0]
+                else:
+                    raise FileNotFoundError(
+                        f"Model not found: {model_path}\n"
+                        f"Searched in: {MODEL_DIR}\n"
+                        f"Also checked config/model_registry.yaml (no usable entry).\n"
+                        f"Run --train first, or use --model_path to specify explicitly.")
 
     if not os.path.exists(model_path):
         raise FileNotFoundError(f"Model not found: {model_path}")
@@ -1584,9 +1685,9 @@ def main():
                        help="List models registered in config/model_registry.yaml "
                             "and exit. Optionally filter with --target / --lm / --model.")
 
-    parser.add_argument("--target", type=str, default="psr_filter")
-    parser.add_argument("--lm", default="antiberta2")
-    parser.add_argument("--model", default="xgboost",
+    parser.add_argument("--target", type=str, default=None)
+    parser.add_argument("--lm", default=None)
+    parser.add_argument("--model", default=None,
                         choices=["xgboost","rf","cnn","transformer_onehot","transformer_lm"])
     parser.add_argument("--db",      type=str)
     parser.add_argument("--cluster", type=float, default=0.8, metavar="THRESHOLD")
@@ -1628,6 +1729,41 @@ def main():
         _f_model  = args.model  if "--model"  in _argv else None
         _list_registered_models(target=_f_target, lm=_f_lm, model=_f_model)
         return
+
+    # ── Infer target/lm/model from a DELPHI-convention --model_path ─────────
+    # No silent defaults: if --lm/--model/--target are omitted, we try to read
+    # them from the checkpoint filename. Explicit flags always win.
+    if getattr(args, 'model_path', None):
+        _parsed = _parse_model_filename(args.model_path)
+        if _parsed:
+            if args.target is None:
+                args.target = _parsed['target']
+                print(f"[infer] target = {args.target}  (from model filename)")
+            if args.lm is None:
+                args.lm = _parsed['lm']
+                print(f"[infer] lm     = {args.lm}  (from model filename)")
+            if args.model is None:
+                args.model = _parsed['model']
+                print(f"[infer] model  = {args.model}  (from model filename)")
+
+    # ── Require target/lm/model explicitly (no defaults) ───────────────────
+    # Only enforced for modes that actually use a model (predict/train/kfold).
+    _needs_model_spec = bool(args.predict or args.train or args.kfold)
+    if _needs_model_spec:
+        _missing = [n for n, v in (("--target", args.target),
+                                   ("--lm", args.lm),
+                                   ("--model", args.model)) if v is None]
+        if _missing:
+            parser.error(
+                "missing required argument(s): " + ", ".join(_missing) + ".\n"
+                "  Pass them explicitly, or use a --model_path whose filename "
+                "follows the DELPHI convention\n"
+                "  FINAL_{target}_{lm}_{model}_{db_stem}.{pt|pkl} so they can be "
+                "inferred.")
+
+    # --build-embedding needs --lm (which PLM to embed with), nothing else.
+    if args.build_embedding and args.lm is None:
+        parser.error("--build-embedding requires --lm (e.g. --lm ablang).")
 
     _raw_db = args.db or get_default_db_path()
     if _raw_db and str(_raw_db).lower().endswith(('.pt', '.pkl')):
