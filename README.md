@@ -357,55 +357,42 @@ Pass the chosen file to `--model_path` (delphi.py) or `--model-path`
 
 ### Tutorial Step 3: Predict on your antibodies
 
-```bash
-# Predict PSR (polyreactivity) — Transformer onehot model
-python delphi.py --predict tests/DS1_psr_500.xlsx \
-    --target psr_filter --lm onehot --model transformer_onehot \
-    --model_path pretrained_202605/FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt \
-    --outdir results/psr
-
-# Predict SEC (size exclusion) — Transformer onehot model
-python delphi.py --predict tests/DS1_psr_500.xlsx \
-    --target sec_filter --lm onehot --model transformer_onehot \
-    --model_path pretrained_202605/FINAL_sec_filter_onehot_transformer_onehot_ipi_sec_5000.pt \
-    --outdir results/sec
-
-# Predict PSR using RF model instead
-python delphi.py --predict tests/DS1_psr_500.xlsx \
-    --target psr_filter --lm biophysical --model rf \
-    --model_path pretrained_202605/FINAL_psr_filter_biophysical_rf_ipi_psr_trainset.pkl \
-    --outdir results/psr_rf
-```
-
-Instead of pointing at a checkpoint with `--model_path`, you can let DELPHI
-locate the model from the training database stem with `--db`. DELPHI builds
-`FINAL_{target}_{lm}_{model}_{db_stem}` and finds it in the model directory
-(`MODEL_DIR` in `config.py`). These commands are equivalent to the ones above,
-provided the matching checkpoint lives in that directory:
+For prediction, the PLM-based `transformer_lm` models (IgBERT, ABlang2,
+AntiBERTy) give the best accuracy and generalize across antibody libraries.
+Point at the downloaded checkpoint with `--model_path`. (The IPI training sets
+such as `ipi_psr_trainset.xlsx` are not distributed, so do not reference them
+with `--db` when predicting.)
 
 ```bash
-# Predict PSR — model located by --db stem (ipi_psr_trainset)
+# Full DS1.xlsx — IgBERT transformer (best AUC)
+python delphi.py --predict data/DS1.xlsx \
+    --target psr_filter --lm igbert --model transformer_lm \
+    --model_path pretrained_202605/FINAL_psr_filter_igbert_transformer_lm_ipi_psr_trainset.pt
+
+# 500-antibody subset — ABlang2 transformer
+python delphi.py --predict tests/DS1_psr_500.xlsx \
+    --target psr_filter --lm ablang --model transformer_lm \
+    --model_path pretrained_202605/FINAL_psr_filter_ablang_transformer_lm_ipi_psr_trainset.pt
+
+# 500-antibody subset — AntiBERTy transformer
+python delphi.py --predict tests/DS1_psr_500.xlsx \
+    --target psr_filter --lm antiberty --model transformer_lm \
+    --model_path pretrained_202605/FINAL_psr_filter_antiberty_transformer_lm_ipi_psr_trainset.pt
+
+# 500-antibody subset — one-hot transformer (no PLM required)
 python delphi.py --predict tests/DS1_psr_500.xlsx \
     --target psr_filter --lm onehot --model transformer_onehot \
-    --db data/ipi_psr_trainset.xlsx \
-    --outdir results/psr
-
-# Predict SEC — model located by --db stem (ipi_sec_5000)
-python delphi.py --predict tests/DS1_psr_500.xlsx \
-    --target sec_filter --lm onehot --model transformer_onehot \
-    --db data/ipi_sec_5000.xlsx \
-    --outdir results/sec
-
-# Predict PSR using RF model — located by --db stem
-python delphi.py --predict tests/DS1_psr_500.xlsx \
-    --target psr_filter --lm biophysical --model rf \
-    --db data/ipi_psr_trainset.xlsx \
-    --outdir results/psr_rf
+    --model_path pretrained_202605/FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt
 ```
 
-> `--model_path` is the most reliable form because it points directly at the
-> checkpoint file. The `--db` form depends on the matching `FINAL_*` file being
-> present in the configured model directory.
+> `transformer_onehot` needs no protein language model and is convenient for a
+> quick run or for interpretability on data drawn from the same distribution as
+> the training set. For prediction on a different antibody library
+> (cross-library generalization), prefer a PLM `transformer_lm` model.
+
+Run `python delphi.py --list-models` to see the exact `model_path` for every
+model you have downloaded. If you trained your own model locally, you can also
+locate it by its training-set stem with `--db your_trainset.xlsx`.
 
 Output files written to `--outdir`:
 ```
@@ -454,22 +441,27 @@ python delphi_interpretability.py --predict tests/DS1_psr_500.xlsx \
     --outdir interpret_out_xgboost
 ```
 
-The same run located by `--db` stem instead of `--model-path`:
+The same run located by `--db` stem instead of `--model-path`. Use this form
+for models you trained locally (where the training set is on disk); for the
+downloaded IPI models use `--model-path` as above:
 
 ```bash
 python delphi_interpretability.py --predict tests/DS1_psr_1000.xlsx \
-    --db data/ipi_psr_trainset.xlsx --target psr_filter \
+    --db data/my_trainset.xlsx --target psr_filter \
     --model transformer_onehot --lm onehot \
     --model-dir pretrained_202605 \
     --ig-max-samples 500 --n-antibodies 20 \
     --outdir interpret_out_transformer
 ```
 
-**Mode B: single-target, all three architectures on one database.**
+**Mode B: single-target, all three architectures on one database.** This mode
+computes interpretability on the training database itself, so it is intended
+for models you trained locally (the IPI training sets are not distributed).
+Replace `my_trainset.xlsx` with your own training file:
 
 ```bash
 python delphi_interpretability.py \
-    --target psr_filter --db data/ipi_psr_trainset.xlsx \
+    --target psr_filter --db data/my_trainset.xlsx \
     --model-dir pretrained_202605 \
     --ig-max-samples 500 --n-antibodies 20 \
     --outdir outputs/interp_psr
@@ -686,15 +678,15 @@ python delphi.py --list-models --target psr_filter
 ## Predict on New Antibodies
 
 ```bash
-# Locate the model by --db stem (looks up FINAL_*.{pt,pkl} in the model dir)
+# Locate the model from the registry, or point at the checkpoint directly
 python delphi.py --predict tests/DS1_psr_500.xlsx \
-    --target psr_filter --lm onehot --model transformer_onehot \
-    --db data/ipi_psr_trainset.xlsx
+    --target psr_filter --lm igbert --model transformer_lm \
+    --model_path pretrained_202605/FINAL_psr_filter_igbert_transformer_lm_ipi_psr_trainset.pt
 
 # Or specify the checkpoint path directly (no --db needed)
 python delphi.py --predict tests/DS1_psr_500.xlsx \
-    --target psr_filter --lm onehot --model transformer_onehot \
-    --model_path pretrained_202605/FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt
+    --target psr_filter --lm igbert --model transformer_lm \
+    --model_path pretrained_202605/FINAL_psr_filter_igbert_transformer_lm_ipi_psr_trainset.pt
 ```
 
 ---
@@ -776,18 +768,18 @@ The Youden-optimal pooled threshold is automatically embedded in the model check
 # Uses the embedded optimal threshold automatically
 python delphi.py --predict my_library.xlsx \
     --target psr_filter --lm ablang --model transformer_lm \
-    --db data/ipi_psr_trainset.xlsx
+    --model_path pretrained_202605/FINAL_psr_filter_ablang_transformer_lm_ipi_psr_trainset.pt
 
 # Override with a custom threshold (e.g. for high-recall screening)
 python delphi.py --predict my_library.xlsx \
     --target psr_filter --lm ablang --model transformer_lm \
-    --db data/ipi_psr_trainset.xlsx \
+    --model_path pretrained_202605/FINAL_psr_filter_ablang_transformer_lm_ipi_psr_trainset.pt \
     --threshold 0.3
 
 # Use standard 0.5 threshold (for cross-model comparison)
 python delphi.py --predict my_library.xlsx \
     --target psr_filter --lm ablang --model transformer_lm \
-    --db data/ipi_psr_trainset.xlsx \
+    --model_path pretrained_202605/FINAL_psr_filter_ablang_transformer_lm_ipi_psr_trainset.pt \
     --threshold 0.5
 ```
 
@@ -878,11 +870,14 @@ cover label pairs beyond PSR/SEC and the high-resolution publication settings.
 
 ```bash
 # For final publication figures (all antibodies, 200 IG steps).
-# Works for any label pair, not just PSR/SEC — swap targets and databases.
+# NOTE: this dual-target mode computes interpretability on the training
+# databases, which are internal to IPI and not distributed. Substitute your
+# own training files to reproduce the figure style on your data. Works for any
+# label pair, not just PSR/SEC — swap targets and databases.
 python delphi_interpretability.py \
     --target psr_filter --target2 sec_filter \
-    --db  data/ipi_psr_trainset.xlsx \
-    --db2 data/ipi_sec_5000.xlsx \
+    --db  data/my_psr_trainset.xlsx \
+    --db2 data/my_sec_trainset.xlsx \
     --model-dir pretrained_202605 \
     --ig-max-samples 0 --ig-steps 200 --n-pairs 20 \
     --outdir outputs/interp_publication
@@ -939,15 +934,16 @@ directly at a checkpoint (parsing the `db_stem` from the filename).
 python delphi.py --list-models
 python delphi.py --list-models --target psr_filter
 
-# Predict by --db stem lookup
+# Predict by explicit checkpoint path (works for downloaded models)
 python delphi.py --predict tests/DS1_psr_500.xlsx \
-    --target psr_filter --lm onehot --model transformer_onehot \
-    --db data/ipi_psr_trainset.xlsx
+    --target psr_filter --lm igbert --model transformer_lm \
+    --model_path pretrained_202605/FINAL_psr_filter_igbert_transformer_lm_ipi_psr_trainset.pt
 
-# Predict by explicit checkpoint path
+# Predict by --db stem lookup — for models you trained locally, where
+# the training set (e.g. my_trainset.xlsx) is present on disk
 python delphi.py --predict tests/DS1_psr_500.xlsx \
-    --target psr_filter --lm onehot --model transformer_onehot \
-    --model_path pretrained_202605/FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt
+    --target psr_filter --lm igbert --model transformer_lm \
+    --db data/my_trainset.xlsx
 ```
 
 The same convention drives model lookup in `delphi_interpretability.py`, where
