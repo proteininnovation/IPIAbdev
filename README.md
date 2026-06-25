@@ -335,7 +335,10 @@ Example output:
   ...
 ```
 
-The filename encodes everything needed to use a model:
+The filename encodes everything needed to use a model. The pretrained set
+spans five PLMs (igbert, ablang, antiberty, antiberta2, antiberta2-cssp) plus
+biophysical, k-mer, and one-hot encodings, across the rf, xgboost, cnn,
+transformer_lm, and transformer_onehot architectures:
 
 ```
 FINAL_{target}_{lm}_{model}_{db_stem}.{pt|pkl}
@@ -343,11 +346,13 @@ FINAL_{target}_{lm}_{model}_{db_stem}.{pt|pkl}
 FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt
       └─ target ──┘└ lm ─┘└──── model ─────┘└── train set ──┘
 
-FINAL_psr_filter_biophysical_rf_ipi_psr_trainset.pkl
-FINAL_psr_filter_biophysical_xgboost_ipi_psr_trainset.pkl
+FINAL_psr_filter_igbert_transformer_lm_ipi_psr_trainset.pt
+FINAL_psr_filter_ablang_rf_ipi_psr_trainset.pkl
+FINAL_psr_filter_antiberty_cnn_ipi_psr_trainset.pt
+FINAL_psr_filter_kmer_rf_ipi_psr_trainset.pkl
 FINAL_sec_filter_onehot_transformer_onehot_ipi_sec_5000.pt
-FINAL_sec_filter_biophysical_rf_ipi_sec_5000.pkl
-FINAL_sec_filter_biophysical_xgboost_ipi_sec_5000.pkl
+FINAL_sec_filter_antiberta2_rf_ipi_sec_5000.pkl
+FINAL_sec_filter_antiberta2-cssp_xgboost_ipi_sec_5000.pkl
 ```
 
 Pass the chosen file to `--model_path` (delphi.py) or `--model-path`
@@ -358,7 +363,8 @@ Pass the chosen file to `--model_path` (delphi.py) or `--model-path`
 ### Tutorial Step 3: Predict on your antibodies
 
 For prediction, the PLM-based `transformer_lm` models (IgBERT, ABlang2,
-AntiBERTy) give the best accuracy and generalize across antibody libraries.
+AntiBERTy, AntiBERTa2, AntiBERTa2-CSSP) give the best accuracy and generalize
+across antibody libraries.
 Point at the downloaded checkpoint with `--model_path`. (The IPI training sets
 such as `ipi_psr_trainset.xlsx` are not distributed, so do not reference them
 with `--db` when predicting.)
