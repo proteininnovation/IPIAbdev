@@ -28,6 +28,44 @@ Outputs
 
 import argparse, os
 import numpy as np
+
+
+def _parse_model_filename(model_path):
+    """
+    Parse a DELPHI-convention checkpoint filename into its components.
+    Pattern: FINAL_{target}_{lm}_{model}_{db_stem}.{pt|pkl}
+    Returns dict(target, lm, model, db_stem) or None if not in convention.
+    Anchors on the known model and lm vocabularies (some contain underscores).
+    """
+    _VALID_MODELS = ["transformer_onehot", "transformer_lm", "xgboost", "rf", "cnn"]
+    _VALID_LMS = ["antiberta2-cssp", "antiberta2", "antiberty", "ablang", "igbert",
+                  "onehot_hcdr3", "onehot_cdr3", "onehot_vh", "onehot",
+                  "biophysical", "kmer", "seq", "none"]
+    name = os.path.splitext(os.path.basename(str(model_path)))[0]
+    if not name.startswith("FINAL_"):
+        return None
+    body = name[len("FINAL_"):]
+    model = None
+    for m in _VALID_MODELS:
+        tok = f"_{m}_"
+        idx = body.find(tok)
+        if idx != -1:
+            model = m
+            left = body[:idx]
+            db_stem = body[idx + len(tok):]
+            break
+    if model is None:
+        return None
+    lm = None
+    for cand in _VALID_LMS:
+        if left == cand or left.endswith("_" + cand):
+            lm = cand
+            target = left[:len(left) - len(cand)].rstrip("_")
+            break
+    if lm is None or not target:
+        return None
+    return {"target": target, "lm": lm, "model": model, "db_stem": db_stem}
+
 import pandas as pd
 import matplotlib
 matplotlib.use('Agg')
@@ -431,7 +469,7 @@ def plot_roc_nature(y_true, y_score, auc_val, thresh_dict,
 def evaluate(file, target, score_col, cost_fp=1.0, cost_fn=3.0,
              out=None, test_target=None,
              model_type=None, lm=None, db_stem=None,
-             dataset_name=None):
+             dataset_name=None, model_path_str=None):
     """
     Main evaluation function.  Returns (auc_val, df_metrics, thresh_dict).
 
@@ -508,6 +546,14 @@ def evaluate(file, target, score_col, cost_fp=1.0, cost_fn=3.0,
     print(f"\n{'═'*W}")
     print(f"  EVALUATION REPORT")
     print(f"  File        : {os.path.basename(file)}")
+    if dataset_name:
+        print(f"  Test set    : {dataset_name}")
+    if model_path_str:
+        print(f"  Model path  : {model_path_str}")
+    if lm:
+        print(f"  LM          : {lm}")
+    if model_type:
+        print(f"  Model       : {model_type}")
     print(f"  Model target: {target}  |  Score : {score_col}")
     print(f"  Label used  : {_label_col}"
           + (f"  (remapped from --test_target)" if _label_col != target else ""))
@@ -540,14 +586,14 @@ def evaluate(file, target, score_col, cost_fp=1.0, cost_fn=3.0,
     t_f05    = thresh_dict['F0.5 (max class-1 precision)']
     t_s90    = thresh_dict['Sensitivity >= 90%']
     print(f"{'─'*W}")
-    print(f"  Class 1 = non-polyreactive (PASS)  |  Class 0 = polyreactive (FAIL)")
+    print(f"  Class 1 = PASS  |  Class 0 = FAIL")
     print(f"{'─'*W}")
     print(f"  Recommended thresholds:")
     print(f"    Balanced FP/FN               → Youden     t={youden_t:.4f}  equal confidence Pass/Fail")
-    print(f"    Max class-1 recall           → F2         t={t_f2:.4f}  miss fewest good antibodies")
-    print(f"    Max class-1 precision        → F0.5       t={t_f05:.4f}  fewest polyreactives advanced")
-    print(f"    Guarantee 90% good recovered → Sens\u226590%  t={t_s90:.4f}  standard screening cutoff")
-    print(f"    Cost-aware (miss good={cost_fn}\u00d7bad) → Cost      t={cost_t:.4f}  quantified cost tradeoff")
+    print(f"    Max class-1 recall           → F2         t={t_f2:.4f}  miss fewest PASS antibodies")
+    print(f"    Max class-1 precision        → F0.5       t={t_f05:.4f}  fewest FAIL advanced")
+    print(f"    Guarantee 90% PASS recovered → Sens\u226590%  t={t_s90:.4f}  standard screening cutoff")
+    print(f"    Cost-aware (miss PASS={cost_fn}\u00d7FAIL) → Cost      t={cost_t:.4f}  quantified cost tradeoff")
     print(f"{'═'*W}\n")
 
     # ── Add optimal_label columns to dataframe ─────────────────────────────
@@ -744,8 +790,29 @@ if __name__ == '__main__':
     parser.add_argument('--cost_fp', type=float, default=1.0)
     parser.add_argument('--cost_fn', type=float, default=3.0)
     parser.add_argument('--out',     default=None)
+    parser.add_argument('--model_path', default=None,
+                        help='Checkpoint path. If it follows the DELPHI '
+                             'convention FINAL_{target}_{lm}_{model}_{db_stem}, '
+                             'lm/model/db_stem are parsed from it for the report.')
+    parser.add_argument('--db', default=None,
+                        help='Training-set file; its stem is used as db_stem '
+                             'in the report when --model_path is not given.')
+    parser.add_argument('--test_set', default=None,
+                        help='Original prediction input file name (e.g. '
+                             'DS1_psr_1000.xlsx) to show in the report. '
+                             'Defaults to the --file basename.')
 
     args = parser.parse_args()
+
+    # Derive lm / model / db_stem for the report header.
+    _lm = _model = _db_stem = None
+    if args.model_path:
+        _parsed = _parse_model_filename(args.model_path)
+        if _parsed:
+            _lm, _model, _db_stem = _parsed['lm'], _parsed['model'], _parsed['db_stem']
+    if _db_stem is None and args.db:
+        _db_stem = os.path.splitext(os.path.basename(args.db))[0]
+
     evaluate(
         file        = args.file,
         target      = args.target,
@@ -754,4 +821,9 @@ if __name__ == '__main__':
         cost_fn     = args.cost_fn,
         out         = args.out,
         test_target = args.test_target,
+        model_type     = _model,
+        lm             = _lm,
+        db_stem        = _db_stem,
+        dataset_name   = args.test_set or os.path.basename(args.file),
+        model_path_str = args.model_path,
     )
