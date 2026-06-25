@@ -548,12 +548,12 @@ def evaluate(file, target, score_col, cost_fp=1.0, cost_fn=3.0,
     print(f"  File        : {os.path.basename(file)}")
     if dataset_name:
         print(f"  Test set    : {dataset_name}")
-    if model_path_str:
-        print(f"  Model path  : {model_path_str}")
     if lm:
         print(f"  LM          : {lm}")
     if model_type:
         print(f"  Model       : {model_type}")
+    if model_path_str:
+        print(f"  Model path  : {model_path_str}")
     print(f"  Model target: {target}  |  Score : {score_col}")
     print(f"  Label used  : {_label_col}"
           + (f"  (remapped from --test_target)" if _label_col != target else ""))
