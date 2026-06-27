@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+*.pyo
+build/
+.DS_Store
+
+# proprietary / large training data — never commit antibody sequences
+data/
+*.emb.csv

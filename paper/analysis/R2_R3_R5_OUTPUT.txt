@@ -1,0 +1,81 @@
+==========================================================================================
+PART A: EXTERNAL COHORTS  (DELPHI = transformer_lm_ablang_ipi_psr_trainset_score)
+==========================================================================================
+
+Cohort                 n Pass Fail   ROC-AUC [95% CI]          PR-AUC(Fail) [95% CI]        no-skill   signed rho [95% CI]        |rho|
+Jain 2017 PSR-SMP    137  109   28   0.732 [0.611-0.846]   0.497 [0.320-0.689]    0.204   -0.312 [-0.465,-0.140]  0.312
+GDPa1 PR-CHO         197  138   59   0.681 [0.595-0.764]   0.507 [0.387-0.641]    0.299   -0.280 [-0.409,-0.146]  0.280
+GDPa3 PR-CHO          80   68   12   0.745 [0.590-0.880]   0.343 [0.172-0.640]    0.150   -0.354 [-0.549,-0.138]  0.354
+GDPa3 PR-Ova          80   77    3   0.779 [0.481-1.000]   0.236 [0.026-1.000]    0.037   -0.657 [-0.787,-0.496]  0.657
+
+Sanity checks (expected vs computed):
+  AUC Jain 2017 PSR-SMP    expected ~0.73  computed 0.732  MATCH
+  AUC GDPa1 PR-CHO         expected ~0.68  computed 0.681  MATCH
+  AUC GDPa3 PR-CHO         expected ~0.75  computed 0.745  MATCH
+  GDPa3 PR-CHO Fails expected ~12  computed 12  MATCH
+  GDPa3 PR-Ova Fails expected ~3   computed 3  MATCH
+
+==========================================================================================
+PART B: EXTERNAL-GRID MAXIMUM AUC  (reproducing ed8.py grid; claim 'up to 0.805')
+==========================================================================================
+
+Full AUC grid (rows = language model, cols = assay readout):
+                    Jain PSR-SMP     Jain ELISA   GDPa1 PR-Ova   GDPa1 PR-CHO   GDPa3 PR-Ova   GDPa3 PR-CHO
+AbLang2                    0.732          0.653          0.740          0.681          0.779          0.745
+AntiBERTy                  0.708          0.626          0.654          0.701          0.684          0.654
+AntiBERTa2                 0.682          0.606          0.771          0.679          0.714          0.608
+AntiBERTa2-CSSP            0.730          0.665          0.690          0.656          0.762          0.787
+IgBert                     0.696          0.707          0.756          0.635          0.805          0.598
+One-hot                    0.556          0.583          0.572          0.578          0.693          0.634
+
+MAX AUC cell = 0.8052
+  language model = IgBert  (igbert)
+  assay readout  = GDPa3 PR-Ova
+  is this the DEPLOYED AbLang2 model? False
+  equals ~0.805? YES
+
+==========================================================================================
+PART C: DUAL-LIABILITY CROSS-ASSAY TEST  (PSR vs SEC, HCDR3 charge)
+==========================================================================================
+
+[Polarity check] sec_filter vs SEC continuous readouts:
+  sec_filter==0: peak_area_pct mean=96.61 median=100.00 (n=41) | retention_time_mins mean=3.169 median=3.296 (n=974)
+  sec_filter==1: peak_area_pct mean=99.43 median=100.00 (n=103) | retention_time_mins mean=2.731 median=2.860 (n=3145)
+  (Higher peak_area_pct = more monomer = better SEC. If sec_filter==1 has higher peak_area_pct, polarity 1=Pass is correct.)
+
+[Polarity check] psr_filter vs psr_norm readouts (higher norm = more polyreactive = worse):
+  psr_filter==0 (n=1326): psr_norm_smp mean=1.986 median=1.441
+  psr_filter==1 (n=3719): psr_norm_smp mean=0.240 median=0.208
+
+[C1] Molecules with BOTH psr_filter and sec_filter measured: n = 5045
+     PSR-fail total = 1326   SEC-fail total = 1835
+     2x2 contingency (PSR x SEC):
+                       SEC-fail   SEC-pass
+        PSR-fail        946        380
+        PSR-pass        889       2830
+
+     phi coefficient            = 0.4341
+     odds ratio (Fisher)        = 7.9249
+     odds ratio (direct/Haldane)= 7.9249
+     Fisher exact p (two-sided) = 5.439e-205
+     P(SEC fail | PSR fail)     = 0.7134  (946/1326)
+     P(SEC fail | PSR pass)     = 0.2390  (889/3719)
+
+[C2] HCDR3_charge predicting failure (Fail=1, n=5045 with charge):
+     ROC-AUC(PSR_fail, HCDR3_charge) = 0.7828   Spearman rho = +0.4314
+     ROC-AUC(SEC_fail, HCDR3_charge) = 0.8221   Spearman rho = +0.5370
+     (AUC>0.5 => higher charge predicts FAIL; AUC<0.5 => higher charge predicts PASS.)
+
+[C3] BARCODE overlap:
+     ipi_psr_trainset unique BARCODEs = 11265
+     ipi_sec_5000     unique BARCODEs = 5045
+     shared BARCODEs                  = 3354
+
+[C4] DUAL-LIABILITY VERDICT:
+     n both-measured = 5045; PSR-fail&SEC-fail co-occurrence = 946
+     association: phi=0.434, OR(Fisher)=7.92, Fisher p=5.44e-205
+     conditional lift: P(SEC fail|PSR fail)=0.713 vs P(SEC fail|PSR pass)=0.239
+     charge drives both? PSR-fail AUC=0.783, SEC-fail AUC=0.822
+     (Verdict text written in the returned report, grounded in the numbers above.)
+
+DONE.
