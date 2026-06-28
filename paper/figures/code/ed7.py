@@ -143,9 +143,10 @@ letters = [["a", "b", "c"], ["d", "e", "f"]]
 
 for ri, (m, df, fcol, name) in enumerate([(m_psr, psr, "psr_filter", "PSR"),
                                           (m_sec, sec, "sec_filter", "SEC")]):
-    # pinned to the antibodies named in the manuscript text/legend (present + correctly
-    # labeled in both the PSR and SEC datasets): pass TAB0012562, fail TAB0015016.
-    pass_bc, fail_bc = "TAB0012562", "TAB0015016"
+    # pinned to the two example antibodies named in the manuscript ED Fig. 8 legend (one Pass,
+    # one Fail, present and correctly labeled in both the PSR and SEC datasets). Internal IDs
+    # are not committed here; set them to the BARCODE values from your local datasets.
+    pass_bc, fail_bc = "<PASS_BARCODE>", "<FAIL_BARCODE>"
     print(f"{name}: pass={pass_bc} (P={m.predict_single(pass_bc, *seqs(df.loc[pass_bc])):.3f}) "
           f"fail={fail_bc} (P={m.predict_single(fail_bc, *seqs(df.loc[fail_bc])):.3f})")
     for ci, bc in enumerate([pass_bc, fail_bc]):
