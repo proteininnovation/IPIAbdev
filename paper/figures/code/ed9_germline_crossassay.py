@@ -1,8 +1,8 @@
 """Extended Data Figure 9 (NEW, revision2) - two analyses added in response to review.
-  a  Framework-driven leakage: AUC under HCDR3-cluster CV vs leave-one-VH-germline-out
+  a  Framework-driven leakage: AUC under CDR H3-cluster CV vs leave-one-VH-germline-out
      vs VH+VL-pair-out, plus per-held-out-germline AUC (R1).
   b  Dual-liability co-occurrence: P(SEC fail) for PSR-Pass vs PSR-Fail antibodies (R2).
-  c  HCDR3 net charge predicts BOTH failure modes within the both-measured set (R2).
+  c  CDR H3 net charge predicts BOTH failure modes within the both-measured set (R2).
 
 R1 values are loaded from NEW_RESULTS/R1_results.json (produced + verified by
 R1_germline_out.py, XGBoost+AbLang2). R2 is recomputed here from ipi_sec_5000.xlsx.
@@ -28,7 +28,7 @@ CHARGE = ok.OI_PURPLE
 
 # ---- R1 (load verified) ----
 r1 = json.load(open(R1J))
-prot = [("HCDR3-cluster CV", r1["anchor_cluster_auc"], NEUTRAL),
+prot = [("CDR H3-cluster CV", r1["anchor_cluster_auc"], NEUTRAL),
         ("VH+VL-pair-out",   r1["pair_out_auc"],       ok.OI_SKYBLUE),
         ("leave-one-VH-\ngermline-out", r1["germline_out_auc"], FAIL)]
 germ = sorted(r1["per_germline"], key=lambda g: g["auc"], reverse=True)  # best on top
@@ -104,7 +104,7 @@ axc.axhline(0.5, color="#999999", lw=0.6, ls="--", zorder=1)
 for xi, v in zip(xc, [auc_psr, auc_sec]):
     axc.text(xi, v + 0.012, f"{v:.2f}", ha="center", va="bottom", fontsize=5.6, fontweight="bold")
 axc.set_xticks(xc); axc.set_xticklabels(["PSR\nfailure", "SEC\nfailure"], fontsize=5.6)
-axc.set_ylim(0.4, 0.9); axc.set_ylabel("ROC-AUC\n(HCDR3 net charge)", fontsize=6.0)
+axc.set_ylim(0.4, 0.9); axc.set_ylabel("ROC-AUC\n(CDR H3 net charge)", fontsize=6.0)
 axc.grid(axis="y", lw=0.25, alpha=0.4)
 axc.set_title("Charge predicts both", fontsize=6.6, fontweight="bold", loc="left", pad=4)
 

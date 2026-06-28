@@ -1,7 +1,7 @@
 """
 Figure 6 (Nature-style rebuild) — model interpretability.
   a/b  mean |IG| per heavy-chain position (HCDR3 + VH framework)  PSR / SEC
-  c/d  HCDR3 per-residue signed IG heatmap (Pass=blue, Fail=red)   PSR / SEC
+  c/d  CDR H3 per-residue signed IG heatmap (Pass=blue, Fail=red)   PSR / SEC
   e/f  attribution convergence across RF-SHAP / XGBoost-SHAP / Transformer-IG,
        as % of attribution mass per region (HCDR3, VH, VL)          PSR / SEC
 
@@ -94,7 +94,7 @@ def charge_dependence(ax, shap_csv, name):
              if ((x >= bins[i]) & (x < bins[i + 1])).sum() > 5 else np.nan for i in range(len(bins) - 1)]
     ax.plot(bc, means, "-", color="black", lw=1.1, zorder=5)
     ax.axhline(0, color="#888888", lw=0.5); ax.axvline(0, color="#888888", lw=0.5, ls=":")
-    ax.set_xlabel("HCDR3 net charge", fontsize=6.3, labelpad=2)
+    ax.set_xlabel("CDR H3 net charge", fontsize=6.3, labelpad=2)
     ax.set_ylabel("SHAP (charge) → P(Pass)", fontsize=6.0, labelpad=2)
     ax.set_title(f"Charge drives the model · {name}", fontsize=6.8, fontweight="bold", pad=3)
 
@@ -111,7 +111,7 @@ for col, (ig, name) in enumerate([(psr_ig, "PSR"), (sec_ig, "SEC")]):
     ax = fig.add_subplot(gs[0, col])
     c, v = positional(ig)
     xc = np.arange(len(c)); xv = np.arange(len(c), len(c) + len(v))
-    ax.fill_between(xc, c, color=REGION_HCDR3, alpha=0.85, lw=0, label="HCDR3")
+    ax.fill_between(xc, c, color=REGION_HCDR3, alpha=0.85, lw=0, label="CDR H3")
     ax.fill_between(xv, v, color=REGION_VH, alpha=0.75, lw=0, label="VH framework")
     ax.set_xlabel("Heavy-chain position", fontsize=6.3, labelpad=2)
     ax.set_ylabel("Mean |IG|", fontsize=6.3, labelpad=2)
@@ -121,16 +121,16 @@ for col, (ig, name) in enumerate([(psr_ig, "PSR"), (sec_ig, "SEC")]):
         ax.legend(loc="upper right", fontsize=5.8, handlelength=1.0, handletextpad=0.4)
     ok.panel_label(fig, ax, "a" if col == 0 else "b", dx=-0.05, dy=0.026, size=8.5)
 
-# ── c/d: HCDR3 per-residue signed IG heatmap ──────────────────────────────────
+# ── c/d: CDR H3 per-residue signed IG heatmap ──────────────────────────────────
 for col, (ig, name) in enumerate([(psr_ig, "PSR"), (sec_ig, "SEC")]):
     ax = fig.add_subplot(gs[1, col])
     M = heat(ig); vmax = np.nanmax(np.abs(M)) * 0.85
     im = ax.imshow(M, cmap=HEAT_CMAP, vmin=-vmax, vmax=vmax, aspect="auto")
     ax.set_yticks(range(len(AAORD))); ax.set_yticklabels(AAORD, fontsize=4.6)
     ax.set_xticks(range(0, 20, 4)); ax.set_xticklabels(range(1, 21, 4), fontsize=5.6)
-    ax.set_xlabel("HCDR3 position", fontsize=6.3, labelpad=2)
+    ax.set_xlabel("CDR H3 position", fontsize=6.3, labelpad=2)
     ax.set_ylabel("Amino acid", fontsize=6.3, labelpad=2)
-    ax.set_title(f"HCDR3 per-residue signed IG · {name}", fontsize=6.8, fontweight="bold", pad=3)
+    ax.set_title(f"CDR H3 per-residue signed IG · {name}", fontsize=6.8, fontweight="bold", pad=3)
     cb = fig.colorbar(im, ax=ax, fraction=0.045, pad=0.03)
     cb.ax.tick_params(labelsize=4.6, length=2)
     cb.set_label("← Fail        Pass →", fontsize=5.2)
@@ -147,7 +147,7 @@ for col, (ra, name) in enumerate([(psr_ra, "PSR"), (sec_ra, "SEC")]):
         for xi, vv in zip(x + (k - 1) * w, vals):
             if vv > 1:
                 ax.text(xi, vv + 1.5, f"{vv:.0f}", ha="center", fontsize=4.8)
-    ax.set_xticks(x); ax.set_xticklabels(REGIONS, fontsize=6.3)
+    ax.set_xticks(x); ax.set_xticklabels([r.replace("HCDR3", "CDR H3") for r in REGIONS], fontsize=6.3)
     ax.set_ylabel("% of attribution mass", fontsize=6.3, labelpad=2)
     ax.set_ylim(0, 100)
     ax.set_title(f"Attribution convergence · {name}", fontsize=6.8, fontweight="bold", pad=3)

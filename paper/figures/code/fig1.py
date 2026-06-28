@@ -4,7 +4,7 @@ Figure 1 (Nature-style v2) — DELPHI platform & datasets.
   a  Platform architecture flowchart (input -> curation -> representations ->
      models -> CV/threshold -> output, + interpretability branch)
   b  Dataset summary table
-  c  HCDR3 diversity (clusters per sequence): designed (IPI) vs natural (DS1)
+  c  CDR H3 diversity (clusters per sequence): designed (IPI) vs natural (DS1)
   d  PSR pass rate by VH germline (data/ipi_psr_trainset.xlsx)
   e  IPI PSR-ELISA normalized scores, 4 antigens x Pass/Fail
   f  Antigen Spearman correlation heatmap
@@ -84,7 +84,7 @@ def draw_flowchart(ax):
     x1, w1 = 0.010, 0.150
     stitle(x1, "INPUT")
     b_in = _box(ax, x1, 0.66, w1, 0.215,
-                "Antibody sequences\nVH / VL / HCDR3\n+ assay label",
+                "Antibody sequences\nVH / VL / CDR H3\n+ assay label",
                 TINT_INPUT, fontsize=5.6, weight="bold")
     _box(ax, x1, 0.560, w1, 0.072, "PSR → polyreactivity\n(psr_filter)", "#FFFFFF",
          fontsize=5.0, ec="#9AA7B4", lw=0.5)
@@ -97,7 +97,7 @@ def draw_flowchart(ax):
     x2, w2 = 0.202, 0.144
     stitle(x2, "CURATION")
     b_cur = _box(ax, x2, 0.66, w2, 0.215,
-                 "HCDR3 clustering\n(80% identity)\n+ out-of-fold\nbalancing",
+                 "CDR H3 clustering\n(80% identity)\n+ out-of-fold\nbalancing",
                  TINT_CURATE, fontsize=5.6)
     _arrow(ax, R(b_in), L(b_cur), lw=0.9)
 
@@ -170,7 +170,7 @@ def draw_flowchart(ax):
     # ---- Stage 5 : CV band beneath models ----
     cv_y, cv_h = 0.075, 0.092
     b_cv = _box(ax, x4, cv_y, w4, cv_h,
-                "10-fold HCDR3-stratified CV\n→ OOF pooling\n→ Youden threshold",
+                "10-fold CDR H3-stratified CV\n→ OOF pooling\n→ Youden threshold",
                 TINT_CV, fontsize=5.1)
     for n in models:
         _arrow(ax, B(mb[n]), (mb[n][0] + w4 / 2, cv_y + cv_h), lw=0.5, color="#8B6FA8", mut=2.4)
@@ -192,7 +192,7 @@ def draw_flowchart(ax):
 
 # ─────────────────────────── PANEL b : table ─────────────────────────────────
 HEADERS = ["Dataset", "Total", "Pass\n(n)", "Fail\n(n)",
-           "HCDR3\nclust.", "HCDR3\nsing.", "Library"]
+           "CDR H3\nclust.", "CDR H3\nsing.", "Library"]
 ROWS = [
     ["IPI PSR-ELISA",  "7,494",  "5,925",  "1,569",  "5,046", "3,895",
      "PSR-ELISA"],
@@ -315,7 +315,7 @@ axB = fig.add_subplot(gs[1, 0]); draw_table(axB)
 axB.set_title("Curated developability datasets", fontsize=7, fontweight="bold",
               loc="left", pad=4)
 
-# c: HCDR3 diversity (clusters per sequence)
+# c: CDR H3 diversity (clusters per sequence)
 axC = fig.add_subplot(gs[1, 1])
 cdiv = [
     ("IPI PSR\ntrain", 7263 / 11265, PASS),
@@ -330,9 +330,9 @@ for x, v in zip(xs, vals):
     axC.text(x, v + 0.012, f"{v:.2f}" if v >= 0.1 else f"{v:.3f}",
              ha="center", va="bottom", fontsize=5.6)
 axC.set_xticks(xs); axC.set_xticklabels([l for l, _, _ in cdiv], fontsize=5.8)
-axC.set_ylabel("HCDR3 clusters / sequence", fontsize=6.6)
+axC.set_ylabel("CDR H3 clusters / sequence", fontsize=6.6)
 axC.set_ylim(0, 0.82)
-axC.set_title("HCDR3 sequence diversity", fontsize=7, fontweight="bold", loc="left", pad=4)
+axC.set_title("CDR H3 sequence diversity", fontsize=7, fontweight="bold", loc="left", pad=4)
 gap = (7263 / 11265) / (6311 / 246293)
 axC.annotate("", xy=(0.30, 0.645), xytext=(1.92, 0.06),
              arrowprops=dict(arrowstyle="<->", color="#444444", lw=0.7))

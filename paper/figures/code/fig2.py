@@ -1,10 +1,10 @@
 """
-Figure 2 (Nature-style rebuild) — Conserved HCDR3 electrostatic signature.
+Figure 2 (Nature-style rebuild) — Conserved CDR H3 electrostatic signature.
 
-TOP block (3 rows x 5 cols): Pass/Fail HCDR3 feature distributions, faithful to
+TOP block (3 rows x 5 cols): Pass/Fail CDR H3 feature distributions, faithful to
 v1 fig2 / utils/Figure2_physicochemical.py, restyled Okabe-Ito.
   rows: IPI PSR (ELISA+NGS) | DS1 (public) | IPI SEC
-  cols: Arg count | Asp count | Trp count (Arg=1) | HCDR3 length | net charge
+  cols: Arg count | Asp count | Trp count (Arg=1) | CDR H3 length | net charge
 
 BOTTOM strip (3 new panels):
   p) Cohen's d effect-size heatmap  — 5 features x 3 datasets, standardized
@@ -12,14 +12,14 @@ BOTTOM strip (3 new panels):
   q) Net charge -> P(Pass) curve     — integer charge bins, fraction Pass per bin
      with Wilson 95% CIs, IPI PSR (blue) + DS1 (orange) overlaid; monotone decline.
   r) Biophysical determinant correlations — Spearman matrix among PSR sub-assays,
-     SPR affinity, SEC retention, HCDR3/VH charge & hydrophobicity, titer.
+     SPR affinity, SEC retention, CDR H3/VH charge & hydrophobicity, titer.
 
 Data:
   IPI PSR  data/ipi_psr_trainset.xlsx          (CDR3, psr_filter)
   IPI SEC  data/ipi_sec_5000.xlsx              (CDR3, sec_filter)
-  DS1      /tmp/delphi_ds1/ds1_clean.parquet   (VH, psr_filter) — HCDR3 re-derived
+  DS1      /tmp/delphi_ds1/ds1_clean.parquet   (VH, psr_filter) — CDR H3 re-derived
            from VH via the C...WGxG motif, fixed 60k sample (seed 42).
-HCDR3 net charge uses liabilities.charge_value (ProteinAnalysis.charge_at_pH 7.4),
+CDR H3 net charge uses liabilities.charge_value (ProteinAnalysis.charge_at_pH 7.4),
 the exact function the original figure used.
 """
 import sys, os, re, warnings
@@ -76,11 +76,11 @@ def load_ds1(n=60000, seed=42):
 
 # (column, x-label, restrict to Arg==1, short feature name for effect-size heatmap)
 PANELS = [
-    ("R",        "Arginine count (HCDR3)",            False, "Arg count"),
-    ("D",        "Aspartic acid count (HCDR3)",       False, "Asp count"),
+    ("R",        "Arginine count (CDR H3)",            False, "Arg count"),
+    ("D",        "Aspartic acid count (CDR H3)",       False, "Asp count"),
     ("W",        "Tryptophan count\n(Arg count = 1)", True,  "Trp count\n(Arg=1)"),
-    ("CDR3_len", "HCDR3 loop length",                 False, "HCDR3 length"),
-    ("charge",   "Net charge (HCDR3)",                False, "Net charge"),
+    ("CDR3_len", "CDR H3 loop length",                 False, "CDR H3 length"),
+    ("charge",   "Net charge (CDR H3)",                False, "Net charge"),
 ]
 LETTERS = [list("abcde"), list("fghij"), list("klmno")]
 ROW_LABELS = ["IPI PSR\n(ELISA+NGS)", "DS1\n(public)", "IPI SEC"]
@@ -153,8 +153,8 @@ CORR_SPEC = [
     ("psr_norm_smp",         "PSR SMP"),
     ("kd_m",                 "SPR KD"),
     ("retention_time_mins",  "SEC RT"),
-    ("HCDR3_charge",         "HCDR3 charge"),
-    ("HCDR3_hydrophobicity", "HCDR3 GRAVY"),
+    ("HCDR3_charge",         "CDR H3 charge"),
+    ("HCDR3_hydrophobicity", "CDR H3 GRAVY"),
     ("VH_charge",            "VH charge"),
     ("puriftitermgl",        "Titer"),
 ]
@@ -262,7 +262,7 @@ for cv, col, lab in [(psr_curve, PASS, "IPI PSR (designed)"),
     yerr = np.clip(np.vstack([cv["ppass"] - cv["lo"], cv["hi"] - cv["ppass"]]), 0, None)
     axq.errorbar(cv["charge"], cv["ppass"], yerr=yerr, color=col, marker="o", ms=2.6,
                  lw=1.0, elinewidth=0.7, capsize=1.3, alpha=0.95, label=lab)
-axq.set_xlabel("HCDR3 net charge", fontsize=6.3, labelpad=2)
+axq.set_xlabel("CDR H3 net charge", fontsize=6.3, labelpad=2)
 axq.set_ylabel("P(Pass)", fontsize=6.3, labelpad=2)
 axq.set_ylim(0, 1.02)
 axq.tick_params(labelsize=5.6, length=2)

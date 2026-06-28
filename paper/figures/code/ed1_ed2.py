@@ -1,10 +1,10 @@
 """
-Extended Data Figures 1 & 2 (Nature-style rebuild) — 8-panel HCDR3 biophysical
+Extended Data Figures 1 & 2 (Nature-style rebuild) — 8-panel CDR H3 biophysical
 profiling.
   ED1: IPI PSR ELISA-only (denoised)   Pass/Fail = non-polyreactive / polyreactive
   ED2: IPI SEC                         Pass/Fail = monomeric / aggregating
 Panels: a Arg | b Asp | c Trp(Arg=1) | d Glu | e loop length | f net charge
-        | g HCDR3 pI | h heavy-chain pI
+        | g CDR H3 pI | h heavy-chain pI
 Faithful to utils/Figure2_physicochemical.generate_extended_figure1 / generate_figure2;
 restyled to Okabe-Ito. Charge & pI via the original liabilities functions.
 Data: data/ipi_psr_trainset_elisa.xlsx, data/ipi_sec_5000.xlsx
@@ -42,13 +42,13 @@ def add_features(df):
 
 # (col, x-label, mode)  mode: 'count' integer | 'bin' 1-unit bins | subset Arg==1 flag via 'W'
 PANELS = [
-    ("R", "Arginine count (HCDR3)", "count"),
-    ("D", "Aspartic acid count (HCDR3)", "count"),
-    ("W", "Tryptophan count (HCDR3)\n(Arg count = 1)", "count"),
-    ("E", "Glutamic acid count (HCDR3)", "count"),
-    ("CDR3_len", "HCDR3 loop length", "count"),
-    ("charge", "Net charge (HCDR3)", "bin"),
-    ("hcdr3_pi", "Isoelectric point (HCDR3)", "bin"),
+    ("R", "Arginine count (CDR H3)", "count"),
+    ("D", "Aspartic acid count (CDR H3)", "count"),
+    ("W", "Tryptophan count (CDR H3)\n(Arg count = 1)", "count"),
+    ("E", "Glutamic acid count (CDR H3)", "count"),
+    ("CDR3_len", "CDR H3 loop length", "count"),
+    ("charge", "Net charge (CDR H3)", "bin"),
+    ("hcdr3_pi", "Isoelectric point (CDR H3)", "bin"),
     ("vh_pi", "Isoelectric point\n(heavy chain)", "bin"),
 ]
 
@@ -93,13 +93,13 @@ eli = eli[eli[["psr_norm_insulin", "psr_norm_dna", "psr_norm_smp", "psr_norm_avi
 eli = eli[eli["psr_filter"].notna()]
 print("ED1 n=", len(eli))
 build(add_features(eli), "psr_filter", ("non-polyreactive", "polyreactive"), "ED_Fig1",
-      f"Full HCDR3 biophysical profile — IPI PSR-ELISA only (denoised, n={len(eli):,});  "
+      f"Full CDR H3 biophysical profile — IPI PSR-ELISA only (denoised, n={len(eli):,});  "
       "net charge and isoelectric point extend the Fig. 2 signature")
 
 # ED2 — SEC
 sec = pd.read_excel(f"{DATA}/ipi_sec_5000.xlsx"); sec = sec[sec["sec_filter"].notna()]
 print("ED2 n=", len(sec))
 build(add_features(sec), "sec_filter", ("monomeric", "aggregating"), "ED_Fig2",
-      f"Full HCDR3 biophysical profile — IPI SEC (n={len(sec):,});  "
+      f"Full CDR H3 biophysical profile — IPI SEC (n={len(sec):,});  "
       "net charge and isoelectric point extend the Fig. 2 signature")
 print("ED1/ED2 done")
