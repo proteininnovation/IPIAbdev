@@ -44,7 +44,7 @@ tqdm
 # ── Protein language models ───────────────────────────────────────────────────
 ablang2
 antiberty
-transformers>=4.30.0,<4.52.0  # >=4.52 requires torch>=2.6; antiberty incompatible with transformers 5.x
+transformers>=4.30.0,<4.52.0  # <4.52 works with both older torch and the newer torch (2.7+/cu128) needed for Blackwell sm_120 GPUs; >=4.52 needs torch>=2.6 and antiberty breaks on transformers 5.x
 rjieba                      # required by some HuggingFace tokenizers (IgBERT, AntiBERTa2)
 peft
 tf-keras

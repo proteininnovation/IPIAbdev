@@ -158,36 +158,103 @@ $CONDA_BIN remove -n $ENV_NAME pytorch torchvision torchaudio \
 pip uninstall torch torchvision torchaudio triton -y 2>/dev/null || true
 
 TORCH_URL=""
+NOTE=""
+TORCH_PKGS="torch torchvision torchaudio"
+TORCH_PRE=""            # set to "--pre" if we need nightly (very new GPUs)
 CUDA_VER=""
+SM=""                   # GPU compute capability, e.g. 120 for Blackwell sm_120
+
 if command -v nvidia-smi &>/dev/null; then
     CUDA_VER=$(nvidia-smi 2>/dev/null | grep -oP "CUDA Version: \K[0-9]+" | head -1)
-    echo "  GPU detected  |  CUDA $CUDA_VER"
+    # Compute capability like "12.0" → strip the dot → "120"
+    SM=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null \
+         | head -1 | tr -d ' .')
+    echo "  GPU detected  |  driver CUDA $CUDA_VER  |  compute_cap sm_${SM:-unknown}"
 fi
 
-case "$(uname -s)-${CUDA_VER}" in
-    Linux-1[2-9]|Linux-2[0-9]) TORCH_URL="https://download.pytorch.org/whl/cu121" ; NOTE="CUDA 12.x" ;;
-    Linux-11)                   TORCH_URL="https://download.pytorch.org/whl/cu118" ; NOTE="CUDA 11.x" ;;
-    Linux-*)                    TORCH_URL="https://download.pytorch.org/whl/cpu"   ; NOTE="CPU only" ;;
-    Darwin-*)                   TORCH_URL=""                                        ; NOTE="macOS (MPS/CPU)" ;;
-esac
+# ── Choose the PyTorch wheel by GPU architecture, not just driver version ─────
+# The compute capability (sm_XX) decides which prebuilt kernels are needed:
+#   sm_120 (Blackwell, RTX 50-series / RTX PRO 6000)  → cu128
+#   sm_90  (Hopper H100) / sm_89 (Ada 40-series) / sm_86 (Ampere) / sm_80  → cu124 covers these
+#   sm_75/70/60 (Turing/Volta/Pascal)                → cu121 still fine
+# Falls back to driver-CUDA heuristics when compute_cap is unavailable.
+if [ "$(uname -s)" = "Darwin" ]; then
+    TORCH_URL=""; NOTE="macOS (MPS/CPU)"
+elif [ -z "$CUDA_VER" ]; then
+    TORCH_URL="https://download.pytorch.org/whl/cpu"; NOTE="CPU only (no NVIDIA GPU)"
+elif [ -n "$SM" ] && [ "$SM" -ge 120 ] 2>/dev/null; then
+    # Blackwell and newer — needs cu128; stable wheels ship sm_120 kernels
+    TORCH_URL="https://download.pytorch.org/whl/cu128"
+    NOTE="CUDA 12.8 (Blackwell sm_${SM})"
+elif [ -n "$SM" ] && [ "$SM" -ge 80 ] 2>/dev/null; then
+    # Ampere / Ada / Hopper — cu124 has these kernels and a wide arch list
+    TORCH_URL="https://download.pytorch.org/whl/cu124"
+    NOTE="CUDA 12.4 (sm_${SM})"
+elif [ -n "$SM" ] && [ "$SM" -ge 70 ] 2>/dev/null; then
+    # Volta / Turing — cu121 is fine
+    TORCH_URL="https://download.pytorch.org/whl/cu121"
+    NOTE="CUDA 12.1 (sm_${SM})"
+else
+    # compute_cap unknown → fall back to driver-CUDA major version
+    case "${CUDA_VER}" in
+        1[3-9]|2[0-9]) TORCH_URL="https://download.pytorch.org/whl/cu128"; NOTE="CUDA 12.8+ (driver $CUDA_VER)" ;;
+        12)            TORCH_URL="https://download.pytorch.org/whl/cu124"; NOTE="CUDA 12.x (driver $CUDA_VER)" ;;
+        11)            TORCH_URL="https://download.pytorch.org/whl/cu118"; NOTE="CUDA 11.x (driver $CUDA_VER)" ;;
+        *)             TORCH_URL="https://download.pytorch.org/whl/cpu"  ; NOTE="CPU only (unrecognized CUDA)" ;;
+    esac
+fi
 
 echo "  Platform : $NOTE"
 if [ -n "$TORCH_URL" ]; then
-    $PIP install torch torchvision torchaudio --index-url "$TORCH_URL"
+    echo "  Torch wheel index: $TORCH_URL"
+    $PIP install $TORCH_PRE $TORCH_PKGS --index-url "$TORCH_URL"
 else
-    $PIP install torch torchvision torchaudio
+    $PIP install $TORCH_PKGS
 fi
 
-"$PY" -c "
-import torch
-print(f'  PyTorch {torch.__version__}')
-if torch.cuda.is_available():
-    print(f'  GPU: {torch.cuda.get_device_name(0)}')
-elif hasattr(torch.backends,'mps') and torch.backends.mps.is_available():
-    print('  Accelerator: Apple MPS')
-else:
-    print('  Accelerator: CPU only')
-"
+# ── Verify the GPU kernels actually match; auto-retry on nightly if not ───────
+# A wheel can install cleanly yet still lack kernels for a brand-new GPU
+# ("no kernel image is available"). Run a real CUDA op to confirm, and if it
+# fails on an NVIDIA GPU, retry once with the cu128 nightly (newest kernels).
+_gpu_smoke_test() {
+    "$PY" - << 'PYEOF'
+import sys
+try:
+    import torch
+    if not torch.cuda.is_available():
+        print("  (no CUDA runtime — CPU/MPS build)"); sys.exit(0)
+    x = torch.randn(8, 8, device="cuda")
+    _ = (x @ x).sum().item()          # forces a real kernel launch
+    print(f"  GPU kernel check OK  |  {torch.cuda.get_device_name(0)}  "
+          f"|  archs={torch.cuda.get_arch_list()}")
+    sys.exit(0)
+except Exception as e:
+    print(f"  GPU kernel check FAILED: {e}")
+    sys.exit(3)
+PYEOF
+}
+
+if [ -n "$CUDA_VER" ] && [ "$(uname -s)" != "Darwin" ]; then
+    if ! _gpu_smoke_test; then
+        echo ""
+        echo "  GPU kernels not compatible with the installed wheel."
+        echo "  Retrying with the cu128 nightly (covers the newest GPUs)..."
+        pip uninstall -y torch torchvision torchaudio 2>/dev/null || true
+        $PIP install --pre torch torchvision torchaudio \
+            --index-url https://download.pytorch.org/whl/nightly/cu128
+        if _gpu_smoke_test; then
+            echo "  Nightly cu128 works on this GPU."
+        else
+            echo ""
+            echo "  WARNING: GPU still not supported by available wheels."
+            echo "  Your GPU may be newer than any released PyTorch build."
+            echo "  See https://pytorch.org/get-started/locally/ for options,"
+            echo "  or run DELPHI on CPU (slower) by installing the CPU wheel:"
+            echo "    pip install torch torchvision torchaudio \\"
+            echo "        --index-url https://download.pytorch.org/whl/cpu"
+        fi
+    fi
+fi
 
 # ── Step 4: Install HMMER + ANARCI ───────────────────────────────────────────
 echo ""
@@ -198,7 +265,22 @@ echo "  HMMER + ANARCI installed"
 # ── Step 5: Install pip packages ─────────────────────────────────────────────
 echo ""
 echo "── Step 5: Install pip packages ────────────────────────────────"
+# Record the torch version we just installed so we can detect if a dependency
+# (e.g. antiberty) silently downgrades it and breaks GPU support.
+_TORCH_BEFORE=$("$PY" -c "import torch; print(torch.__version__)" 2>/dev/null || echo "none")
 $PIP install -r requirements.txt
+_TORCH_AFTER=$("$PY" -c "import torch; print(torch.__version__)" 2>/dev/null || echo "none")
+if [ "$_TORCH_BEFORE" != "none" ] && [ "$_TORCH_BEFORE" != "$_TORCH_AFTER" ]; then
+    echo ""
+    echo "  NOTE: a dependency changed torch ($_TORCH_BEFORE → $_TORCH_AFTER)."
+    echo "  Reinstalling the GPU-matched wheel to preserve GPU support..."
+    if [ -n "$TORCH_URL" ]; then
+        $PIP install --force-reinstall --no-deps $TORCH_PRE $TORCH_PKGS \
+            --index-url "$TORCH_URL" 2>/dev/null || \
+        $PIP install --force-reinstall --no-deps --pre torch torchvision torchaudio \
+            --index-url https://download.pytorch.org/whl/nightly/cu128
+    fi
+fi
 echo "  All packages installed"
 
 # ── Step 6: Pre-download IgBERT weights ──────────────────────────────────────
