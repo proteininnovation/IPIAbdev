@@ -2410,7 +2410,7 @@ def evaluate_sample_size_effect(
     rdf.to_csv(output_csv, index=False)
     print(f"\n[eval] Results → {output_csv}")
 
-    # ── Nature Biotechnology-style figure ────────────────────────
+    # ── publication-quality style figure ────────────────────────
     # Specifications: Arial 7pt, no top/right spines, outward ticks,
     # 300 DPI TIFF, double-column width (183 mm = 7.2 in)
     _MM = 1 / 25.4

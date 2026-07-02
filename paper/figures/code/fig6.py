@@ -1,5 +1,5 @@
 """
-Figure 6 (Nature-style rebuild) — model interpretability.
+Figure 6 — model interpretability.
   a/b  mean |IG| per heavy-chain position (HCDR3 + VH framework)  PSR / SEC
   c/d  CDR H3 per-residue signed IG heatmap (Pass=blue, Fail=red)   PSR / SEC
   e/f  attribution convergence across RF-SHAP / XGBoost-SHAP / Transformer-IG,
@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 from matplotlib.lines import Line2D
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import okabe_nature as ok
+import okabe_style as ok
 warnings.filterwarnings("ignore")
 
 DELPHI = "/Users/Andre.Teixeira/Library/CloudStorage/GoogleDrive-andre.teixeira@proteininnovation.org/.shortcut-targets-by-id/1pzqwNBoHnehFObY0PzrgligSRKxpVPPY/DELPHI"

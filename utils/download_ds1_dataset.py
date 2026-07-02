@@ -10,15 +10,15 @@
 # DOI      : 10.5281/zenodo.14735846
 # License  : MIT License (redistribution permitted with attribution)
 # Citation : Chen HT, Zhang Y, Huang J et al. Human antibody polyreactivity
-#            is governed primarily by the VH gene germline. Cell Reports, 2024.
-#            PMC11564698
+#            is governed primarily by the heavy-chain complementarity-determining regions. Cell Rep. 43, 114801 (2024).
+#            doi:10.1016/j.celrep.2024.114801  (PMC11564698)
 #
 # Usage:
 #   python utils/download_ds1_dataset.py
 #
 # Output:
 #   data/DS1.xlsx          — full dataset (gitignored, large)
-#   tests/DS1_5000.xlsx    — 5,000-antibody test subset (committed to GitHub)
+#   tests/DS1_5000.xlsx    — 5,000-antibody test subset (gitignored; downloaded on demand, not committed)
 # ══════════════════════════════════════════════════════════════════════════════
 
 import os
@@ -342,7 +342,7 @@ def main():
     print()
     print("══════════════════════════════════════════════════════════════════")
     print("  DELPHI — DS1 Dataset Download")
-    print("  Source : Chen et al. 2024  (Cell Reports, PMC11564698)")
+    print("  Source : Chen et al. 2024  (Cell Reports, doi:10.1016/j.celrep.2024.114801  (PMC11564698))")
     print("  DOI    : 10.5281/zenodo.14735846  |  License: MIT")
     print("══════════════════════════════════════════════════════════════════")
     print()

@@ -1,5 +1,5 @@
 """
-Delphi — Dataset Summary Figure (Nature Biotechnology format)
+Delphi — Dataset Summary Figure (double-column format)
 ================================================================
 Single composite figure:
   Panel a  : Dataset summary table (colour-coded header + Pass/Fail tinted cells)
@@ -44,7 +44,7 @@ warnings.filterwarnings("ignore")
 OUT_DIR = Path("/Users/Hoan.Nguyen/ComBio/delphi/manuscripts/figures_tables")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# ─── Nature Biotechnology style constants ────────────────────────────────────
+# ─── publication-quality style constants ────────────────────────────────────
 MM_TO_INCH  = 1 / 25.4
 SINGLE_COL  = 89  * MM_TO_INCH
 DOUBLE_COL  = 183 * MM_TO_INCH
@@ -613,7 +613,7 @@ def generate_dataset_summary_figure(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Generate Delphi dataset-summary figure "
-                    "(Nature Biotechnology format)"
+                    "(double-column format)"
     )
     parser.add_argument("--elisa_path", type=str, required=True,
                         help="Path to public_elisa_score.xlsx")

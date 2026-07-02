@@ -1,5 +1,5 @@
 """
-Extended Data Figure 8 (Nature-style) — full external-clinical-validation grid.
+Extended Data Figure 8 (publication-quality) — full external-clinical-validation grid.
   a  AUC-ROC heatmap     : every language model × every assay readout
   b  Spearman ρ heatmap  : P(Pass) score vs continuous assay, with significance stars
 
@@ -22,7 +22,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.stats import spearmanr
 from sklearn.metrics import roc_auc_score
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import okabe_nature as ok
+import okabe_style as ok
 warnings.filterwarnings("ignore")
 
 DELPHI = "/Users/Andre.Teixeira/Library/CloudStorage/GoogleDrive-andre.teixeira@proteininnovation.org/.shortcut-targets-by-id/1pzqwNBoHnehFObY0PzrgligSRKxpVPPY/DELPHI"

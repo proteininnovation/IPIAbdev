@@ -1,5 +1,5 @@
 """
-Extended Data Figures 5 & 6 (Nature-style rebuild) — feature attribution beeswarms.
+Extended Data Figures 5 & 6 — feature attribution beeswarms.
   a  RF-biophysical SHAP summary        b  XGBoost-biophysical SHAP summary
   c  Transformer (one-hot) IG per amino acid
   ED5 = PSR, ED6 = SEC.
@@ -16,7 +16,7 @@ import matplotlib as mpl
 from matplotlib.gridspec import GridSpec
 from matplotlib.lines import Line2D
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import okabe_nature as ok
+import okabe_style as ok
 warnings.filterwarnings("ignore")
 
 DELPHI = "/Users/Andre.Teixeira/Library/CloudStorage/GoogleDrive-andre.teixeira@proteininnovation.org/.shortcut-targets-by-id/1pzqwNBoHnehFObY0PzrgligSRKxpVPPY/DELPHI"

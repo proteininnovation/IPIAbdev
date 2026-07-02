@@ -1,5 +1,5 @@
 """
-Extended Data Figure 3 (Nature-style rebuild).
+Extended Data Figure 3.
   a  Spearman ρ correlation heatmap across all models on IPI PSR validation
   b  Spearman ρ correlation heatmap across models on DS1 (cross-library)
   c  Score-distribution KDEs, IPI PSR validation (all models)
@@ -17,7 +17,7 @@ from matplotlib.gridspec import GridSpec
 from scipy.stats import gaussian_kde
 import seaborn as sns
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import okabe_nature as ok
+import okabe_style as ok
 warnings.filterwarnings("ignore")
 
 DELPHI = "/Users/Andre.Teixeira/Library/CloudStorage/GoogleDrive-andre.teixeira@proteininnovation.org/.shortcut-targets-by-id/1pzqwNBoHnehFObY0PzrgligSRKxpVPPY/DELPHI"

@@ -5,7 +5,7 @@ Generates Figure 1, Extended Data Figure 1, and Figure 2 for:
   "Interpretable machine learning reveals HCDR3 electrostatic balance
    as the master determinant of antibody polyreactivity and aggregation"
 
-Nature Biotechnology figure specifications:
+double-column figure specifications:
   - Font       : Arial (sans-serif fallback: Helvetica, DejaVu Sans)
   - Font sizes : panel labels 8pt bold, axis labels 7pt, tick labels 6pt
   - Resolution : 300 dpi (TIFF) for submission; 600 dpi for final
@@ -42,7 +42,7 @@ import utilities
 
 warnings.filterwarnings("ignore")
 
-# ─── Nature Biotechnology style constants ────────────────────────────────────
+# ─── publication-quality style constants ────────────────────────────────────
 MM_TO_INCH   = 1 / 25.4
 SINGLE_COL   = 89  * MM_TO_INCH   # 89 mm  inches
 DOUBLE_COL   = 183 * MM_TO_INCH   # 183 mm  inches
@@ -69,7 +69,7 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # ─── Global matplotlib style ─────────────────────────────────────────────────
 def set_nature_style():
-    """Apply Nature Biotechnology-compliant matplotlib rcParams."""
+    """Apply double-column-compliant matplotlib rcParams."""
     matplotlib.rcParams.update({
         "font.family"         : "sans-serif",
         "font.sans-serif"     : [FONT_FAMILY, "Helvetica", "DejaVu Sans"],
@@ -112,7 +112,7 @@ def _legend_handles(label_pass="Pass (1)", label_fail="Fail (0)"):
 
 
 def _panel_label(ax, letter, x=-0.22, y=1.10):
-    """Add bold lowercase panel label (a, b, c) in Nature Biotechnology style."""
+    """Add bold lowercase panel label (a, b, c) in publication-quality style."""
     ax.text(
         x, y, letter,
         transform=ax.transAxes,
@@ -552,7 +552,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Generate IPIAbDev publication figures (Nature Biotechnology format)"
+        description="Generate IPIAbDev publication figures (double-column format)"
     )
     parser.add_argument(
         "--data_path",

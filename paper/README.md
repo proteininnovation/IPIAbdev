@@ -7,7 +7,7 @@ local `data/` directory (gitignored) by path.
 ## Layout
 
 - `figures/code/` — figure-generation scripts on a shared Okabe-Ito palette
-  (`okabe_nature.py`): main figures `fig1.py`–`fig6.py`, Extended Data `ed*.py`.
+  (`okabe_style.py`): main figures `fig1.py`–`fig6.py`, Extended Data `ed*.py`.
 - `figures/output/` — rendered figures (PDF + PNG + TIFF). The per-antibody Extended Data
   figure output is omitted from the repository because it renders individual CDR3
   sequences; regenerate it locally with `ed7.py` if needed.

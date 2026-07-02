@@ -1,5 +1,5 @@
 """
-Extended Data Figures 1 & 2 (Nature-style rebuild) — 8-panel CDR H3 biophysical
+Extended Data Figures 1 & 2 — 8-panel CDR H3 biophysical
 profiling.
   ED1: IPI PSR ELISA-only (denoised)   Pass/Fail = non-polyreactive / polyreactive
   ED2: IPI SEC                         Pass/Fail = monomeric / aggregating
@@ -19,7 +19,7 @@ from matplotlib.lines import Line2D
 import seaborn as sns
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, "/Users/Andre.Teixeira/temp/delphi/utils")
-import okabe_nature as ok
+import okabe_style as ok
 import liabilities
 warnings.filterwarnings("ignore")
 

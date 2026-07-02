@@ -63,7 +63,7 @@ if not _HAS_LIABILITIES:
     print("[biophys] WARNING: liabilities module not found.")
 
 
-# ── Nature Biotechnology style constants — identical to ipiabdev_figures.py ───
+# ── publication-quality style constants — identical to ipiabdev_figures.py ───
 MM_TO_INCH  = 1 / 25.4
 SINGLE_COL  = 89  * MM_TO_INCH
 DOUBLE_COL  = 183 * MM_TO_INCH
@@ -84,7 +84,7 @@ LINEWIDTH   = 0.6
 
 
 def set_nature_style():
-    """Apply Nature Biotechnology-compliant rcParams — identical to ipiabdev_figures.py."""
+    """Apply double-column-compliant rcParams — identical to ipiabdev_figures.py."""
     matplotlib.rcParams.update({
         "font.family"         : "sans-serif",
         "font.sans-serif"     : [FONT_FAMILY, "Helvetica", "DejaVu Sans"],

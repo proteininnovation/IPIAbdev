@@ -1098,7 +1098,7 @@ class RandomForestModel:
         """
         CDR3 in-silico mutagenesis — RF version.
         Mutates every CDR3 position to all 20 AAs, predicts score,
-        plots 20 x L heatmap per antibody (Nature Biotech style).
+        plots 20 x L heatmap per antibody (publication-quality style).
         Saves TIFFs + PPT.
         """
         if self.model is None or self.fb_ is None:
@@ -2122,7 +2122,7 @@ class RandomForestModel:
         For each antibody and each CDR3 position, substitute all 20 AAs
         and score with the trained RF model.
 
-        Output per antibody (Nature Biotech quality):
+        Output per antibody (double-column quality):
           • {barcode}_cdr3_mutagenesis.{fmt}  — 20×CDR3_len heatmap
         Output overall:
           • cdr3_mutagenesis_all.pptx          — all heatmaps in PPT

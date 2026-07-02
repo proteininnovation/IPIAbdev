@@ -1,5 +1,5 @@
 """
-Shared Okabe-Ito / Nature style for the DELPHI paper figures.
+Shared Okabe-Ito palette and publication-quality styling for the DELPHI paper figures.
 =============================================================
 
 Single source of truth for colour and typography across the improved figure set
@@ -20,7 +20,7 @@ import matplotlib
 from matplotlib import font_manager
 from matplotlib.colors import LinearSegmentedColormap
 
-# ── Print geometry (Nature Biotechnology) ─────────────────────────────────────
+# ── Print geometry (double-column) ─────────────────────────────────────
 MM        = 1 / 25.4
 SINGLE    = 89  * MM      # single column
 COL1_5    = 120 * MM      # 1.5 column
@@ -157,7 +157,7 @@ def save_fig(fig, stem, outdir, dpi=300, tiff=True):
     outdir.mkdir(parents=True, exist_ok=True)
     pdf = outdir / f"{stem}.pdf"
     png = outdir / f"{stem}.png"
-    fig.savefig(pdf, format="pdf")
+    fig.savefig(pdf, format="pdf", dpi=dpi)   # honor dpi for rasterized artists (e.g. t-SNE)
     fig.savefig(png, format="png", dpi=dpi)
     saved = [pdf, png]
     if tiff:

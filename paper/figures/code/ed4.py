@@ -1,5 +1,5 @@
 """
-Extended Data Figure 4 (Nature-style rebuild) — predicted-score distributions per
+Extended Data Figure 4 — predicted-score distributions per
 architecture, within-distribution (IPI val) vs cross-library (DS1).
   row 1 (a-e): IPI validation     row 2 (f-j): DS1 public dataset
 Predicted-score densities across 4 classifier architectures (+ OneHot transformer);
@@ -16,7 +16,7 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from sklearn.metrics import roc_auc_score, roc_curve
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import okabe_nature as ok
+import okabe_style as ok
 warnings.filterwarnings("ignore")
 
 DELPHI = "/Users/Andre.Teixeira/Library/CloudStorage/GoogleDrive-andre.teixeira@proteininnovation.org/.shortcut-targets-by-id/1pzqwNBoHnehFObY0PzrgligSRKxpVPPY/DELPHI"

@@ -7,3 +7,10 @@ build/
 # proprietary / large training data — never commit antibody sequences
 data/
 *.emb.csv
+
+# datasets are downloaded from Zenodo, never committed (see utils/download_ds1_dataset.py)
+tests/*.xlsx
+tests/*.csv
+tests/*_pred*
+outputs/
+tests/*.log

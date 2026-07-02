@@ -1,327 +1,374 @@
 """
-Figure 4 (Nature-style rebuild) — Within-distribution model benchmarking.
-  a  ROC curves, 5 representative models on the 20% internal validation split
-  b  Precision-Recall curves, same 5 models (legend = average precision)
-  c  Calibration / reliability curves, same 5 models
-  d  arch x LM cross-validation AUC bars (10-fold CV sheet)
-  e  Confusion matrices at the Youden-J threshold (trans_ablang vs trans_one_hot)
-  f  Learning curve: AUC vs training-set size (IPI vs DS1) with quadratic fit
+Figure 4 — Generalization & external clinical validation.
+Centrepiece for the zero-shot-transfer claim: the DELPHI model (Transformer +
+AbLang2, trained on IPI PSR) is applied UNCHANGED to external libraries and
+public clinical-stage antibody panels.
 
-Every number is read from the source files — no invented data. Curve-panel CIs
-are bootstrap only (2000 resamples, fixed seed). Colourblind-safe: Okabe-Ito
-colours plus a distinct line style per series.
+  a  Cross-library transfer dumbbell  — IPI→DS1 vs DS1→IPI AUC per LM (asymmetry)
+  b  Per-cohort external ROC          — Jain / GDPa1 / GDPa3 (AUC + 95% CI + n)
+  c  Score-vs-assay scatter           — DELPHI score vs GDPa1 PR-CHO (neg. corr.)
+  d  Score by subgroup                — GDPa1 score split by IgG subtype & clin. status
+  e  Competition forest               — GDPa3 PR-CHO |Spearman ρ| per LM vs 113-team band
+  f  Zero-shot |ρ| by cohort          — best-model |ρ| for Jain / GDPa1 / GDPa3
+
+Sign convention: DELPHI score (transformer_lm_*_score) higher = more Pass = LESS
+polyreactive. Assay PR/PSR scores higher = MORE polyreactive. So score-vs-assay
+is NEGATIVE; for ROC, Pass = assay < threshold and higher score predicts Pass.
+
+Every point estimate carries a bootstrap 95% CI (2000 resamples, rng seed 0).
+No number is invented — all read from the data files.
+Data: data/{Figure4_data.xlsx, Jain2017_*, GDPa1_*, GDPa3_*}.
 """
 import sys, os, warnings
 import numpy as np, pandas as pd
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
-from matplotlib.gridspec import GridSpec
-from sklearn.metrics import roc_curve, roc_auc_score, precision_recall_curve, average_precision_score
-from sklearn.calibration import calibration_curve
+from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
+from scipy.stats import spearmanr, linregress
+from sklearn.metrics import roc_auc_score, roc_curve
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import okabe_nature as ok
+import okabe_style as ok
 warnings.filterwarnings("ignore")
 
 DELPHI = "/Users/Andre.Teixeira/Library/CloudStorage/GoogleDrive-andre.teixeira@proteininnovation.org/.shortcut-targets-by-id/1pzqwNBoHnehFObY0PzrgligSRKxpVPPY/DELPHI"
 DATA = f"{DELPHI}/data"
-SUPPL = f"{DELPHI}/suppl_doc_table_figure"
 OUT = f"{DELPHI}/revision2_redteam/figures/output"
 ok.set_style(base_pt=6.5)
+PASS, FAIL, NEUTRAL = ok.PASS, ok.FAIL, ok.NEUTRAL
+GREY = ok.OI_GREY
 
-# ── representative models (column -> display name), shared across a/b/c ──────────
-MODELS = [
-    ("trans_ablang",  "Transformer + AbLang2"),
-    ("cnn_ablang",    "CNN + AbLang2"),
-    ("xgb_ablang",    "XGBoost + AbLang2"),
-    ("rf_ablang",     "RF + AbLang2"),
-    ("trans_one_hot", "Transformer + one-hot"),
-]
-COLS = ok.qualitative(5)                      # blue, orange, green, purple, skyblue
-LINESTYLES = ["-", "--", "-.", ":", (0, (3, 1, 1, 1))]   # greyscale-safe distinction
-
-# ── load 20% internal validation; truth psr_filter (1 = Pass), higher score = Pass
-val = pd.read_csv(f"{DATA}/IPI_PSR_TRAINSET_validation20pct_muliple_models_output.csv")
-Y = val["psr_filter"].astype(int).values     # 1 = Pass
-
-RNG = np.random.default_rng(0)
+THRESH = 0.27          # PR/PSR Pass cutoff (assay < THRESH => Pass)
+COMP_LO, COMP_HI = 0.337, 0.356   # 113-team competition best band (GDPa3 PR-CHO)
 N_BOOT = 2000
+RNG = np.random.default_rng(0)
+
+# DELPHI deployed model = Transformer + AbLang2
+DELPHI_SC = "transformer_lm_ablang_ipi_psr_trainset_score"
+MODELS = ["ablang", "igbert", "antiberta2", "antiberta2-cssp", "antiberty"]
+MODEL_DISP = {"ablang": "AbLang2", "igbert": "IgBert", "antiberta2": "AntiBERTa2",
+              "antiberta2-cssp": "AntiBERTa2-CSSP", "antiberty": "AntiBERTy"}
 
 
-def boot_auc_ci(y, s, n_boot=N_BOOT):
-    """Bootstrap 95% CI for ROC-AUC (percentile, paired resampling of indices)."""
-    idx = np.arange(len(y))
-    aucs = np.empty(n_boot)
-    for b in range(n_boot):
-        r = RNG.choice(idx, size=len(idx), replace=True)
-        yr = y[r]
-        if yr.min() == yr.max():              # degenerate resample, skip
-            aucs[b] = np.nan
-            continue
-        aucs[b] = roc_auc_score(yr, s[r])
-    aucs = aucs[~np.isnan(aucs)]
-    return np.percentile(aucs, 2.5), np.percentile(aucs, 97.5)
+def score_col(lm):
+    return f"transformer_lm_{lm}_ipi_psr_trainset_score"
 
 
-def youden_threshold(y, s):
-    """Threshold on the score that maximises sensitivity + specificity - 1."""
-    fpr, tpr, thr = roc_curve(y, s)
-    j = tpr - fpr
-    return thr[int(np.argmax(j))]
+# ── bootstrap helpers (paired resample of the index, seed 0) ──────────────────
+def boot_ci(stat_fn, n, n_boot=N_BOOT, rng=RNG):
+    """Bootstrap 95% CI of stat_fn(idx) over a paired resample of range(n)."""
+    vals = []
+    for _ in range(n_boot):
+        idx = rng.integers(0, n, n)
+        v = stat_fn(idx)
+        if v is not None and np.isfinite(v):
+            vals.append(v)
+    if not vals:
+        return np.nan, np.nan
+    return float(np.percentile(vals, 2.5)), float(np.percentile(vals, 97.5))
 
 
-# ── precompute per-model metrics ────────────────────────────────────────────────
-roc_data, pr_data, cal_data = [], [], []
-auc_report, ap_report = {}, {}
-for (col, name), c, ls in zip(MODELS, COLS, LINESTYLES):
-    s = val[col].values
-    fpr, tpr, _ = roc_curve(Y, s)
-    auc = roc_auc_score(Y, s)
-    lo, hi = boot_auc_ci(Y, s)
-    auc_report[name] = (auc, lo, hi)
-    roc_data.append((name, c, ls, fpr, tpr, auc, lo, hi))
+def auc_ci(y, s):
+    y = np.asarray(y); s = np.asarray(s)
+    pt = roc_auc_score(y, s)
 
-    prec, rec, _ = precision_recall_curve(Y, s)
-    ap = average_precision_score(Y, s)
-    ap_report[name] = ap
-    pr_data.append((name, c, ls, rec, prec, ap))
-
-    frac_pos, mean_pred = calibration_curve(Y, s, n_bins=10, strategy="uniform")
-    cal_data.append((name, c, ls, mean_pred, frac_pos))
+    def fn(idx):
+        yi = y[idx]
+        if yi.sum() == 0 or yi.sum() == len(yi):
+            return None
+        return roc_auc_score(yi, s[idx])
+    lo, hi = boot_ci(fn, len(y))
+    return pt, lo, hi
 
 
-# ── panel d: 10-fold CV AUC, grouped by architecture ────────────────────────────
-cv = pd.read_excel(f"{DATA}/Figure4_data.xlsx", sheet_name="Fig4A_IPI_10fold_CV", skiprows=1)
-cv.columns = cv.columns.str.strip()
-cv["Architecture"] = cv["Architecture"].ffill()
-cv = cv.dropna(subset=["Language Model"]).rename(columns={"Language Model": "LM"})
-ARCH_ORDER = ["CNN", "Transformer", "RF", "XGBoost"]
-# compact tick labels so the 24 vertical x-labels stay short (full names in legend d note)
-LM_ABBR = {"AbLang2": "AbLang2", "AntiBERTy": "AntiBERTy", "AntiBERTa2": "AntiBERTa2",
-           "AntiBERTa2-CSSP": "AB2-CSSP", "IgBert": "IgBert", "One-hot": "One-hot",
-           "Biophysical": "Biophys.", "k-mer": "k-mer"}
-best_auc = cv["AUC"].max()
-best_row = cv.loc[cv["AUC"].idxmax()]
+def absrho_ci(s, a):
+    """|Spearman rho| point + CI between score s and assay a (paired)."""
+    s = np.asarray(s); a = np.asarray(a)
+    pt = abs(spearmanr(s, a).correlation)
+
+    def fn(idx):
+        c = spearmanr(s[idx], a[idx]).correlation
+        return abs(c) if np.isfinite(c) else None
+    lo, hi = boot_ci(fn, len(s))
+    return pt, lo, hi
 
 
-# ── panel e: confusion matrices at Youden threshold (best named model + one-hot) ─
-def confusion(y, s, thr):
-    pred = (s >= thr).astype(int)             # 1 = predicted Pass
-    tp = int(((pred == 1) & (y == 1)).sum())
-    fn = int(((pred == 0) & (y == 1)).sum())
-    fp = int(((pred == 1) & (y == 0)).sum())
-    tn = int(((pred == 0) & (y == 0)).sum())
-    # rows = true (Pass, Fail); cols = predicted (Pass, Fail)
-    return np.array([[tp, fn], [fp, tn]])
+def rho_signed_ci(s, a):
+    s = np.asarray(s); a = np.asarray(a)
+    pt = spearmanr(s, a).correlation
+
+    def fn(idx):
+        c = spearmanr(s[idx], a[idx]).correlation
+        return c if np.isfinite(c) else None
+    lo, hi = boot_ci(fn, len(s))
+    return pt, lo, hi
 
 
-cm_models = [("trans_ablang", "Transformer + AbLang2"), ("trans_one_hot", "Transformer + one-hot")]
-cm_data = []
-for col, name in cm_models:
-    s = val[col].values
-    thr = youden_threshold(Y, s)
-    cm_data.append((name, thr, confusion(Y, s, thr)))
+# ── load ──────────────────────────────────────────────────────────────────────
+f4 = pd.read_excel(f"{DATA}/Figure4_data.xlsx", sheet_name="Fig4B_Cross_Dataset", skiprows=1)
+f4.columns = f4.columns.str.strip()
+f4["Condition"] = f4["Condition"].ffill()
+f4 = f4.dropna(subset=["Language Model"])
+
+jain = pd.read_excel(f"{DATA}/Jain2017_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx")
+g1 = pd.read_excel(f"{DATA}/GDPa1_v1.3_20251027_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx")
+g3 = pd.read_excel(f"{DATA}/GDPa3_20260106_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx")
 
 
-# ── panel f: learning curves ────────────────────────────────────────────────────
-ipi = pd.read_csv(f"{SUPPL}/learning_curve_ipi_psr_trainset_transformer_lm_ablang_psr_filter_sample_size_100_200.csv")
-ds1 = pd.read_csv(f"{SUPPL}/learning_curve_DS1_transformer_lm_ablang_psr_filter_sample_size_500_1000.csv")
-poly = pd.read_csv(f"{SUPPL}/learning_curve_ipi_psr_trainset_transformer_lm_ablang_psr_filter_sample_size_100_200.csv.polynomial_regression_results.csv")
-pr_auc = poly[poly["metric"] == "auc"].iloc[0]
-P_I, P_S, P_Q = pr_auc["intercept"], pr_auc["slope_linear"], pr_auc["coeff_quadratic"]
+def cohort_arrays(df, assay_col, thr=THRESH, binary_col=None):
+    """Return (score, assay_continuous, y_pass) with NaNs dropped. y_pass=1 => Pass.
+    If binary_col given, use it directly as Pass=1 truth; else Pass = assay<thr."""
+    cols = [DELPHI_SC, assay_col] + ([binary_col] if binary_col else [])
+    sub = df[cols].dropna()
+    s = sub[DELPHI_SC].values
+    a = sub[assay_col].values
+    if binary_col:
+        y = sub[binary_col].astype(int).values
+    else:
+        y = (a < thr).astype(int)
+    return s, a, y
 
 
-def poly_auc(x):
-    return P_I + P_S * x + P_Q * x ** 2
+# Jain: binarise on psr_filter (already Pass=1); continuous = PSR_SMP_Score
+jain_s, jain_a, jain_y = cohort_arrays(jain, "PSR_SMP_Score", binary_col="psr_filter")
+g1_s, g1_a, g1_y = cohort_arrays(g1, "polyreactivity_prscore_cho_avg")
+g3_s, g3_a, g3_y = cohort_arrays(g3, "polyreactivity_prscore_cho_avg")
 
+COHORTS = [
+    ("Jain 2017", jain_s, jain_a, jain_y, ok.OI_BLUE, "-"),
+    ("GDPa1",     g1_s,   g1_a,   g1_y,   ok.OI_VERMILION, "--"),
+    ("GDPa3",     g3_s,   g3_a,   g3_y,   ok.OI_GREEN, "-."),
+]
 
-# =====================================================================================
+# ════════════════════════════════════════════════════════════════════════════
 # FIGURE
-# =====================================================================================
-fig = plt.figure(figsize=(ok.DOUBLE, 118 * ok.MM))
-gs = GridSpec(2, 3, figure=fig,
-              hspace=0.95, wspace=0.34,
-              left=0.065, right=0.985, top=0.91, bottom=0.16)
-
-axa = fig.add_subplot(gs[0, 0])
-axb = fig.add_subplot(gs[0, 1])
-axc = fig.add_subplot(gs[0, 2])
-axd = fig.add_subplot(gs[1, 0])
-# panel e holds two small confusion heatmaps side by side
-gse = gs[1, 1].subgridspec(1, 2, wspace=0.45)
-axe1 = fig.add_subplot(gse[0, 0])
-axe2 = fig.add_subplot(gse[0, 1])
-axf = fig.add_subplot(gs[1, 2])
+# ════════════════════════════════════════════════════════════════════════════
+fig, axes = plt.subplots(2, 3, figsize=(ok.DOUBLE, 120 * ok.MM))
+fig.subplots_adjust(left=0.075, right=0.985, top=0.905, bottom=0.085,
+                    hspace=0.55, wspace=0.40)
+(axa, axb, axc), (axd, axe, axf) = axes
 
 
-# ── a: ROC ──────────────────────────────────────────────────────────────────────
-axa.plot([0, 1], [0, 1], color=ok.OI_GREY, lw=0.6, ls=(0, (1, 1)), zorder=1)
-for name, c, ls, fpr, tpr, auc, lo, hi in roc_data:
-    axa.plot(fpr, tpr, color=c, ls=ls, lw=1.1, zorder=3,
-             label=f"{name}\nAUC {auc:.3f} ({lo:.3f}–{hi:.3f})")
-axa.set_xlim(-0.02, 1.02); axa.set_ylim(-0.02, 1.02)
-axa.set_xlabel("False positive rate", labelpad=2)
-axa.set_ylabel("True positive rate", labelpad=2)
-axa.set_aspect("equal")
-axa.legend(loc="lower right", fontsize=4.3, handlelength=1.4, handletextpad=0.4,
-           labelspacing=0.55, borderpad=0.2)
-axa.set_title("ROC — internal 20% validation", fontsize=6.8, pad=4,
-              fontweight="bold", loc="left")
+# ── panel a: cross-library transfer dumbbell ─────────────────────────────────
+def panel_a(ax):
+    cond = {"IPI → DS1 Transfer": {}, "DS1 → IPI Transfer": {}}
+    for _, r in f4.iterrows():
+        c = str(r["Condition"]).strip()
+        if c in cond:
+            cond[c][str(r["Language Model"]).strip()] = float(r["AUC"])
+    fwd, rev = cond["IPI → DS1 Transfer"], cond["DS1 → IPI Transfer"]
+    lms = [l for l in fwd if l in rev]
+    # sort by forward (designed->natural) AUC so the strongest transfer is on top
+    lms = sorted(lms, key=lambda l: fwd[l])
+    y = np.arange(len(lms))
+    for yi, lm in zip(y, lms):
+        ax.plot([rev[lm], fwd[lm]], [yi, yi], color=GREY, lw=1.4, zorder=1,
+                solid_capstyle="round")
+    ax.scatter([rev[l] for l in lms], y, s=26, color=FAIL, zorder=3,
+               label="DS1→IPI  (natural→designed)", clip_on=False)
+    ax.scatter([fwd[l] for l in lms], y, s=26, color=PASS, zorder=3,
+               label="IPI→DS1  (designed→natural)", clip_on=False)
+    ax.set_yticks(y); ax.set_yticklabels(lms, fontsize=5.8)
+    ax.set_ylim(-0.6, len(lms) - 0.4 + 1.0)        # headroom above the top bar for the legend
+    ax.set_xlim(0.70, 0.97)
+    ax.set_xlabel("Transfer AUC", fontsize=6.5)
+    ax.axvline(0.5, color="#cccccc", lw=0.5, ls=":")
+    ax.grid(axis="x", lw=0.25, alpha=0.4)
+    ax.set_title("Cross-library transfer", fontsize=6.8, fontweight="bold",
+                 loc="left", pad=3)
+    # legend in the clear headroom above the dumbbells
+    ax.legend(loc="upper left", bbox_to_anchor=(0.0, 1.0), fontsize=4.9, handlelength=0.9,
+              handletextpad=0.3, labelspacing=0.3, borderpad=0.3,
+              frameon=True, framealpha=0.92, edgecolor="#CCCCCC").get_frame().set_linewidth(0.4)
 
 
-# ── b: Precision-Recall ──────────────────────────────────────────────────────────
-base = (Y == 1).mean()
-axb.axhline(base, color=ok.OI_GREY, lw=0.6, ls=(0, (1, 1)), zorder=1)
-for name, c, ls, rec, prec, ap in pr_data:
-    axb.plot(rec, prec, color=c, ls=ls, lw=1.1, zorder=3,
-             label=f"{name}\nAP {ap:.3f}")
-axb.set_xlim(-0.02, 1.02); axb.set_ylim(0.40, 1.02)
-axb.set_xlabel("Recall (Pass)", labelpad=2)
-axb.set_ylabel("Precision (Pass)", labelpad=2)
-axb.legend(loc="lower left", fontsize=4.5, handlelength=1.4, handletextpad=0.4,
-           labelspacing=0.55, borderpad=0.2)
-axb.set_title("Precision–Recall", fontsize=6.8, pad=4, fontweight="bold", loc="left")
+# ── panel b: per-cohort external ROC ─────────────────────────────────────────
+def panel_b(ax):
+    from sklearn.metrics import average_precision_score
+    ax.plot([0, 1], [0, 1], color="#bbbbbb", lw=0.6, ls=":", zorder=1)
+    stats = []
+    for name, s, a, y, col, ls in COHORTS:
+        nfail = int((y == 0).sum())
+        fpr, tpr, _ = roc_curve(y, s)
+        auc, lo, hi = auc_ci(y, s)
+        # PR-AUC for the rare FAIL class (positive = Fail, score = 1 - P(Pass)); no-skill = Fail prevalence
+        prauc = average_precision_score(1 - y, 1 - s)
+        ax.plot(fpr, tpr, color=col, ls=ls, lw=1.5, zorder=3)
+        stats.append((name, col, auc, lo, hi, len(y), prauc, nfail))
+    ax.set_xlim(-0.01, 1.01); ax.set_ylim(-0.01, 1.02)
+    ax.set_xlabel("False-positive rate", fontsize=6.5)
+    ax.set_ylabel("True-positive rate", fontsize=6.5)
+    ax.set_aspect("equal", adjustable="box")
+    ax.set_title("External ROC (zero-shot)", fontsize=6.8, fontweight="bold",
+                 loc="left", pad=3)
+    # colour-coded stat block in the empty lower-right triangle: ROC-AUC+CI and PR-AUC(Fail)+no-skill
+    for k, (name, col, auc, lo, hi, n, prauc, nfail) in enumerate(stats):
+        ax.text(0.975, 0.035 + 0.118 * (len(stats) - 1 - k),
+                f"{name}  ROC {auc:.2f} [{lo:.2f}–{hi:.2f}]\nPR(Fail) {prauc:.2f} "
+                f"(no-skill {nfail/n:.2f}); n={n}, {nfail}F",
+                transform=ax.transAxes, ha="right", va="bottom",
+                fontsize=4.3, color=col, fontweight="bold", linespacing=1.1)
+    ax.text(0.03, 0.96, "Pass = PR-CHO < 0.27\n(Jain: psr_filter)", transform=ax.transAxes,
+            fontsize=4.6, va="top", ha="left", color="#555555")
 
 
-# ── c: Calibration ───────────────────────────────────────────────────────────────
-axc.plot([0, 1], [0, 1], color=ok.OI_GREY, lw=0.6, ls=(0, (1, 1)), zorder=1,
-         label="Perfect calibration")
-for name, c, ls, mean_pred, frac_pos in cal_data:
-    axc.plot(mean_pred, frac_pos, color=c, ls=ls, lw=1.0, marker="o", ms=2.2,
-             mew=0, zorder=3, label=name)
-axc.set_xlim(-0.02, 1.02); axc.set_ylim(-0.02, 1.02)
-axc.set_xlabel("Mean predicted P(Pass)", labelpad=2)
-axc.set_ylabel("Observed Pass fraction", labelpad=2)
-axc.set_aspect("equal")
-# short labels so the legend fits the empty lower-right corner (below the curves)
-_ch, _cl = axc.get_legend_handles_labels()
-_cshort = {"Transformer + AbLang2": "Transformer", "CNN + AbLang2": "CNN",
-           "XGBoost + AbLang2": "XGBoost", "RF + AbLang2": "RF",
-           "Transformer + one-hot": "Transformer (1-hot)"}
-axc.legend(_ch, [_cshort.get(l, l) for l in _cl], loc="lower right", fontsize=4.2,
-           handlelength=1.3, handletextpad=0.35, labelspacing=0.32, borderpad=0.25,
-           frameon=True, framealpha=0.9, edgecolor="#cccccc").get_frame().set_linewidth(0.4)
-axc.set_title("Calibration", fontsize=6.8, pad=4, fontweight="bold", loc="left")
+# ── panel c: score vs assay scatter (GDPa1 PR-CHO) ───────────────────────────
+def panel_c(ax):
+    s, a, y = g1_s, g1_a, g1_y
+    cols = np.where(y == 1, PASS, FAIL)
+    ax.scatter(s, a, s=11, c=cols, alpha=0.55, edgecolor="none", zorder=2)
+    # regression of assay on score + 95% CI band
+    lr = linregress(s, a)
+    xs = np.linspace(s.min(), s.max(), 100)
+    ys = lr.intercept + lr.slope * xs
+    n = len(s); dof = n - 2
+    se_line = np.sqrt(np.sum((a - (lr.intercept + lr.slope * s))**2) / dof) * \
+        np.sqrt(1 / n + (xs - s.mean())**2 / np.sum((s - s.mean())**2))
+    from scipy.stats import t as tdist
+    tval = tdist.ppf(0.975, dof)
+    ax.plot(xs, ys, color="#222222", lw=1.1, zorder=3)
+    ax.fill_between(xs, ys - tval * se_line, ys + tval * se_line,
+                    color="#222222", alpha=0.12, lw=0, zorder=1)
+    ax.axhline(THRESH, color=GREY, lw=0.6, ls="--", zorder=1)
+    rho, lo, hi = rho_signed_ci(s, a)
+    ax.set_xlabel("DELPHI score  P(Pass)", fontsize=6.5)
+    ax.set_ylabel("GDPa1 PR-CHO\n(polyreactivity)", fontsize=6.5)
+    ax.set_title("Score vs assay  (GDPa1)", fontsize=6.8, fontweight="bold",
+                 loc="left", pad=3)
+    ax.grid(lw=0.25, alpha=0.35)
+    # stats box in the empty upper-right triangle (negative-correlation cloud)
+    ax.text(0.965, 0.95,
+            f"Spearman ρ = {rho:.2f}\n[{lo:.2f}, {hi:.2f}]\nn = {n}",
+            transform=ax.transAxes, fontsize=5.4, va="top", ha="right",
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="white",
+                      edgecolor="#bbbbbb", alpha=0.9, lw=0.4))
+    ax.legend(handles=[Line2D([0], [0], marker="o", ls="", color=PASS, ms=3.5, label="Pass"),
+                       Line2D([0], [0], marker="o", ls="", color=FAIL, ms=3.5, label="Fail")],
+              loc="lower left", fontsize=5, handletextpad=0.2, labelspacing=0.2,
+              borderpad=0.3, frameon=False)
 
 
-# ── d: CV AUC bars ───────────────────────────────────────────────────────────────
-x_ticks, x_labels, centres, cursor = [], [], {}, 0.0
-BAR_W, IN_GAP, GROUP_GAP = 0.8, 0.18, 0.7
-for arch in ARCH_ORDER:
-    sub = cv[cv["Architecture"] == arch]
-    g_start = cursor
-    for _, r in sub.iterrows():
-        axd.bar(cursor, r["AUC"] - 0.84, BAR_W, bottom=0.84, color=ok.OI_BLUE,
-                zorder=3, lw=0)
-        x_ticks.append(cursor); x_labels.append(LM_ABBR.get(r["LM"], r["LM"]))
-        cursor += BAR_W + IN_GAP
-    centres[arch] = (g_start, cursor - BAR_W - IN_GAP + BAR_W)
-    cursor += GROUP_GAP
-axd.set_xlim(-0.7, cursor - GROUP_GAP + 0.1)
-axd.set_ylim(0.84, 0.975)
-axd.yaxis.set_major_locator(ticker.MultipleLocator(0.04))
-axd.yaxis.set_minor_locator(ticker.MultipleLocator(0.02))
-axd.tick_params(axis="y", which="minor", length=1.2, width=0.4)
-axd.set_ylabel("10-fold CV AUC", labelpad=2)
-axd.grid(axis="y", lw=0.25, alpha=0.4, zorder=0)
-axd.set_xticks(x_ticks)
-axd.set_xticklabels(x_labels, rotation=90, ha="center", va="top", fontsize=4.4)
-axd.tick_params(axis="x", length=0, pad=1)
-axd.axhline(best_auc, color=ok.OI_VERMILION, lw=0.7, ls="--", alpha=0.85, zorder=4)
-axd.text(-0.6, best_auc + 0.0015,
-         f"best CV AUC {best_auc:.3f}  ({best_row['Architecture']}+{best_row['LM']})",
-         color=ok.OI_VERMILION, fontsize=4.6, va="bottom", ha="left")
-# architecture group brackets under the rotated labels
-for arch, (s, e) in centres.items():
-    axd.annotate("", xy=(s - 0.35, -0.50), xycoords=("data", "axes fraction"),
-                 xytext=(e - BAR_W + 0.35, -0.50), textcoords=("data", "axes fraction"),
-                 arrowprops=dict(arrowstyle="-", color="#333333", lw=0.9))
-    axd.text((s + e - BAR_W) / 2, -0.555, arch, transform=axd.get_xaxis_transform(),
-             ha="center", va="top", fontsize=5.4, fontweight="bold", color="#333333")
-axd.set_title("Architecture × language model", fontsize=6.8,
-              pad=4, fontweight="bold", loc="left")
+# ── panel d: DELPHI score by subgroup (GDPa1) ────────────────────────────────
+def panel_d(ax):
+    sc = g1[DELPHI_SC].values
+    # grouping 1: IgG subtype
+    sub = g1["hc_subtype"].astype(str).values
+    sub_groups = ["IgG1", "IgG2", "IgG4"]
+    # grouping 2: clinical status (Approved vs In-trial) from highest_clinical_trial
+    hct = g1["highest_clinical_trial_asof_feb2025"].astype(str)
+    clin = np.where(hct.str.startswith("Approved").values, "Approved", "In-trial")
+    clin_groups = ["Approved", "In-trial"]
+
+    positions, data, labels, colors, tick_pos, tick_lab = [], [], [], [], [], []
+    pos = 0
+    palette = ok.qualitative(len(sub_groups))
+    for i, g in enumerate(sub_groups):
+        d = sc[(sub == g) & ~np.isnan(sc)]
+        data.append(d); positions.append(pos); colors.append(palette[i])
+        tick_pos.append(pos); tick_lab.append(f"{g}\n(n={len(d)})")
+        pos += 1
+    pos += 0.8  # gap between the two groupings
+    sep_x = pos - 0.9
+    clin_pal = [ok.OI_BLUE, ok.OI_GREY]
+    for i, g in enumerate(clin_groups):
+        d = sc[(clin == g) & ~np.isnan(sc)]
+        data.append(d); positions.append(pos); colors.append(clin_pal[i])
+        tick_pos.append(pos); tick_lab.append(f"{g}\n(n={len(d)})")
+        pos += 1
+
+    bp = ax.boxplot(data, positions=positions, widths=0.55, patch_artist=True,
+                    showfliers=False, medianprops=dict(color="#222222", lw=1.0),
+                    whiskerprops=dict(color="#555555", lw=0.6),
+                    capprops=dict(color="#555555", lw=0.6),
+                    boxprops=dict(lw=0.5, edgecolor="#555555"))
+    for patch, c in zip(bp["boxes"], colors):
+        patch.set_facecolor(c); patch.set_alpha(0.45)
+    for d, p, c in zip(data, positions, colors):
+        jit = (RNG.random(len(d)) - 0.5) * 0.32
+        ax.scatter(np.full(len(d), p) + jit, d, s=4, color=c, alpha=0.6,
+                   edgecolor="none", zorder=3)
+    ax.axvline(sep_x, color="#dddddd", lw=0.6, ls="-")
+    ax.set_xticks(tick_pos); ax.set_xticklabels(tick_lab, fontsize=5.0)
+    ax.set_ylabel("DELPHI score  P(Pass)", fontsize=6.5)
+    ax.set_ylim(-0.02, 1.05)
+    ax.grid(axis="y", lw=0.25, alpha=0.35)
+    ax.set_title("Score by subgroup  (GDPa1)", fontsize=6.8, fontweight="bold",
+                 loc="left", pad=3)
+    # sub-headers under the two clusters
+    ax.text((tick_pos[0] + tick_pos[2]) / 2, -0.22, "Isotype",
+            transform=ax.get_xaxis_transform(), ha="center", va="top",
+            fontsize=5.6, color="#555555", fontweight="bold")
+    ax.text((tick_pos[3] + tick_pos[4]) / 2, -0.22, "Clinical status",
+            transform=ax.get_xaxis_transform(), ha="center", va="top",
+            fontsize=5.6, color="#555555", fontweight="bold")
 
 
-# ── e: confusion matrices ────────────────────────────────────────────────────────
-def draw_cm(ax, name, thr, cm):
-    row_tot = cm.sum(axis=1, keepdims=True)
-    pct = cm / row_tot
-    ax.imshow(pct, cmap=ok.SEQ, vmin=0, vmax=1, aspect="equal")
-    labels = [["TP", "FN"], ["FP", "TN"]]
-    for i in range(2):
-        for j in range(2):
-            tc = ok.text_on(pct[i, j], 0, 1, thresh=0.55)
-            ax.text(j, i - 0.18, f"{cm[i, j]:d}", ha="center", va="center",
-                    fontsize=6.6, fontweight="bold", color=tc)
-            ax.text(j, i + 0.20, f"{labels[i][j]}  {pct[i, j]*100:.0f}%",
-                    ha="center", va="center", fontsize=4.6, color=tc)
-    ax.set_xticks([0, 1]); ax.set_xticklabels(["Pass", "Fail"], fontsize=4.8)
-    ax.set_yticks([0, 1]); ax.set_yticklabels(["Pass", "Fail"], fontsize=4.8, rotation=90, va="center")
-    ax.tick_params(length=0, pad=1.5)
-    ax.set_xlabel("Predicted", fontsize=5.0, labelpad=1)
-    short = "T+AbLang2" if "AbLang2" in name else "T+one-hot"
-    ax.set_title(f"{short}\nJ thr {thr:.2f}", fontsize=5.2, pad=2)
-    for sp in ax.spines.values():
-        sp.set_visible(False)
+# ── panel e: competition forest (GDPa3 PR-CHO |rho| per LM) ──────────────────
+def panel_e(ax):
+    rows = []
+    g3c = g3.dropna(subset=["polyreactivity_prscore_cho_avg"])
+    a = g3c["polyreactivity_prscore_cho_avg"].values
+    for lm in MODELS:
+        col = score_col(lm)
+        if col not in g3c.columns:
+            continue
+        s = g3c[col].values
+        m = ~np.isnan(s)
+        pt, lo, hi = absrho_ci(s[m], a[m])
+        rows.append((MODEL_DISP[lm], pt, lo, hi))
+    rows.sort(key=lambda r: r[1])           # weakest at bottom, best on top
+    y = np.arange(len(rows))
+    ax.axvspan(COMP_LO, COMP_HI, color=ok.OI_YELLOW, alpha=0.35, zorder=0)
+    ax.axvline(COMP_HI, color="#9a8500", lw=0.8, ls="--", zorder=1)
+    for yi, (nm, pt, lo, hi) in zip(y, rows):
+        col = PASS if nm == "AbLang2" else NEUTRAL
+        ax.plot([lo, hi], [yi, yi], color=col, lw=1.2, zorder=2,
+                solid_capstyle="round")
+        ax.scatter(pt, yi, s=24, color=col, zorder=3)
+    ax.set_yticks(y); ax.set_yticklabels([r[0] for r in rows], fontsize=5.8)
+    ax.set_ylim(-0.6, len(rows) + 0.15)        # headroom for the label above the bars
+    ax.set_xlim(0, max(0.56, max(r[3] for r in rows) * 1.05))
+    ax.set_xlabel("|Spearman ρ|  (GDPa3 PR-CHO)", fontsize=6.5)
+    ax.grid(axis="x", lw=0.25, alpha=0.4)
+    ax.set_title("Zero-shot vs competition", fontsize=6.8, fontweight="bold",
+                 loc="left", pad=3)
+    # label above the bars and to the LEFT of the band so it never sits on the line
+    ax.text(0.01, len(rows) - 0.15, "113-team best: 0.337–0.356",
+            ha="left", va="bottom", fontsize=4.9, color="#222222")
 
 
-axe1.set_ylabel("True", fontsize=5.0, labelpad=1)
-draw_cm(axe1, *cm_data[0])
-draw_cm(axe2, *cm_data[1])
-# shared panel-e header (figure coords so it sits above both heatmaps)
-bbe = axe1.get_position(); bbe2 = axe2.get_position()
-fig.text((bbe.x0 + bbe2.x1) / 2, bbe.y1 + 0.085,
-         "Confusion @ Youden-J threshold", fontsize=6.8, fontweight="bold",
-         ha="center", va="baseline")
+# ── panel f: zero-shot |rho| by cohort (best model = DELPHI/AbLang2) ─────────
+def panel_f(ax):
+    bars = []
+    for name, s, a, y in [("Jain 2017", jain_s, jain_a, len(jain_s)),
+                          ("GDPa1", g1_s, g1_a, len(g1_s)),
+                          ("GDPa3", g3_s, g3_a, len(g3_s))]:
+        pt, lo, hi = absrho_ci(s, a)
+        bars.append((name, pt, lo, hi, len(s)))
+    x = np.arange(len(bars))
+    cols = [ok.OI_BLUE, ok.OI_VERMILION, ok.OI_GREEN]
+    for xi, (nm, pt, lo, hi, n), c in zip(x, bars, cols):
+        ax.bar(xi, pt, width=0.6, color=c, alpha=0.85, zorder=2, lw=0)
+        ax.errorbar(xi, pt, yerr=[[pt - lo], [hi - pt]], fmt="none",
+                    ecolor="#333333", elinewidth=0.8, capsize=2.2, zorder=3)
+        ax.text(xi, hi + 0.015, f"{pt:.2f}", ha="center", va="bottom", fontsize=5.4)
+    ax.set_xticks(x)
+    ax.set_xticklabels([f"{b[0]}\nn={b[4]}" for b in bars], fontsize=5.6)
+    ax.set_ylabel("|Spearman ρ|  (DELPHI)", fontsize=6.5)
+    ax.set_ylim(0, max(b[3] for b in bars) * 1.18)
+    ax.grid(axis="y", lw=0.25, alpha=0.4)
+    ax.set_title("Zero-shot |ρ| by cohort", fontsize=6.8, fontweight="bold",
+                 loc="left", pad=3)
+    ax.text(0.5, 0.97, "PR-CHO (GDPa); PSR-SMP (Jain)", transform=ax.transAxes,
+            ha="center", va="top", fontsize=4.7, color="#555555")
 
 
-# ── f: learning curves ───────────────────────────────────────────────────────────
-axf.scatter(ipi["sample_size"], ipi["auc"], s=5, color=ok.PASS, alpha=0.55,
-            edgecolors="none", zorder=3, label="IPI (observed)")
-axf.scatter(ds1["sample_size"], ds1["auc"], s=5, color=ok.FAIL, alpha=0.55,
-            edgecolors="none", zorder=3, label="DS1 (observed)")
-xs = np.linspace(ipi["sample_size"].min(), ipi["sample_size"].max(), 200)
-axf.plot(xs, poly_auc(xs), color=ok.PASS, lw=1.3, ls="--", zorder=4,
-         label="IPI quadratic fit")
-axf.set_xscale("log")
-axf.set_xlim(250, 3e5)
-axf.set_ylim(0.62, 1.0)
-axf.set_xlabel("Training-set size", labelpad=2)
-axf.set_ylabel("AUC", labelpad=2)
-axf.yaxis.set_major_locator(ticker.MultipleLocator(0.1))
-axf.grid(axis="y", lw=0.25, alpha=0.4, zorder=0)
-# practical plateau band (~5,000-6,000) where IPI AUC reaches ~0.95
-axf.axvspan(5000, 6000, color=ok.OI_GREY, alpha=0.18, zorder=1, lw=0)
-axf.annotate("practical plateau\n~5,000–6,000\nAUC≈0.95",
-             xy=(5500, 0.945), xytext=(310, 0.88),
-             fontsize=4.8, ha="left", va="center",
-             arrowprops=dict(arrowstyle="->", color="#333333", lw=0.6))
-axf.legend(loc="lower right", fontsize=4.8, handlelength=1.2, handletextpad=0.4,
-           labelspacing=0.4, borderpad=0.25)
-axf.set_title("Learning curve — AUC vs training size", fontsize=6.8, pad=4,
-              fontweight="bold", loc="left")
+panel_a(axa); panel_b(axb); panel_c(axc)
+panel_d(axd); panel_e(axe); panel_f(axf)
 
-
-# ── panel letters (bold, outside axes) ───────────────────────────────────────────
-ok.panel_label(fig, axa, "a", dx=-0.045, dy=0.052, size=9)
-ok.panel_label(fig, axb, "b", dx=-0.045, dy=0.052, size=9)
-ok.panel_label(fig, axc, "c", dx=-0.045, dy=0.052, size=9)
-ok.panel_label(fig, axd, "d", dx=-0.045, dy=0.052, size=9)
-ok.panel_label(fig, axe1, "e", dx=-0.060, dy=0.115, size=9)
-ok.panel_label(fig, axf, "f", dx=-0.045, dy=0.052, size=9)
+for ax, letter, dx in [(axa, "a", -0.052), (axb, "b", -0.050), (axc, "c", -0.050),
+                       (axd, "d", -0.052), (axe, "e", -0.050), (axf, "f", -0.050)]:
+    ok.panel_label(fig, ax, letter, dx=dx, dy=0.030, size=9)
 
 ok.save_fig(fig, "Figure4", OUT)
-
-# ── console report ───────────────────────────────────────────────────────────────
-print("\n=== Panel a: AUC + 95% bootstrap CI ===")
-for name, (auc, lo, hi) in auc_report.items():
-    print(f"  {name:24s} AUC {auc:.3f}  95% CI [{lo:.3f}, {hi:.3f}]")
-print("=== Panel b: average precision (AUC-PR) ===")
-for name, ap in ap_report.items():
-    print(f"  {name:24s} AP {ap:.3f}")
-print(f"=== Panel d: best CV arch x LM AUC = {best_auc:.3f} "
-      f"({best_row['Architecture']} + {best_row['LM']}) ===")
-print("=== Panel e: Youden thresholds + confusion (rows=true, [[TP,FN],[FP,TN]]) ===")
-for name, thr, cm in cm_data:
-    print(f"  {name:24s} thr {thr:.3f}  TP {cm[0,0]} FN {cm[0,1]} FP {cm[1,0]} TN {cm[1,1]}")
-print("Fig4 done")
+print("Fig5 done")

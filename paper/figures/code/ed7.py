@@ -1,5 +1,5 @@
 """
-Extended Data Figure 7 (Nature-style rebuild) — per-antibody interpretability.
+Extended Data Figure 7 — per-antibody interpretability.
   rows: PSR | SEC
   cols: a/d  example PASS antibody — per-residue IG waterfall
         b/e  example FAIL antibody — per-residue IG waterfall
@@ -27,7 +27,7 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.lines import Line2D
 from captum.attr import IntegratedGradients
 from models.transformer_onehot import TransformerOneHotModel, one_hot_encode_sequence_2d
-import okabe_nature as ok
+import okabe_style as ok
 warnings.filterwarnings("ignore")
 
 DELPHI = "/Users/Andre.Teixeira/Library/CloudStorage/GoogleDrive-andre.teixeira@proteininnovation.org/.shortcut-targets-by-id/1pzqwNBoHnehFObY0PzrgligSRKxpVPPY/DELPHI"

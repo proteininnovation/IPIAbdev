@@ -17,7 +17,7 @@ Applicable to any binary antibody property label including PSR (polyreactivity),
 
 > Code and full tutorial documentation accompanying the manuscript:
 > **"DELPHI: a unified interpretable ML platform for multi-objective antibody developability prediction"**
-> Hoan Nguyen, Andre Teixeira et al., *Nature Biotechnology* (in preparation)
+> Hoan Nguyen, Andre Teixeira et al., *double-column* (in preparation)
 
 ---
 
@@ -894,7 +894,7 @@ Per-antibody IG waterfall plots identify the exact HCDR3 positions and residues 
 
 ### Running interpretability analysis
 
-Generate publication-quality SHAP and Integrated Gradients figures (Nature Biotechnology style).
+Generate publication-quality SHAP and Integrated Gradients figures (publication-quality style).
 
 **Minimum required models per filter:**
 
@@ -1078,7 +1078,7 @@ If you use DELPHI in your research, please cite:
 Hoan Nguyen, Andre Teixeira et al.
 DELPHI: a unified interpretable ML platform for multi-objective antibody
 developability prediction.
-Nature Biotechnology, 2026 (in preparation).
+double-column, 2026 (in preparation).
 ```
 
 ---

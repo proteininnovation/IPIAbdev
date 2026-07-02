@@ -1,5 +1,5 @@
 """
-Figure 1 (Nature-style v2) — DELPHI platform & datasets.
+Figure 1 — DELPHI platform & datasets.
 
   a  Platform architecture flowchart (input -> curation -> representations ->
      models -> CV/threshold -> output, + interpretability branch)
@@ -23,7 +23,7 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle, FancyBboxPatch, FancyArrowPatch
 import seaborn as sns
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import okabe_nature as ok
+import okabe_style as ok
 warnings.filterwarnings("ignore")
 
 DELPHI = "/Users/Andre.Teixeira/Library/CloudStorage/GoogleDrive-andre.teixeira@proteininnovation.org/.shortcut-targets-by-id/1pzqwNBoHnehFObY0PzrgligSRKxpVPPY/DELPHI"
