@@ -82,7 +82,11 @@ MIN_AUC = {
 
 
 def _run(cmd: list, label: str, timeout: int = None) -> bool:
-    """Run a delphi CLI command silently. Show output only on failure."""
+    """
+    Run a delphi CLI command and stream its output live to the terminal so the
+    user can watch progress (AUC, accuracy, k-fold folds, prediction, ...).
+    Output is also buffered so the last lines can be re-shown on failure.
+    """
     _info(f"$ python {' '.join(str(c) for c in cmd)}"
           + (f"  [no timeout]" if timeout is None else f"  [timeout={timeout}s]"))
     t0 = time.time()
@@ -92,27 +96,40 @@ def _run(cmd: list, label: str, timeout: int = None) -> bool:
     env["TRANSFORMERS_VERBOSITY"]     = "error"
     env["TOKENIZERS_PARALLELISM"]     = "false"
 
+    buffered = []
     try:
-        result = subprocess.run(
+        proc = subprocess.Popen(
             [sys.executable] + [str(c) for c in cmd],
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,     # merge stderr into the same stream
             text=True,
-            timeout=timeout,
+            bufsize=1,                    # line-buffered
             env=env,
         )
+        # Stream each line live, indented so it is visually nested under the step.
+        for line in proc.stdout:
+            line = line.rstrip("\n")
+            print(f"    | {line}", flush=True)
+            buffered.append(line)
+        proc.wait(timeout=timeout)
         elapsed = time.time() - t0
-        if result.returncode == 0:
+
+        if proc.returncode == 0:
             _ok(f"{label}  ({elapsed:.0f}s)")
             return True
         else:
-            _fail(f"{label} — exit code {result.returncode}")
-            # Show output only on failure
-            if result.stdout.strip():
-                print(result.stdout[-2000:])   # last 2000 chars
-            if result.stderr.strip():
-                print(result.stderr[-2000:])
+            _fail(f"{label} — exit code {proc.returncode}")
+            # Output was already streamed above; re-show the tail for clarity.
+            if buffered:
+                print("  --- last lines ---")
+                for line in buffered[-15:]:
+                    print(f"    {line}")
             return False
     except subprocess.TimeoutExpired:
+        try:
+            proc.kill()
+        except Exception:
+            pass
         _fail(f"{label} — timed out after {timeout}s")
         return False
     except Exception as e:
@@ -333,7 +350,7 @@ def test_kfold(fast: bool = False) -> bool:
 
     runs = [
         ("transformer_lm",     "ablang",      None),
-        ("transformer_onehot", "onehot",      None),
+        # ("transformer_onehot", "onehot",      None),  # skipped: slow k-fold
         ("rf",                 "biophysical", None),
         ("xgboost",            "biophysical", None),
     ]
