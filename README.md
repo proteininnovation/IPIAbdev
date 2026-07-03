@@ -944,10 +944,6 @@ If a required model is not found, DELPHI prints the exact command to train it:
   └─────────────────────────────────────────────────────────────┘
 ```
 
-<p align="center">
-  <img src="images/mutagenesis.png" alt="CDR3 mutagenesis heatmap" width="600"/>
-</p>
-
 ---
 
 ## Model Lookup Convention
