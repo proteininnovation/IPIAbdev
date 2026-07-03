@@ -17,7 +17,7 @@ Applicable to any binary antibody property label including PSR (polyreactivity),
 
 > Code and full tutorial documentation accompanying the manuscript:
 > **"DELPHI: a unified interpretable ML platform for multi-objective antibody developability prediction"**
-> Hoan Nguyen, Andre Teixeira et al., *Nature Biotechnology* (in preparation)
+> Hoan Nguyen, Andre Teixeira et al. (in preparation)
 
 ---
 
@@ -43,6 +43,7 @@ Applicable to any binary antibody property label including PSR (polyreactivity),
 - [Supported Models and Embeddings](#supported-models-and-embeddings)
 - [Data-Adaptive Hyperparameter Configuration](#data-adaptive-hyperparameter-configuration)
 - [Key Results](#key-results)
+- [Application: Joint Developability vs. Affinity Analysis](#application-joint-developability-vs-affinity-analysis)
 - [Citation](#citation)
 - [Contact](#contact)
 
@@ -894,7 +895,7 @@ Per-antibody IG waterfall plots identify the exact HCDR3 positions and residues 
 
 ### Running interpretability analysis
 
-Generate publication-quality SHAP and Integrated Gradients figures (Nature Biotechnology style).
+Generate publication-quality SHAP and Integrated Gradients figures.
 
 **Minimum required models per filter:**
 
@@ -1070,6 +1071,26 @@ All 25 model combinations achieve AUC 0.877–0.960, with the majority of PLM em
 
 ---
 
+## Application: Joint Developability vs. Affinity Analysis
+
+A core use of DELPHI is to add a **developability axis** to data a discovery team already has, turning a single-axis ranking (affinity) into a two-axis triage.
+
+![DELPHI developability × affinity decision map](images/DELPHI_decision_map_example.png)
+
+**Developability × affinity decision map.** Each point is an antibody from a multi-target discovery campaign (six antigens), positioned by its DELPHI-predicted developability on the x axis (P(PASS), the probability of passing the polyreactivity/PSR filter) and by an orthogonal functional readout on the y axis (here cell-display EC50, plotted so that tighter binders sit higher). Points are colored by antigen, and antibodies that were confirmed active in a downstream functional assay are ringed. The dashed lines mark a developability threshold (P(PASS) = 0.5) and an affinity threshold (100 nM), dividing the plane into quadrants. The upper-right quadrant contains the candidates that are simultaneously predicted-developable and high-affinity, which are the natural priorities to advance.
+
+**What it shows.** DELPHI adds a developability axis to data a discovery team already has, turning a single-axis ranking (affinity) into a two-axis triage. In this example the predicted-developable region is well populated across all antigens, and the functionally confirmed leads concentrate in the developable band, indicating that predicted developability and functional performance can be satisfied together rather than traded off. The score is model-generated from sequence alone, so this view is available before any developability assay is run.
+
+**Potential applications**
+
+- **Lead triage.** Rank and gate a large binder set by P(PASS) before committing reagents to biophysical developability assays, focusing wet-lab effort on the upper-right quadrant.
+- **In silico pre-screen.** Use P(PASS) as a conservative filter that rarely discards developable antibodies, shrinking a panel to a manageable shortlist while retaining functional diversity.
+- **Multi-objective selection.** Overlay P(PASS) against any functional metric (affinity, potency, expression, specificity) to select on developability and function jointly, instead of optimizing affinity first and discovering liabilities later.
+- **Campaign monitoring.** Track where each antigen's binders fall on the map to spot targets whose leads are systematically less developable, flagging them for earlier engineering.
+- **Engineering triage.** For otherwise attractive binders that fall left of the developability threshold, prioritize sequence-level optimization, and use DELPHI interpretability outputs to identify the residues driving the low score.
+
+---
+
 ## Citation
 
 If you use DELPHI in your research, please cite:
@@ -1078,7 +1099,7 @@ If you use DELPHI in your research, please cite:
 Hoan Nguyen, Andre Teixeira et al.
 DELPHI: a unified interpretable ML platform for multi-objective antibody
 developability prediction.
-Nature Biotechnology, 2026 (in preparation).
+2026 (in preparation).
 ```
 
 ---
