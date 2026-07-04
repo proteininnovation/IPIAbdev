@@ -159,28 +159,57 @@ set -e
 # results to inspect.
 echo ""
 echo "── Step 3: Collect plots and logs into tests/results/ ──────────"
-RESULTS="tests/results"
+RESULTS="$ROOT/tests/results"
 mkdir -p "$RESULTS"
 
-_collected=0
-# Search the test output folders plus tests/ itself (where --kfold ROC and
-# histogram plots land), but skip the results folder to avoid recursion.
-for src in tests/predictions tests/interpretability tests/logs tests; do
+# k-fold plots (CV_ROC_*, CV_*), prediction plots (ROC/histograms), and
+# interpretability figures can land in a few places depending on delphi.py's
+# working directory: under tests/, in the repo root, or in a results/ or plots/
+# folder. Search all of them so nothing is missed.
+SEARCH_DIRS="
+$ROOT/tests
+$ROOT/results
+$ROOT/plots
+$ROOT/build
+$ROOT
+"
+
+# Use a temp list so the count is correct (avoids the while-in-subshell pitfall).
+_list="$(mktemp)"
+for src in $SEARCH_DIRS; do
     [ -d "$src" ] || continue
-    # find figures and logs, excluding model files and the results dir itself
-    find "$src" \
+    # Depth-limit the repo-root scan to avoid trawling the whole tree; the
+    # dedicated dirs (tests/, results/, plots/) are searched fully.
+    if [ "$src" = "$ROOT" ]; then
+        _maxdepth="-maxdepth 2"
+    else
+        _maxdepth=""
+    fi
+    # shellcheck disable=SC2086
+    find "$src" $_maxdepth \
         -path "$RESULTS" -prune -o \
         -type f \( -name "*.png" -o -name "*.tiff" -o -name "*.tif" \
                    -o -name "*.pdf" -o -name "*.svg" \
                    -o -name "*.log" -o -name "*.txt" \) -print 2>/dev/null \
-    | while read -r f; do
-        cp -f "$f" "$RESULTS/" 2>/dev/null || true
-    done
+        >> "$_list"
 done
-# Count what we gathered (exclude nothing; models were never copied).
+
+# Copy unique files (dedupe by basename would risk collisions, so copy by full
+# path; identical paths found via multiple roots are naturally de-duplicated).
+sort -u "$_list" | while IFS= read -r f; do
+    [ -f "$f" ] || continue
+    cp -f "$f" "$RESULTS/" 2>/dev/null || true
+done
+
 _collected=$(find "$RESULTS" -type f 2>/dev/null | wc -l | tr -d ' ')
-echo "  Collected $_collected file(s) into $RESULTS/"
+rm -f "$_list"
+
+echo "  Collected $_collected file(s) into tests/results/"
 echo "  (figures + logs; trained model checkpoints excluded)"
+if [ "$_collected" -eq 0 ]; then
+    echo "  NOTE: nothing collected. If --kfold/--predict wrote plots elsewhere,"
+    echo "  tell me the path and I will add it to the search."
+fi
 
 echo ""
 echo "══════════════════════════════════════════════════════════════════"
