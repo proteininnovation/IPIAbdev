@@ -172,10 +172,13 @@ class AntibodyDataset(Dataset):
         return len(self._labels)
 
     def __getitem__(self, idx):
-        # torch.from_numpy wraps existing memory — no copy
+        # [FIX-NUMPY2] self._encoding[idx] returns a non-writable view when
+        # _encoding is a pre-allocated 3D ndarray (NumPy 2.x + some PyTorch
+        # builds reject non-writable arrays in from_numpy). .copy() ensures a
+        # fresh contiguous writable array at negligible cost vs I/O + inference.
         return (
-            torch.from_numpy(self._encoding[idx]),   # (270, 20)
-            torch.from_numpy(self._cdr3[idx]),        # (25,  20)
+            torch.from_numpy(self._encoding[idx].copy()),   # (270, 20)
+            torch.from_numpy(self._cdr3[idx].copy()),        # (25,  20)
             torch.tensor(self._labels[idx]),
             self._barcodes[idx],
             self._h_seqs[idx],

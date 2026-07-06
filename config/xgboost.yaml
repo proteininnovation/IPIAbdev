@@ -88,7 +88,7 @@ features:
 # ── k-mer settings ────────────────────────────────────────────────────────────
 kmer:
   k: [1, 2, 3]          # k values — [1,2] recommended (3-mers too sparse for <10k)
-  sequence: both      # 'CDR3' | 'VH' | 'both'
+  sequence: CDR3      # 'CDR3' | 'VH' 
   normalize: true     # normalise counts to frequencies
 
 # ── One-hot encoding ──────────────────────────────────────────────────────────

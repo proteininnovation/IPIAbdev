@@ -17,7 +17,7 @@ Applicable to any binary antibody property label including PSR (polyreactivity),
 
 > Code and full tutorial documentation accompanying the manuscript:
 > **"DELPHI: a unified interpretable ML platform for multi-objective antibody developability prediction"**
-> Hoan Nguyen, Andre Teixeira et al., *double-column* (in preparation)
+> Hoan Nguyen, Andre Teixeira et al. (in preparation)
 
 ---
 
@@ -43,6 +43,7 @@ Applicable to any binary antibody property label including PSR (polyreactivity),
 - [Supported Models and Embeddings](#supported-models-and-embeddings)
 - [Data-Adaptive Hyperparameter Configuration](#data-adaptive-hyperparameter-configuration)
 - [Key Results](#key-results)
+- [Application: Joint Developability vs. Affinity Analysis](#application-joint-developability-vs-affinity-analysis)
 - [Citation](#citation)
 - [Contact](#contact)
 
@@ -103,8 +104,7 @@ delphi/
 │   └── create_subsets.py              # Create CDR3-diverse balanced subsets
 ├── tests/
 │   ├── test_delphi.py                 # Integration test suite  ← Step 3
-│   ├── DS1_psr_500.xlsx               # Test data — 500 PSR antibodies (committed)
-│   └── DS1_psr_5000.xlsx              # Larger test subset (committed)
+│   ├── test_delphi.sh                 # Integration test suite
 ├── data/                              # Training databases (gitignored)
 └── pretrained_202605/                 # IPI pretrained models — download via Step 2
 ```
@@ -170,7 +170,7 @@ env) rather than `python3`, or call `$CONDA_PREFIX/bin/python` directly.
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20785877.svg)](https://doi.org/10.5281/zenodo.20785877)
 
 ```bash
-# Download all 52 pretrained models to pretrained_202605/
+# Download all 52 pretrained models to pretrained_202605/  and public DS1 dataset
 python utils/download_zenodo.py
 
 # Preview what will be downloaded first (recommended)
@@ -894,7 +894,7 @@ Per-antibody IG waterfall plots identify the exact HCDR3 positions and residues 
 
 ### Running interpretability analysis
 
-Generate publication-quality SHAP and Integrated Gradients figures (publication-quality style).
+Generate publication-quality SHAP and Integrated Gradients figures.
 
 **Minimum required models per filter:**
 
@@ -942,10 +942,6 @@ If a required model is not found, DELPHI prints the exact command to train it:
   │ Then re-run delphi_interpretability.py                      │
   └─────────────────────────────────────────────────────────────┘
 ```
-
-<p align="center">
-  <img src="images/mutagenesis.png" alt="CDR3 mutagenesis heatmap" width="600"/>
-</p>
 
 ---
 
@@ -1070,6 +1066,26 @@ All 25 model combinations achieve AUC 0.877–0.960, with the majority of PLM em
 
 ---
 
+## Application: Joint Developability vs. Affinity Analysis
+
+A core use of DELPHI is to add a **developability axis** to data a discovery team already has, turning a single-axis ranking (affinity) into a two-axis triage.
+
+![DELPHI developability × affinity decision map](images/DELPHI_decision_map_example.png)
+
+**Developability × affinity decision map.** Each point is an antibody from a multi-target discovery campaign (six antigens), positioned by its DELPHI-predicted developability on the x axis (P(PASS), the probability of passing the polyreactivity/PSR filter) and by an orthogonal functional readout on the y axis (here cell-display EC50, plotted so that tighter binders sit higher). Points are colored by antigen, and antibodies that were confirmed active in a downstream functional assay are ringed. The dashed lines mark a developability threshold (P(PASS) = 0.5) and an affinity threshold (100 nM), dividing the plane into quadrants. The upper-right quadrant contains the candidates that are simultaneously predicted-developable and high-affinity, which are the natural priorities to advance.
+
+**What it shows.** DELPHI adds a developability axis to data a discovery team already has, turning a single-axis ranking (affinity) into a two-axis triage. In this example the predicted-developable region is well populated across all antigens, and the functionally confirmed leads concentrate in the developable band, indicating that predicted developability and functional performance can be satisfied together rather than traded off. The score is model-generated from sequence alone, so this view is available before any developability assay is run.
+
+**Potential applications**
+
+- **Lead triage.** Rank and gate a large binder set by P(PASS) before committing reagents to biophysical developability assays, focusing wet-lab effort on the upper-right quadrant.
+- **In silico pre-screen.** Use P(PASS) as a conservative filter that rarely discards developable antibodies, shrinking a panel to a manageable shortlist while retaining functional diversity.
+- **Multi-objective selection.** Overlay P(PASS) against any functional metric (affinity, potency, expression, specificity) to select on developability and function jointly, instead of optimizing affinity first and discovering liabilities later.
+- **Campaign monitoring.** Track where each antigen's binders fall on the map to spot targets whose leads are systematically less developable, flagging them for earlier engineering.
+- **Engineering triage.** For otherwise attractive binders that fall left of the developability threshold, prioritize sequence-level optimization, and use DELPHI interpretability outputs to identify the residues driving the low score.
+
+---
+
 ## Citation
 
 If you use DELPHI in your research, please cite:
@@ -1078,7 +1094,7 @@ If you use DELPHI in your research, please cite:
 Hoan Nguyen, Andre Teixeira et al.
 DELPHI: a unified interpretable ML platform for multi-objective antibody
 developability prediction.
-double-column, 2026 (in preparation).
+2026 (in preparation).
 ```
 
 ---
