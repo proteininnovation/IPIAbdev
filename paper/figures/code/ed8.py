@@ -1,5 +1,5 @@
 """
-Extended Data Figure 8 (publication-quality) — full external-clinical-validation grid.
+Extended Data Figure 4 (publication-quality) — full external-clinical-validation grid.
   a  AUC-ROC heatmap     : every language model × every assay readout
   b  Spearman ρ heatmap  : P(Pass) score vs continuous assay, with significance stars
 
@@ -129,10 +129,13 @@ fig = plt.figure(figsize=(ok.DOUBLE, 150 * ok.MM))
 gs = GridSpec(2, 1, figure=fig, height_ratios=[1.0, 1.0],
               hspace=0.95, left=0.135, right=0.94, top=0.90, bottom=0.105)
 
+# AUC panel restricted to the two Jain 2017 readouts (their own developability flags).
+# GDPa columns use THRESH=0.27, which is the Jain PSR flag, not valid for Ginkgo's ELISA
+# PR-CHO scale -> shown by Spearman only in panel b.
 axa = fig.add_subplot(gs[0, 0])
-draw_heatmap(axa, auc_mat, HM_LM_DISPLAY, DATASETS, "External clinical validation · AUC-ROC",
-             vmin=0.20, vmax=0.90, vcenter=0.55, cbar_label='AUC-ROC', fmt='.3f', letter='a',
-             subtitle=f"Pass threshold: PSR/PR score < {THRESH};  ELISA < {THRESH_ELISA}")
+draw_heatmap(axa, auc_mat[:, :2], HM_LM_DISPLAY, DATASETS[:2], "Jain 2017 clinical panel · AUC-ROC",
+             vmin=0.20, vmax=0.90, vcenter=0.5, cbar_label='AUC-ROC', fmt='.3f', letter='a', col_sep=(),
+             subtitle=f"Jain developability flags: PSR SMP < {THRESH}; ELISA < {THRESH_ELISA}. Ginkgo cohorts: rank correlation only (b)")
 axb = fig.add_subplot(gs[1, 0])
 draw_heatmap(axb, rho_mat, HM_LM_DISPLAY, DATASETS, "External clinical validation · Spearman ρ",
              vmin=-0.80, vmax=0.20, vcenter=0.0, cbar_label='Spearman ρ', fmt='.2f',

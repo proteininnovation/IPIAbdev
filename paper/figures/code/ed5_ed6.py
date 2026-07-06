@@ -1,5 +1,5 @@
 """
-Extended Data Figures 5 & 6 — feature attribution beeswarms.
+Extended Data Figures 6 & 7 — feature attribution beeswarms.
   a  RF-biophysical SHAP summary        b  XGBoost-biophysical SHAP summary
   c  Transformer (one-hot) IG per amino acid
   ED5 = PSR, ED6 = SEC.

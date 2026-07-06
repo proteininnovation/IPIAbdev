@@ -123,16 +123,12 @@ for col, name in cm_models:
     cm_data.append((name, thr, confusion(Y, s, thr)))
 
 
-# ── panel f: learning curves ────────────────────────────────────────────────────
-ipi = pd.read_csv(f"{SUPPL}/learning_curve_ipi_psr_trainset_transformer_lm_ablang_psr_filter_sample_size_100_200.csv")
-ds1 = pd.read_csv(f"{SUPPL}/learning_curve_DS1_transformer_lm_ablang_psr_filter_sample_size_500_1000.csv")
-poly = pd.read_csv(f"{SUPPL}/learning_curve_ipi_psr_trainset_transformer_lm_ablang_psr_filter_sample_size_100_200.csv.polynomial_regression_results.csv")
-pr_auc = poly[poly["metric"] == "auc"].iloc[0]
-P_I, P_S, P_Q = pr_auc["intercept"], pr_auc["slope_linear"], pr_auc["coeff_quadratic"]
-
-
-def poly_auc(x):
-    return P_I + P_S * x + P_Q * x ** 2
+# ── panel f: REPLICATED learning curves — mean ± 95% CI over repeated
+#    subsample + CDR3-cluster split + init per training-set size (TransformerLM + AbLang2).
+#    IPI: 17 sizes × 12 reps; DS1: 12 reps (≤26k) / 4 (>26k). Replaces the old single-draw
+#    points + quadratic fit, which were noise-dominated below ~2,000.
+ipi = pd.read_csv(f"{SUPPL}/learning_curve_ipi_replicated_summary.csv").sort_values("size")
+ds1 = pd.read_csv(f"{SUPPL}/learning_curve_DS1_replicated_summary.csv").sort_values("size")
 
 
 # =====================================================================================
@@ -175,7 +171,7 @@ axb.axhline(base, color=ok.OI_GREY, lw=0.6, ls=(0, (1, 1)), zorder=1)
 for name, c, ls, rec, prec, ap in pr_data:
     axb.plot(rec, prec, color=c, ls=ls, lw=1.1, zorder=3,
              label=f"{name}\nAP {ap:.3f}")
-axb.set_xlim(-0.02, 1.02); axb.set_ylim(0.40, 1.02)
+axb.set_xlim(-0.02, 1.02); axb.set_ylim(0, 1.02)
 axb.set_xlabel("Recall (Pass)", labelpad=2)
 axb.set_ylabel("Precision (Pass)", labelpad=2)
 axb.legend(loc="lower left", fontsize=4.5, handlelength=1.4, handletextpad=0.4,
@@ -275,25 +271,21 @@ fig.text((bbe.x0 + bbe2.x1) / 2, bbe.y1 + 0.085,
          ha="center", va="baseline")
 
 
-# ── f: learning curves ───────────────────────────────────────────────────────────
-axf.scatter(ipi["sample_size"], ipi["auc"], s=5, color=ok.PASS, alpha=0.55,
-            edgecolors="none", zorder=3, label="IPI (observed)")
-axf.scatter(ds1["sample_size"], ds1["auc"], s=5, color=ok.FAIL, alpha=0.55,
-            edgecolors="none", zorder=3, label="DS1 (observed)")
-xs = np.linspace(ipi["sample_size"].min(), ipi["sample_size"].max(), 200)
-axf.plot(xs, poly_auc(xs), color=ok.PASS, lw=1.3, ls="--", zorder=4,
-         label="IPI quadratic fit")
+# ── f: replicated learning curves — mean ± 95% CI per training-set size ───────────
+for d, c, lab in [(ipi, ok.PASS, "IPI"), (ds1, ok.FAIL, "DS1")]:
+    axf.fill_between(d["size"], d["ci_lo"], d["ci_hi"], color=c, alpha=0.22, lw=0, zorder=2)
+    axf.plot(d["size"], d["mean_auc"], color=c, lw=1.3, marker="o", ms=2.6,
+             zorder=4, label=f"{lab} mean ± 95% CI")
 axf.set_xscale("log")
-axf.set_xlim(250, 3e5)
+axf.set_xlim(90, 3e5)
 axf.set_ylim(0.62, 1.0)
 axf.set_xlabel("Training-set size", labelpad=2)
 axf.set_ylabel("AUC", labelpad=2)
 axf.yaxis.set_major_locator(ticker.MultipleLocator(0.1))
 axf.grid(axis="y", lw=0.25, alpha=0.4, zorder=0)
-# practical plateau band (~5,000-6,000) where IPI AUC reaches ~0.95
+# practical-plateau band: IPI reaches ~0.95 by ~5,000 and plateaus ~0.95–0.96; DS1 higher (~0.98)
 axf.axvspan(5000, 6000, color=ok.OI_GREY, alpha=0.18, zorder=1, lw=0)
-axf.annotate("practical plateau\n~5,000–6,000\nAUC≈0.95",
-             xy=(5500, 0.945), xytext=(310, 0.88),
+axf.annotate("IPI plateau ≈0.95–0.96\nfrom ~5,000", xy=(5300, 0.951), xytext=(330, 0.80),
              fontsize=4.8, ha="left", va="center",
              arrowprops=dict(arrowstyle="->", color="#333333", lw=0.6))
 axf.legend(loc="lower right", fontsize=4.8, handlelength=1.2, handletextpad=0.4,
@@ -324,4 +316,4 @@ print(f"=== Panel d: best CV arch x LM AUC = {best_auc:.3f} "
 print("=== Panel e: Youden thresholds + confusion (rows=true, [[TP,FN],[FP,TN]]) ===")
 for name, thr, cm in cm_data:
     print(f"  {name:24s} thr {thr:.3f}  TP {cm[0,0]} FN {cm[0,1]} FP {cm[1,0]} TN {cm[1,1]}")
-print("Fig4 done")
+print("Fig3 done")

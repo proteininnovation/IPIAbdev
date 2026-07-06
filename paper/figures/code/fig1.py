@@ -18,7 +18,7 @@ import sys, os, warnings
 import numpy as np, pandas as pd
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.gridspec import GridSpec
+from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle, FancyBboxPatch, FancyArrowPatch
 import seaborn as sns
@@ -239,15 +239,17 @@ def draw_table(ax):
 
 
 # ─────────────────────────── shared boxplot ─────────────────────────────────
-def boxplot(ax, df, x, y, hue, order):
+def boxplot(ax, df, x, y, hue, order, showfliers=False):
     sns.boxplot(data=df, x=x, y=y, hue=hue, order=order,
-                palette={1: PASS, 0: FAIL}, ax=ax, showfliers=False, showmeans=True,
+                palette={1: PASS, 0: FAIL}, ax=ax, showfliers=showfliers, showmeans=True,
                 width=0.7, linewidth=0.6, gap=0.12,
                 meanprops=dict(marker="D", markerfacecolor="white", markeredgecolor="black",
                                markersize=2.4, markeredgewidth=0.5),
                 boxprops=dict(alpha=0.9, edgecolor="black"),
                 medianprops=dict(color="black", linewidth=0.8),
-                whiskerprops=dict(linewidth=0.5), capprops=dict(linewidth=0.5))
+                whiskerprops=dict(linewidth=0.5), capprops=dict(linewidth=0.5),
+                flierprops=dict(marker="o", markersize=1.2, markerfacecolor="#555555",
+                                markeredgewidth=0, alpha=0.5))
     if ax.get_legend():
         ax.get_legend().remove()
 
@@ -261,24 +263,58 @@ def load_elisa():
     return df
 
 
-def _main_peak(rt, pa):
-    if pd.isna(rt) or pd.isna(pa): return np.nan, np.nan
-    try:
-        rts = [float(x) for x in str(rt).split(",") if x.strip()]
-        pas = [float(x) for x in str(pa).split(",") if x.strip()]
-        if len(rts) != len(pas) or not pas: return np.nan, np.nan
-        i = int(np.argmax(pas)); return rts[i], pas[i]
-    except (ValueError, TypeError):
-        return np.nan, np.nan
+def _sec_main_peak(area_str, rt_str):
+    """(% monomer, retention time) of the main SEC peak. A run may report several peaks in
+    one cell (area and RT comma-separated and positionally matched, e.g. area '10.22, 89.78'
+    with RT '2.06, 3.141'); the main peak is the largest by area, and we take its area
+    (= % monomer) and its retention time. Single-value cells are that peak; empty area -> NaN."""
+    def parse(s):
+        out = []
+        if not pd.isna(s):
+            for x in str(s).split(","):
+                x = x.strip()
+                if x and x.lower() != "nan":
+                    try: out.append(float(x))
+                    except ValueError: pass
+        return out
+    areas, rts = parse(area_str), parse(rt_str)
+    if not areas:
+        # no area to rank peaks; a lone RT is trivially the main peak, keep it
+        return (np.nan, rts[0] if len(rts) == 1 else np.nan)
+    i = int(np.argmax(areas))
+    return (areas[i], rts[i] if len(rts) == len(areas) else np.nan)
 
 
 def load_sec():
-    df = pd.read_excel(f"{DATA}/sec_retention_time_figure1.xlsx")
-    df["sec_filter"] = pd.to_numeric(df["sec_filter"], errors="coerce")
-    df = df.dropna(subset=["sec_filter"]); df["sec_filter"] = df["sec_filter"].astype(int)
-    rts = [_main_peak(a, b)[0] for a, b in zip(df["retention_time_mins"], df["Peak Area Percent"])]
-    df["RT"] = rts
-    return df
+    """SEC for the 5,045 cohort. Labels are the original `sec_filter` (aligned with the trained
+    SEC models and every other SEC figure). RT and % monomer VALUES come from the 20260420 SEC
+    export where it covers an antibody, else from the Dash export (largest-area peak of its
+    comma-separated multi-peak cells). The values only refine the panels; they do not change
+    the labels (see FIGURE_AUDIT R7: Path B)."""
+    coh = pd.read_excel(f"{DATA}/ipi_sec_5000.xlsx")[["BARCODE", "sec_filter"]]
+    coh["sec_filter"] = pd.to_numeric(coh["sec_filter"], errors="coerce")
+    coh = coh.dropna(subset=["sec_filter"]); coh["sec_filter"] = coh["sec_filter"].astype(int)
+    b = coh["BARCODE"]
+    # preferred values: the 20260420 SEC export (one row per antibody; main-peak RT + area)
+    nf = pd.read_excel(f"{DATA}/ipi_sec_20260420_M54-M117.xlsx").drop_duplicates("TAB ID").set_index("TAB ID")
+    nf_rt = b.map(pd.to_numeric(nf["Retention Time_SEC"], errors="coerce"))
+    nf_mo = b.map(pd.to_numeric(nf["Peak Area Percent"], errors="coerce"))
+    # fallback values: the Dash export
+    dash = pd.read_csv(f"{DATA}/ipi_sec_dash_export.csv", dtype=str).drop_duplicates("TAB ID").set_index("TAB ID")
+    sub = dash.reindex(b.values)
+    mp = [_sec_main_peak(a, r) for a, r in zip(sub["Main Peak Area (%)"], sub["Main Peak Retention Time (min)"])]
+    d_mo = pd.Series([m[0] for m in mp], index=coh.index)
+    d_rt = pd.Series([m[1] for m in mp], index=coh.index)
+    coh["RT"] = nf_rt.fillna(d_rt)
+    coh["monomer"] = nf_mo.fillna(d_mo)
+    print(f"  SEC values: new-file {int((nf_rt.notna() | nf_mo.notna()).sum())}, "
+          f"Dash fallback {int((nf_rt.isna() & nf_mo.isna()).sum())}")
+    for col, lab in [("RT", "retention"), ("monomer", "%monomer")]:
+        by = coh.dropna(subset=[col]).groupby("sec_filter").size()
+        n = int(coh[col].notna().sum())
+        print(f"  SEC {lab}: {n}/{len(coh)} ({100*n/len(coh):.0f}%) "
+              f"[Pass={int(by.get(1,0))}, Fail={int(by.get(0,0))}]")
+    return coh
 
 
 def load_germline():
@@ -318,9 +354,9 @@ axB.set_title("Curated developability datasets", fontsize=7, fontweight="bold",
 # c: CDR H3 diversity (clusters per sequence)
 axC = fig.add_subplot(gs[1, 1])
 cdiv = [
-    ("IPI PSR\ntrain", 7263 / 11265, PASS),
-    ("IPI SEC\ntrain", 3272 / 5045, PASS),
-    ("DS1\n(natural)", 6311 / 246293, FAIL),
+    ("IPI PSR\ntrain", 7263 / 11265, ok.OI_GREEN),
+    ("IPI SEC\ntrain", 3272 / 5045, ok.OI_GREEN),
+    ("DS1\n(natural)", 6311 / 246293, ok.OI_PURPLE),
 ]
 xs = np.arange(len(cdiv))
 vals = [v for _, v, _ in cdiv]
@@ -339,8 +375,8 @@ axC.annotate("", xy=(0.30, 0.645), xytext=(1.92, 0.06),
 # annotation parked in the white space above the tiny DS1 bar
 axC.text(1.98, 0.40, f"~{gap:.0f}× more\ndiverse per\nsequence",
          ha="center", va="center", fontsize=5.3, color="#333333", linespacing=1.1)
-axC.legend(handles=[Line2D([0], [0], marker="s", color="w", markerfacecolor=PASS, markersize=6, label="designed (IPI)"),
-                    Line2D([0], [0], marker="s", color="w", markerfacecolor=FAIL, markersize=6, label="natural (DS1)")],
+axC.legend(handles=[Line2D([0], [0], marker="s", color="w", markerfacecolor=ok.OI_GREEN, markersize=6, label="designed (IPI)"),
+                    Line2D([0], [0], marker="s", color="w", markerfacecolor=ok.OI_PURPLE, markersize=6, label="natural (DS1)")],
            loc="upper right", fontsize=5.3, handletextpad=0.3, labelspacing=0.25, borderpad=0.2)
 
 # d: PSR pass rate by VH germline
@@ -349,13 +385,13 @@ gl = germ.iloc[::-1]            # ascending so highest is at top
 ys = np.arange(len(gl))
 rates = gl["rate"].values * 100
 ns = gl["n"].values
-bar_cols = [PASS if r >= overall_rate * 100 else FAIL for r in rates]
+bar_cols = NEUTRAL
 axD.barh(ys, rates, color=bar_cols, height=0.7, edgecolor="black", linewidth=0.4)
 for y, r, n in zip(ys, rates, ns):
     axD.text(r + 1.8, y, f"n={int(n)}", va="center", ha="left", fontsize=4.7, color="#333333")
 axD.axvline(overall_rate * 100, color="#444444", lw=0.7, ls=(0, (3, 2)))
 # label near the x-axis where the short low-pass-rate bars leave white space
-axD.text(overall_rate * 100 + 2, 0.0, f"overall {overall_rate*100:.0f}%",
+axD.text(overall_rate * 100 + 2, 0.0, f"overall {overall_rate*100:.1f}%",
          ha="left", va="center", fontsize=4.8, color="#444444")
 axD.set_yticks(ys); axD.set_yticklabels(gl.index, fontsize=5.2)
 axD.set_xlabel("PSR pass rate (%)", fontsize=6.6)
@@ -363,8 +399,11 @@ axD.set_xlim(0, 120)
 axD.set_xticks([0, 25, 50, 75, 100])
 axD.set_title("PSR pass rate by VH germline", fontsize=7, fontweight="bold", loc="left", pad=4)
 
+# e-h: bottom row of readout panels, side by side across the full width of row 2
+gbot = GridSpecFromSubplotSpec(1, 4, subplot_spec=gs[2, :],
+                               width_ratios=[1.5, 1.12, 0.78, 0.78], wspace=0.62)
 # e: PSR boxplots
-axE = fig.add_subplot(gs[2, 0])
+axE = fig.add_subplot(gbot[0, 0])
 longp = elisa.melt(id_vars=["psr_filter"],
                    value_vars=["psr_norm_dna", "psr_norm_avidin", "psr_norm_insulin", "psr_norm_smp"],
                    var_name="Antigen", value_name="score")
@@ -380,7 +419,7 @@ axE.legend(handles=[Line2D([0], [0], marker="s", color="w", markerfacecolor=PASS
            loc="upper right", fontsize=5.6, handletextpad=0.3, labelspacing=0.25, borderpad=0.2)
 
 # f: correlation heatmap
-axF = fig.add_subplot(gs[2, 1])
+axF = fig.add_subplot(gbot[0, 1])
 cols_h = ["psr_norm_dna", "psr_norm_avidin", "psr_norm_insulin", "psr_norm_smp"]
 lab = ["DNA", "Avidin", "Insulin", "SMP"]
 rho = elisa[cols_h].corr(method="spearman").values
@@ -397,14 +436,25 @@ axF.set_title("Antigen score correlation", fontsize=7, fontweight="bold", loc="l
 cb = fig.colorbar(im, ax=axF, fraction=0.046, pad=0.04); cb.ax.tick_params(labelsize=5, length=2)
 cb.set_label("Spearman ρ", fontsize=6)
 
-# g: SEC retention
-axG = fig.add_subplot(gs[2, 2])
+# g: SEC main-peak retention time (IPI Dash export; joined by BARCODE, labels validated)
+axG = fig.add_subplot(gbot[0, 2])
 boxplot(axG, sec, "sec_filter", "RT", "sec_filter", [1, 0])
-axG.set_xticks([0, 1]); axG.set_xticklabels(["Pass (1)", "Fail (0)"], fontsize=5.8)
-axG.set_xlabel(""); axG.set_ylabel("Retention time (min)", fontsize=6.6)
-axG.set_title("IPI SEC retention", fontsize=7, fontweight="bold", loc="left", pad=4)
+nR = sec.dropna(subset=["RT"]).groupby("sec_filter").size()
+axG.set_xticks([0, 1]); axG.set_xticklabels([f"Pass\nn={int(nR.get(1,0))}", f"Fail\nn={int(nR.get(0,0))}"], fontsize=5.5)
+axG.set_xlabel(""); axG.set_ylabel("Retention time (min)", fontsize=6.4)
+axG.set_title("IPI SEC retention", fontsize=6.8, fontweight="bold", loc="left", pad=4)
+
+# h: SEC % monomer = main-peak area (multi-peak runs -> largest-area peak)
+axH = fig.add_subplot(gbot[0, 3])
+boxplot(axH, sec, "sec_filter", "monomer", "sec_filter", [1, 0], showfliers=True)
+nM = sec.dropna(subset=["monomer"]).groupby("sec_filter").size()
+axH.set_xticks([0, 1]); axH.set_xticklabels([f"Pass\nn={int(nM.get(1,0))}", f"Fail\nn={int(nM.get(0,0))}"], fontsize=5.5)
+axH.set_xlabel(""); axH.set_ylabel("Main-peak area (% monomer)", fontsize=6.4)
+axH.set_ylim(38, 101)
+axH.set_title("IPI SEC monomer", fontsize=6.8, fontweight="bold", loc="left", pad=4)
 
 ok.panel_label(fig, axB, "b"); ok.panel_label(fig, axC, "c"); ok.panel_label(fig, axD, "d")
 ok.panel_label(fig, axE, "e"); ok.panel_label(fig, axF, "f"); ok.panel_label(fig, axG, "g")
+ok.panel_label(fig, axH, "h")
 ok.save_fig(fig, "Figure1", OUT)
 print("Fig1 v2 done | overall PSR pass rate %.1f%%" % (overall_rate * 100))

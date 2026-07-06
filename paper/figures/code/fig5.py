@@ -17,12 +17,13 @@ BOTTOM strip (3 new panels):
 Data:
   IPI PSR  data/ipi_psr_trainset.xlsx          (CDR3, psr_filter)
   IPI SEC  data/ipi_sec_5000.xlsx              (CDR3, sec_filter)
-  DS1      /tmp/delphi_ds1/ds1_clean.parquet   (VH, psr_filter) — CDR H3 re-derived
-           from VH via the C...WGxG motif, fixed 60k sample (seed 42).
+  DS1      tests/DS1.xlsx  (BARCODE, HSEQ, CDR3, psr_filter) - downloaded from Zenodo
+           (Chen 2024, record 14735846) via utils/download_ds1_dataset.py; HCDR3 from
+           ANARCI IMGT 105-117, fixed 60k subsample (seed 42).
 CDR H3 net charge uses liabilities.charge_value (ProteinAnalysis.charge_at_pH 7.4),
 the exact function the original figure used.
 """
-import sys, os, re, warnings
+import sys, os, warnings
 import numpy as np, pandas as pd
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -39,11 +40,10 @@ warnings.filterwarnings("ignore")
 
 DELPHI = "/Users/Andre.Teixeira/Library/CloudStorage/GoogleDrive-andre.teixeira@proteininnovation.org/.shortcut-targets-by-id/1pzqwNBoHnehFObY0PzrgligSRKxpVPPY/DELPHI"
 DATA = f"{DELPHI}/data"; OUT = f"{DELPHI}/revision2_redteam/figures/output"
-DS1_PARQUET = "/tmp/delphi_ds1/ds1_clean.parquet"
+DS1_XLSX = "/Users/Andre.Teixeira/temp/delphi/tests/DS1.xlsx"  # Zenodo (Chen 2024, rec 14735846) via utils/download_ds1_dataset.py
 ok.set_style(base_pt=6.5)
 PASS, FAIL = ok.PASS, ok.FAIL
 ALPHA = 0.72
-HCDR3_RE = re.compile(r"C([A-Z]{3,35}?)WG[QKRPL]G")
 
 
 def add_features(df, cdr3_col="CDR3"):
@@ -66,11 +66,17 @@ def load_sec():
 
 
 def load_ds1(n=60000, seed=42):
-    d = pd.read_parquet(DS1_PARQUET).dropna(subset=["psr_filter"])
-    if len(d) > n:
+    if not os.path.exists(DS1_XLSX):
+        raise SystemExit(
+            f"DS1 not found: {DS1_XLSX}\n"
+            "Download it from Zenodo first:  python utils/download_ds1_dataset.py")
+    # The Zenodo download already carries an ANARCI (IMGT 105-117) HCDR3 column and has
+    # dropped empty-CDR3 rows, so there is no motif re-derivation and no silent drop here.
+    d = pd.read_excel(DS1_XLSX).dropna(subset=["psr_filter", "CDR3"])
+    n_full = len(d)
+    if n_full > n:
         d = d.sample(n, random_state=seed)          # density-faithful subsample
-    m = d["VH"].astype(str).map(lambda v: (HCDR3_RE.findall(v) or [None])[-1])
-    d = d.assign(CDR3=m).dropna(subset=["CDR3"])
+    print(f"  DS1: {n_full:,} loaded -> {len(d):,} used (subsample n={n}, seed={seed})")
     return add_features(d), "psr_filter"
 
 
@@ -255,8 +261,8 @@ ok.panel_label(fig, axp, "p", dx=-0.040, dy=0.052, size=8)
 
 # (q) Net charge -> P(Pass) curve --------------------------------------------
 axq = fig.add_subplot(gbot[0, 1])
-for cv, col, lab in [(psr_curve, PASS, "IPI PSR (designed)"),
-                     (ds1_curve, FAIL, "DS1 (natural)")]:
+for cv, col, lab in [(psr_curve, ok.OI_GREEN, "IPI PSR (designed)"),
+                     (ds1_curve, ok.OI_PURPLE, "DS1 (natural)")]:
     # Wilson interval is asymmetric and its centre is shifted from the point
     # estimate, so error arms can come out slightly <0 near p=0/1; clip to 0.
     yerr = np.clip(np.vstack([cv["ppass"] - cv["lo"], cv["hi"] - cv["ppass"]]), 0, None)
@@ -298,4 +304,4 @@ cbc.set_ticks([-1, -0.5, 0, 0.5, 1]); cbc.ax.tick_params(labelsize=5.2, length=1
 ok.panel_label(fig, axr, "r", dx=-0.060, dy=0.052, size=8)
 
 ok.save_fig(fig, "Figure5", OUT)
-print("Fig2 done")
+print("Fig5 done")

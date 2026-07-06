@@ -186,4 +186,4 @@ legf = fig.legend(handles=pf_handles, loc="upper left", bbox_to_anchor=(0.852, 0
 legf.set_title("Polyreactivity", prop={"size": 6, "weight": "bold"})
 
 ok.save_fig(fig, "Figure2", OUT, dpi=600)   # t-SNE is rasterized; 600 dpi keeps it crisp
-print("Fig3 done")
+print("Fig2 done")

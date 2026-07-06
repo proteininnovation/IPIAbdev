@@ -39,7 +39,7 @@ PASS, FAIL, NEUTRAL = ok.PASS, ok.FAIL, ok.NEUTRAL
 GREY = ok.OI_GREY
 
 THRESH = 0.27          # PR/PSR Pass cutoff (assay < THRESH => Pass)
-COMP_LO, COMP_HI = 0.337, 0.356   # 113-team competition best band (GDPa3 PR-CHO)
+COMP_BEST = 0.337   # best 113-team competition PR-CHO submission (van Niekerk et al. mAbs 2026, Results; abstract lists 0.356 for polyreactivity vs 0.337 self-association)
 N_BOOT = 2000
 RNG = np.random.default_rng(0)
 
@@ -55,8 +55,11 @@ def score_col(lm):
 
 
 # ── bootstrap helpers (paired resample of the index, seed 0) ──────────────────
-def boot_ci(stat_fn, n, n_boot=N_BOOT, rng=RNG):
-    """Bootstrap 95% CI of stat_fn(idx) over a paired resample of range(n)."""
+def boot_ci(stat_fn, n, n_boot=N_BOOT, seed=0):
+    """Bootstrap 95% CI of stat_fn(idx) over a paired resample of range(n).
+    Fresh seeded RNG per call -> CIs are order-independent and reproducible
+    (the shared module RNG previously made them depend on cohort order)."""
+    rng = np.random.default_rng(seed)
     vals = []
     for _ in range(n_boot):
         idx = rng.integers(0, n, n)
@@ -136,8 +139,9 @@ g3_s, g3_a, g3_y = cohort_arrays(g3, "polyreactivity_prscore_cho_avg")
 
 COHORTS = [
     ("Jain 2017", jain_s, jain_a, jain_y, ok.OI_BLUE, "-"),
-    ("GDPa1",     g1_s,   g1_a,   g1_y,   ok.OI_VERMILION, "--"),
-    ("GDPa3",     g3_s,   g3_a,   g3_y,   ok.OI_GREEN, "-."),
+    # GDPa1/GDPa3 dropped from the binary ROC/PR panel: 0.27 is the Jain PSR flow-cytometry
+    # developability flag (Jain 2017), not a valid cutoff for Ginkgo's ELISA-scale PR-CHO.
+    # The Ginkgo cohorts are evaluated by Spearman only (panels c, e, f).
 ]
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -170,7 +174,7 @@ def panel_a(ax):
                label="IPI→DS1  (designed→natural)", clip_on=False)
     ax.set_yticks(y); ax.set_yticklabels(lms, fontsize=5.8)
     ax.set_ylim(-0.6, len(lms) - 0.4 + 1.0)        # headroom above the top bar for the legend
-    ax.set_xlim(0.70, 0.97)
+    ax.set_xlim(0.5, 0.97)
     ax.set_xlabel("Transfer AUC", fontsize=6.5)
     ax.axvline(0.5, color="#cccccc", lw=0.5, ls=":")
     ax.grid(axis="x", lw=0.25, alpha=0.4)
@@ -208,7 +212,7 @@ def panel_b(ax):
                 f"(no-skill {nfail/n:.2f}); n={n}, {nfail}F",
                 transform=ax.transAxes, ha="right", va="bottom",
                 fontsize=4.3, color=col, fontweight="bold", linespacing=1.1)
-    ax.text(0.03, 0.96, "Pass = PR-CHO < 0.27\n(Jain: psr_filter)", transform=ax.transAxes,
+    ax.text(0.03, 0.96, "Jain PSR flag\n(score < 0.27)", transform=ax.transAxes,
             fontsize=4.6, va="top", ha="left", color="#555555")
 
 
@@ -318,8 +322,7 @@ def panel_e(ax):
         rows.append((MODEL_DISP[lm], pt, lo, hi))
     rows.sort(key=lambda r: r[1])           # weakest at bottom, best on top
     y = np.arange(len(rows))
-    ax.axvspan(COMP_LO, COMP_HI, color=ok.OI_YELLOW, alpha=0.35, zorder=0)
-    ax.axvline(COMP_HI, color="#9a8500", lw=0.8, ls="--", zorder=1)
+    ax.axvline(COMP_BEST, color="#9a8500", lw=0.9, ls="--", zorder=1)
     for yi, (nm, pt, lo, hi) in zip(y, rows):
         col = PASS if nm == "AbLang2" else NEUTRAL
         ax.plot([lo, hi], [yi, yi], color=col, lw=1.2, zorder=2,
@@ -333,7 +336,7 @@ def panel_e(ax):
     ax.set_title("Zero-shot vs competition", fontsize=6.8, fontweight="bold",
                  loc="left", pad=3)
     # label above the bars and to the LEFT of the band so it never sits on the line
-    ax.text(0.01, len(rows) - 0.15, "113-team best: 0.337–0.356",
+    ax.text(0.01, len(rows) - 0.15, "113-team PR-CHO best: 0.337",
             ha="left", va="bottom", fontsize=4.9, color="#222222")
 
 
@@ -371,4 +374,4 @@ for ax, letter, dx in [(axa, "a", -0.052), (axb, "b", -0.050), (axc, "c", -0.050
     ok.panel_label(fig, ax, letter, dx=dx, dy=0.030, size=9)
 
 ok.save_fig(fig, "Figure4", OUT)
-print("Fig5 done")
+print("Fig4 done")

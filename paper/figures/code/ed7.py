@@ -1,5 +1,5 @@
 """
-Extended Data Figure 7 — per-antibody interpretability.
+Extended Data Figure 8 — per-antibody interpretability.
   rows: PSR | SEC
   cols: a/d  example PASS antibody — per-residue IG waterfall
         b/e  example FAIL antibody — per-residue IG waterfall
@@ -37,7 +37,7 @@ ok.set_style(base_pt=6.5)
 AMINO = "ACDEFGHIKLMNPQRSTVWY"
 AA_IDX = {a: i for i, a in enumerate(AMINO)}
 MUT_CMAP = ok.DIVERGING.reversed()   # P(Pass): 0->vermilion(Fail), 0.5->white, 1->blue(Pass)
-IG_STEPS = 64
+IG_STEPS = 100
 
 
 def seqs(d):
@@ -139,14 +139,15 @@ sec = pd.read_excel(f"{DELPHI}/data/ipi_sec_5000.xlsx").dropna(subset=["sec_filt
 fig = plt.figure(figsize=(ok.DOUBLE, 165 * ok.MM))
 gs = GridSpec(2, 3, figure=fig, width_ratios=[1.0, 1.0, 1.25], left=0.075, right=0.95,
               top=0.91, bottom=0.075, hspace=0.40, wspace=0.55)
-letters = [["a", "b", "c"], ["d", "e", "f"]]
+letters = [["a", "b", "e"], ["c", "d", "f"]]  # legend groups waterfalls (a-d) then mutagenesis (e,f)
 
 for ri, (m, df, fcol, name) in enumerate([(m_psr, psr, "psr_filter", "PSR"),
                                           (m_sec, sec, "sec_filter", "SEC")]):
-    # pinned to the two example antibodies named in the manuscript ED Fig. 8 legend (one Pass,
-    # one Fail, present and correctly labeled in both the PSR and SEC datasets). Internal IDs
-    # are not committed here; set them to the BARCODE values from your local datasets.
-    pass_bc, fail_bc = "<PASS_BARCODE>", "<FAIL_BARCODE>"
+    # pinned to the two antibodies named in the manuscript ED Fig. 8 legend: pass TAB0012562,
+    # fail TAB0015016 — both present and correctly labeled (Pass / Fail) in the PSR and SEC
+    # datasets. These are BARCODE identifiers, the same ones printed in the manuscript; the
+    # sequences they resolve to are read from the (non-committed) local datasets, not stored here.
+    pass_bc, fail_bc = "TAB0012562", "TAB0015016"
     print(f"{name}: pass={pass_bc} (P={m.predict_single(pass_bc, *seqs(df.loc[pass_bc])):.3f}) "
           f"fail={fail_bc} (P={m.predict_single(fail_bc, *seqs(df.loc[fail_bc])):.3f})")
     for ci, bc in enumerate([pass_bc, fail_bc]):

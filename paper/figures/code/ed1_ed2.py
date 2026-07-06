@@ -89,7 +89,13 @@ def build(df, fcol, meaning, outname, cohort):
 
 # ED1 — PSR ELISA-only (4 ELISA scores present + psr_filter)
 eli = pd.read_excel(f"{DATA}/ipi_psr_trainset_elisa.xlsx")
-eli = eli[eli[["psr_norm_insulin", "psr_norm_dna", "psr_norm_smp", "psr_norm_avidin"]].notna().all(axis=1)]
+# This ELISA export is stale-missing PSR labels for 114 antibodies that are labeled in the current
+# training set (and carry complete four-antigen scores in elisa_score_figure1.xlsx); recover them by
+# BARCODE so ED Fig 1 uses all 7,494 ELISA-labeled antibodies, matching Fig 1b, not a 7,380 subset.
+_lab = pd.read_excel(f"{DATA}/ipi_psr_trainset.xlsx")
+_lab = dict(zip(_lab["BARCODE"].astype(str), pd.to_numeric(_lab["psr_filter"], errors="coerce")))
+_miss = eli["psr_filter"].isna()
+eli.loc[_miss, "psr_filter"] = eli.loc[_miss, "BARCODE"].astype(str).map(_lab)
 eli = eli[eli["psr_filter"].notna()]
 print("ED1 n=", len(eli))
 build(add_features(eli), "psr_filter", ("non-polyreactive", "polyreactive"), "ED_Fig1",

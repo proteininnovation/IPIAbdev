@@ -1,5 +1,5 @@
 """
-Extended Data Figure 4 — predicted-score distributions per
+Extended Data Figure 5 — predicted-score distributions per
 architecture, within-distribution (IPI val) vs cross-library (DS1).
   row 1 (a-e): IPI validation     row 2 (f-j): DS1 public dataset
 Predicted-score densities across 4 classifier architectures (+ OneHot transformer);

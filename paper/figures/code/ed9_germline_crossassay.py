@@ -14,6 +14,7 @@ import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 from sklearn.metrics import roc_auc_score
+from scipy.stats import fisher_exact
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import okabe_style as ok
 warnings.filterwarnings("ignore")
@@ -45,12 +46,13 @@ p_secfail_psrfail = sec_fail[psr_fail].mean()
 a = int((psr_fail & sec_fail).sum()); b = int((psr_fail & ~sec_fail).sum())
 c = int((~psr_fail & sec_fail).sum()); dd = int((~psr_fail & ~sec_fail).sum())
 OR = (a * dd) / (b * c)
+_, fisher_p = fisher_exact([[a, b], [c, dd]])   # substantiates the "p < 1e-200" stated in the ED9 legend
 ch = sec.dropna(subset=["HCDR3_charge"])
 pf = (ch["psr_filter"] == 0).values; sf = (ch["sec_filter"] == 0).values
 auc_psr = roc_auc_score(pf, ch["HCDR3_charge"].values)
 auc_sec = roc_auc_score(sf, ch["HCDR3_charge"].values)
 print(f"[R2 recomputed] P(SECfail|PSRpass)={p_secfail_psrpass:.3f} P(SECfail|PSRfail)={p_secfail_psrfail:.3f} "
-      f"OR={OR:.2f} | charge AUC PSR={auc_psr:.3f} SEC={auc_sec:.3f}")
+      f"OR={OR:.2f} Fisher p={fisher_p:.2e} | charge AUC PSR={auc_psr:.3f} SEC={auc_sec:.3f}")
 
 # ════════════════════════════════════════════════════════════════════════════
 fig = plt.figure(figsize=(ok.DOUBLE, 88 * ok.MM))
@@ -74,11 +76,11 @@ for yi, v in zip(y, vals):
     axa.text(v - 0.004, yi, f3(v), ha="right", va="center", fontsize=5.0,
              color="white", fontweight="bold")
 axa.set_yticks(y); axa.set_yticklabels(labels, fontsize=5.4)
-axa.set_xlim(0.75, 1.0); axa.set_xlabel("ROC-AUC", fontsize=6.5)
+axa.set_xlim(0.5, 1.0); axa.set_xlabel("ROC-AUC", fontsize=6.5)
 axa.set_ylim(y.min() - 0.6, y.max() + 1.2)
-axa.text(0.755, y[0] + 1.05, "Evaluation protocol (same classifier)", fontsize=5.2,
+axa.text(0.505, y[0] + 1.05, "Evaluation protocol (same classifier)", fontsize=5.2,
          color="#333333", fontweight="bold", va="bottom")
-axa.text(0.755, y[3] + 0.55, "Per held-out VH germline", fontsize=5.2,
+axa.text(0.505, y[3] + 0.55, "Per held-out VH germline", fontsize=5.2,
          color="#333333", fontweight="bold", va="bottom")
 axa.grid(axis="x", lw=0.25, alpha=0.4)
 axa.set_title("Within-CV AUC is an upper bound", fontsize=6.6,
