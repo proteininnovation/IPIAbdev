@@ -7,10 +7,16 @@ build/
 # proprietary / large training data — never commit antibody sequences
 data/
 *.emb.csv
+# runtime model symlinks + DS1 stub xlsx; trained weights live on Zenodo, never in git
+pretrained_202605/
 
 # datasets are downloaded from Zenodo, never committed (see utils/download_ds1_dataset.py)
 tests/*.xlsx
 tests/*.csv
 tests/*_pred*
+tests/interpretability/
 outputs/
 tests/*.log
+
+# editing backups
+*.bak-*
