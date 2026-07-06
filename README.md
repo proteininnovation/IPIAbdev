@@ -104,8 +104,7 @@ delphi/
 │   └── create_subsets.py              # Create CDR3-diverse balanced subsets
 ├── tests/
 │   ├── test_delphi.py                 # Integration test suite  ← Step 3
-│   ├── DS1_psr_500.xlsx               # Test data — 500 PSR antibodies (committed)
-│   └── DS1_psr_5000.xlsx              # Larger test subset (committed)
+│   ├── test_delphi.sh                 # Integration test suite
 ├── data/                              # Training databases (gitignored)
 └── pretrained_202605/                 # IPI pretrained models — download via Step 2
 ```
@@ -171,7 +170,7 @@ env) rather than `python3`, or call `$CONDA_PREFIX/bin/python` directly.
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20785877.svg)](https://doi.org/10.5281/zenodo.20785877)
 
 ```bash
-# Download all 52 pretrained models to pretrained_202605/
+# Download all 52 pretrained models to pretrained_202605/  and public DS1 dataset
 python utils/download_zenodo.py
 
 # Preview what will be downloaded first (recommended)
