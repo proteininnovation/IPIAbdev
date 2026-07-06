@@ -2503,9 +2503,13 @@ class RandomForestModel:
             if override_features:
                 # Strip internal keys before applying to features dict
                 _oh_seq = override_features.pop('_onehot_sequence', None)
-                inst.config['features'].update(override_features)
+                _km_seq = override_features.get('_kmer_sequence', None)   # .get so it persists across folds
+                inst.config['features'].update(
+                    {k: v for k, v in override_features.items() if k != '_kmer_sequence'})
                 if _oh_seq:
                     inst.config.setdefault('onehot', {})['sequence'] = _oh_seq
+                if _km_seq:
+                    inst.config.setdefault('kmer', {})['sequence'] = _km_seq
             inst.task = task
             inst.fb_  = FeatureBuilder(inst.config)   # use inst.config (with overrides)
             # Apply LM-specific hyperparameter profile per fold
