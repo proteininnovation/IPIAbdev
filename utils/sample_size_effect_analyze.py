@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Sample size analysis — Extended Data Figure 4
-Nature Biotechnology format:
+double-column format:
   - Figure width: 183 mm (double-column)
   - Font: Arial 7 pt axis labels, 6 pt tick labels
   - No panel titles (descriptions in legend text only)
@@ -25,7 +25,7 @@ smoothing_window = 5
 low_threshold    = 1000
 mid_threshold    = 5000
 
-# ── Nature Biotech rcParams ───────────────────────────────────────────────────
+# ── double-column rcParams ───────────────────────────────────────────────────
 plt.rcParams.update({
     'font.family':         'sans-serif',
     'font.sans-serif':     ['Arial', 'Helvetica', 'DejaVu Sans'],
@@ -282,7 +282,7 @@ smoothing_window = 5
 low_threshold    = 1000
 mid_threshold    = 5000
 
-# Nature Biotech style
+# publication-quality style
 plt.rcParams.update({
     'font.family':        'sans-serif',
     'font.sans-serif':    ['Arial', 'Helvetica', 'DejaVu Sans'],

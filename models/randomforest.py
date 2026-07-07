@@ -1098,7 +1098,7 @@ class RandomForestModel:
         """
         CDR3 in-silico mutagenesis — RF version.
         Mutates every CDR3 position to all 20 AAs, predicts score,
-        plots 20 x L heatmap per antibody (Nature Biotech style).
+        plots 20 x L heatmap per antibody (publication-quality style).
         Saves TIFFs + PPT.
         """
         if self.model is None or self.fb_ is None:
@@ -2122,7 +2122,7 @@ class RandomForestModel:
         For each antibody and each CDR3 position, substitute all 20 AAs
         and score with the trained RF model.
 
-        Output per antibody (Nature Biotech quality):
+        Output per antibody (double-column quality):
           • {barcode}_cdr3_mutagenesis.{fmt}  — 20×CDR3_len heatmap
         Output overall:
           • cdr3_mutagenesis_all.pptx          — all heatmaps in PPT
@@ -2503,9 +2503,13 @@ class RandomForestModel:
             if override_features:
                 # Strip internal keys before applying to features dict
                 _oh_seq = override_features.pop('_onehot_sequence', None)
-                inst.config['features'].update(override_features)
+                _km_seq = override_features.get('_kmer_sequence', None)   # .get so it persists across folds
+                inst.config['features'].update(
+                    {k: v for k, v in override_features.items() if k != '_kmer_sequence'})
                 if _oh_seq:
                     inst.config.setdefault('onehot', {})['sequence'] = _oh_seq
+                if _km_seq:
+                    inst.config.setdefault('kmer', {})['sequence'] = _km_seq
             inst.task = task
             inst.fb_  = FeatureBuilder(inst.config)   # use inst.config (with overrides)
             # Apply LM-specific hyperparameter profile per fold

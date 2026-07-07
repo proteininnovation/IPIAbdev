@@ -1,0 +1,110 @@
+==============================================================================
+R1: Leave-one-VH-germline-out evaluation (DELPHI developability)
+==============================================================================
+
+[1] Loading and merging data on BARCODE (inner join)
+    embedding rows         : 11265
+    label rows             : 11265
+    matched (inner join)   : 11265
+    emb BARCODEs unmatched : 0
+    label BARCODEs unmatched: 0
+    n_pass (psr_filter==1) : 5925 (0.5260)
+    n_fail (psr_filter==0) : 5340 (0.4740)
+    -> PASS is the MAJORITY class (expected MAJORITY ~0.526)
+    distinct HCDR3 clusters: 7263
+    distinct vh_base       : 8  (['VH1-46', 'VH1-69', 'VH3-15', 'VH3-23', 'VH3-7', 'VH4-34', 'VH4-39', 'VH5-51'])
+
+    Classifier (same config for ALL protocols): xgboost.XGBClassifier (v3.2.0)
+
+==============================================================================
+[3] ANCHOR protocol: StratifiedGroupKFold(10) grouped by HCDR3_CLUSTER_0.8
+==============================================================================
+    fold  1: train=10157  test= 1108  test_pass= 585  test_fail= 523
+    fold  2: train=10194  test= 1071  test_pass= 556  test_fail= 515
+    fold  3: train=10139  test= 1126  test_pass= 585  test_fail= 541
+    fold  4: train=10186  test= 1079  test_pass= 548  test_fail= 531
+    fold  5: train=10125  test= 1140  test_pass= 572  test_fail= 568
+    fold  6: train=10139  test= 1126  test_pass= 613  test_fail= 513
+    fold  7: train=10140  test= 1125  test_pass= 621  test_fail= 504
+    fold  8: train=10135  test= 1130  test_pass= 573  test_fail= 557
+    fold  9: train=10111  test= 1154  test_pass= 640  test_fail= 514
+    fold 10: train=10059  test= 1206  test_pass= 632  test_fail= 574
+
+    AUC_cluster (pooled OOF over all 10 folds) = 0.9648
+
+==============================================================================
+[4] MAIN protocol: LeaveOneGroupOut grouped by BASE vh_scaffold germline
+==============================================================================
+
+    Per-germline results (table restricted to n >= 100):
+    germline        n   pass   fail pass_frac      AUC
+    --------------------------------------------------
+    VH3-23       5451   2087   3364     0.383   0.9461
+    VH1-69       2442   1717    725     0.703   0.7998
+    VH3-7        1298    908    390     0.700   0.9474
+    VH4-34        877    266    611     0.303   0.9436
+    VH5-51        520    489     31     0.940   0.7991
+    VH1-46        378    201    177     0.532   0.8933
+    VH3-15        247    225     22     0.911   0.8741
+
+    Germlines EXCLUDED from table (n < 100) but still in pooled AUC:
+      VH4-39     n=   52 pass=  32 fail=  20 AUC=0.7703
+
+    Pooled AUC_germline_out computed over ALL held-out germlines (8 germlines, all 11265 antibodies).
+    Germlines with n>=100 (in table): ['VH1-46', 'VH1-69', 'VH3-15', 'VH3-23', 'VH3-7', 'VH4-34', 'VH5-51']
+    Germlines with n< 100 (pooled only): ['VH4-39']
+
+    AUC_germline_out (pooled) = 0.9025
+
+==============================================================================
+[5] HEADLINE COMPARISON (identical classifier)
+==============================================================================
+    AUC_cluster      (HCDR3-cluster 10-fold CV) = 0.9648
+    AUC_germline_out (leave-one-VH-germline-out)= 0.9025
+    absolute drop                               = 0.0623
+    (manuscript ED Table 1 reports 0.959 for XGBoost+AbLang2)
+
+==============================================================================
+[6] OPTIONAL protocol: LeaveOneGroupOut grouped by base vh+vl pair
+==============================================================================
+    n pairs (LOGO folds) = 39; pooled over all 11265 antibodies.
+
+    Per-pair results (n >= 100):
+    pair                      n   pass   fail      AUC
+    ----------------------------------------------------
+    VH3-23 | VK3-20        2633    732   1901   0.9878
+    VH3-23 | VK4-1         1068    569    499   0.9701
+    VH3-23 | VK1-39         918    425    493   0.9429
+    VH1-69 | VK1-39         784    373    411   0.7407
+    VH3-23 | VK3-15         751    300    451   0.9887
+    VH1-69 | VK3-15         714    590    124   0.8285
+    VH4-34 | VK3-20         534     63    471   0.9600
+    VH3-7 | VK1-39          401    253    148   0.8850
+    VH1-69 | VK3-20         376    238    138   0.7935
+    VH3-7 | VL1-51          355    322     33   0.9626
+    VH3-7 | VK3-15          350    250    100   0.9794
+    VH1-69 | VL1-51         316    295     21   0.7947
+    VH1-69 | VK4-1          243    213     30   0.5598
+    VH5-51 | VK3-15         193    192      1   0.4115
+    VH5-51 | VK1-39         171    149     22   0.7053
+    VH1-46 | VL1-51         158    110     48   0.9333
+    VH1-46 | VK3-15         156     70     86   0.9105
+    VH3-7 | VK3-20          145     56     89   0.9595
+    VH4-34 | VK4-1          137    101     36   0.7382
+    VH5-51 | VL1-51         119    116      3   0.8477
+    VH4-34 | VK3-15         116     55     61   0.9648
+    VH3-15 | VK1-39         101     83     18   0.8086
+
+    AUC_pair_out (pooled) = 0.9480
+    absolute drop vs AUC_cluster = 0.0168
+
+==============================================================================
+SUMMARY (all values from this run)
+==============================================================================
+  classifier              : xgboost.XGBClassifier (v3.2.0)
+  n matched               : 11265  (pass=5925, fail=5340)
+  AUC_cluster   (anchor)  : 0.9648
+  AUC_germline_out (main) : 0.9025
+  drop (cluster - germ)   : 0.0623
+  AUC_pair_out  (optional): 0.9480
+==============================================================================

@@ -1719,6 +1719,14 @@ def main():
 
     args    = parser.parse_args()
 
+    # --lm kmer_vh / kmer_vhvl: aliases selecting the k-mer sequence region (kmer.sequence).
+    # Normalize to "kmer" so every downstream --lm gate passes, and stash the region to apply
+    # to the model config at the train/kfold dispatch points below (parallels onehot_vh/onehot_cdr3).
+    args._kmer_seq = None
+    if args.lm and args.lm.lower() in ("kmer_vh", "kmer_vhvl"):
+        args._kmer_seq = {"kmer_vh": "VH", "kmer_vhvl": "VHVL"}[args.lm.lower()]
+        args.lm = "kmer"
+
     # ── --list-models: read config/model_registry.yaml and exit ──────────
     if getattr(args, 'list_models', False):
         # Detect which filters the user explicitly passed (vs argparse defaults)
@@ -1852,6 +1860,7 @@ def main():
                 _xgb_feat = {'embedding': False, 'biophysical': True, 'kmer': False, 'onehot': False}
             elif _lm_k == "kmer":
                 _xgb_feat = {'embedding': False, 'biophysical': False, 'kmer': True, 'onehot': False}
+                if getattr(args, '_kmer_seq', None): _xgb_feat['_kmer_sequence'] = args._kmer_seq
             elif _lm_k in ("onehot","onehot_vh","onehot_cdr3","onehot_hcdr3"):
                 _oh_seq = {"onehot":"VHVL","onehot_vh":"VH","onehot_cdr3":"HCDR3","onehot_hcdr3":"HCDR3"}.get(_lm_k,"VHVL")
                 _xgb_feat = {'embedding': False, 'biophysical': False, 'kmer': False, 'onehot': True, '_onehot_sequence': _oh_seq}
@@ -1877,6 +1886,7 @@ def main():
                 _rf_feat_override = {'embedding': False, 'biophysical': True, 'kmer': False}
             elif _lm_k == "kmer":
                 _rf_feat_override = {'embedding': False, 'biophysical': False, 'kmer': True}
+                if getattr(args, '_kmer_seq', None): _rf_feat_override['_kmer_sequence'] = args._kmer_seq
             elif _lm_k in ("none","seq"):
                 _rf_feat_override = {'embedding': False}
             elif _lm_k in ("onehot","onehot_vh","onehot_cdr3","onehot_hcdr3"):
@@ -1938,6 +1948,7 @@ def main():
                 model.config['features'].update({'embedding': False, 'biophysical': True, 'kmer': False, 'onehot': False})
             elif _lm_xgb == "kmer":
                 model.config['features'].update({'embedding': False, 'biophysical': False, 'kmer': True, 'onehot': False})
+                if getattr(args, '_kmer_seq', None): model.config.setdefault('kmer', {})['sequence'] = args._kmer_seq
             elif _lm_xgb in ("onehot","onehot_vh","onehot_cdr3","onehot_hcdr3"):
                 _oh_seq_xgb = {"onehot":"VHVL","onehot_vh":"VH","onehot_cdr3":"HCDR3","onehot_hcdr3":"HCDR3"}.get(_lm_xgb,"VHVL")
                 model.config['features'].update({'embedding': False, 'biophysical': False, 'kmer': False, 'onehot': True})
@@ -1955,6 +1966,7 @@ def main():
                 model.config['features'].update({'embedding': False, 'biophysical': True, 'kmer': False})
             elif _lm == "kmer":
                 model.config['features'].update({'embedding': False, 'biophysical': False, 'kmer': True})
+                if getattr(args, '_kmer_seq', None): model.config.setdefault('kmer', {})['sequence'] = args._kmer_seq
             elif _lm in ("none","seq"):
                 model.config['features']['embedding'] = False
             elif _lm in ("onehot","onehot_vh","onehot_cdr3","onehot_hcdr3"):

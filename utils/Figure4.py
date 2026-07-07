@@ -1,6 +1,6 @@
 """
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║   figure4_bar.py  —  Delphi Platform  ·  Nature Biotech Figure 4          ║
+║   figure4_bar.py  —  Delphi Platform  ·  double-column Figure 4          ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 
 QUICK START
@@ -20,7 +20,7 @@ QUICK START
 
 DESCRIPTION
 ───────────
-Generates a 4-panel Nature Biotech figure (183 x 216 mm, 300 DPI) showing:
+Generates a 4-panel double-column figure (183 x 216 mm, 300 DPI) showing:
 
   a  IPI PSR Dataset · 10-Fold HCDR3-Stratified CV
      Grouped bar chart — AUC-ROC + Accuracy per Language Model,
@@ -526,7 +526,7 @@ def save_combined(fig, stem, dpi):
 
 def make_combined_figure(groups_a, groups_b, auc_mat, rho_mat, pval_mat, out, dpi):
     """
-    Generate combined 4-panel Nature Biotech Figure 4.
+    Generate combined 4-panel double-column Figure 4.
     Layout:
       Row 1: [panel a (wide) | panel b (narrow)]
       Row 2: [panel c (full width)             ]

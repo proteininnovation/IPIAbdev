@@ -1,5 +1,5 @@
 """
-Delphi — Figure 3: t-SNE PLM Embedding Quality (Nature Biotechnology format)
+Delphi — Figure 3: t-SNE PLM Embedding Quality (double-column format)
 ================================================================================
 Generates Figure 3: t-SNE visualizations of IPI PSR antibody embeddings
 colored by VH germline (top row, panels a–e) and VL germline (bottom row,
@@ -10,7 +10,7 @@ Layout  : 2 rows × 5 columns = 10 panels
 Width   : double column (183 mm)
 Colors  : Qualitative palette (colorblind-safe, up to 9 germlines)
 
-Nature Biotechnology figure specifications:
+double-column figure specifications:
   - Font       : Arial, 7pt axis labels, 6pt tick labels, 8pt panel letters
   - Resolution : 300 dpi (TIFF) submission | 600 dpi final
   - Width      : double column = 183 mm
@@ -62,7 +62,7 @@ DATA_FILE  = "data/ipi_antibodydb.xlsx"
 OUT_DIR    = Path("images/figures_natbiotech")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# ─── Nature Biotechnology style constants ────────────────────────────────────
+# ─── publication-quality style constants ────────────────────────────────────
 MM_TO_INCH  = 1 / 25.4
 DOUBLE_COL  = 183 * MM_TO_INCH
 MAX_DEPTH   = 247 * MM_TO_INCH
@@ -528,7 +528,7 @@ def generate_figure3(
 def _save_figure(fig, prefix: str, dpi: int = DPI_SUBMIT):
     tiff_path = OUT_DIR / f"{prefix}.tiff"
     pdf_path  = OUT_DIR / f"{prefix}.pdf"
-    # LZW-compressed TIFF: lossless, accepted by Nature Biotech, and avoids the
+    # LZW-compressed TIFF: lossless, accepted by double-column, and avoids the
     # Classic TIFF 4 GB IFD-offset overflow (struct 'L' pack error) that occurs
     # when the uncompressed bitmap from savefig exceeds ~4 GB at submission DPI.
     fig.savefig(
@@ -578,7 +578,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Figure 3 t-SNE — 5 PLMs incl. IgBert (Nature Biotechnology format)"
+        description="Figure 3 t-SNE — 5 PLMs incl. IgBert (double-column format)"
     )
     parser.add_argument("--data_path",     type=str,   default=MAIN_PATH)
     parser.add_argument("--data_file",     type=str,   default=DATA_FILE)

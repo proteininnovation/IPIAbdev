@@ -10,15 +10,15 @@
 # DOI      : 10.5281/zenodo.14735846
 # License  : MIT License (redistribution permitted with attribution)
 # Citation : Chen HT, Zhang Y, Huang J et al. Human antibody polyreactivity
-#            is governed primarily by the VH gene germline. Cell Reports, 2024.
-#            PMC11564698
+#            is governed primarily by the heavy-chain complementarity-determining regions. Cell Rep. 43, 114801 (2024).
+#            doi:10.1016/j.celrep.2024.114801  (PMC11564698)
 #
 # Usage:
 #   python utils/download_ds1_dataset.py
 #
 # Output:
 #   data/DS1.xlsx          — full dataset (gitignored, large)
-#   tests/DS1_5000.xlsx    — 5,000-antibody test subset (committed to GitHub)
+#   tests/DS1_5000.xlsx    — 5,000-antibody test subset (gitignored; downloaded on demand, not committed)
 # ══════════════════════════════════════════════════════════════════════════════
 
 import os
@@ -46,6 +46,7 @@ ZENODO_URL     = ("https://zenodo.org/records/14735846/files/"
 SUBSET_SIZE    = 5000
 RANDOM_STATE   = 42
 CDR3_THRESHOLD = 0.8
+_NCPU          = max(1, (os.cpu_count() or 2) - 1)   # parallelize ANARCI's hmmscan calls
 _TESTS_DIR     = Path(__file__).resolve().parent.parent / "tests"
 OUT_RAW        = _TESTS_DIR / "DS1_raw.xlsx"
 OUT_FULL       = _TESTS_DIR / "DS1.xlsx"
@@ -120,7 +121,7 @@ def extract_hcdr3(vh_sequences: list, scheme: str = "imgt") -> list:
             continue
         try:
             results, _, _ = _anarci_fn(
-                batch, scheme=scheme, output=False, assign_germline=False)
+                batch, scheme=scheme, output=False, assign_germline=False, ncpu=_NCPU)
         except Exception as e:
             print(f"\n  WARNING: ANARCI batch failed: {e}")
             cdr3_seqs.extend([""] * len(batch))
@@ -136,7 +137,10 @@ def extract_hcdr3(vh_sequences: list, scheme: str = "imgt") -> list:
             cdr3 = ""
             for pos_info, aa in numbering:
                 try:
-                    pos = int(pos_info[1])
+                    # numbering element is ((position, insertion_code), aa), e.g. ((105, ' '), 'A');
+                    # the IMGT position is pos_info[0]. Reading pos_info[1] took the insertion code,
+                    # and int(' ') raised for every residue, silently emptying every HCDR3.
+                    pos = int(pos_info[0])
                     if CDR3_START <= pos <= CDR3_END and aa != "-":
                         cdr3 += aa
                 except (ValueError, TypeError):
@@ -342,7 +346,7 @@ def main():
     print()
     print("══════════════════════════════════════════════════════════════════")
     print("  DELPHI — DS1 Dataset Download")
-    print("  Source : Chen et al. 2024  (Cell Reports, PMC11564698)")
+    print("  Source : Chen et al. 2024  (Cell Reports, doi:10.1016/j.celrep.2024.114801  (PMC11564698))")
     print("  DOI    : 10.5281/zenodo.14735846  |  License: MIT")
     print("══════════════════════════════════════════════════════════════════")
     print()

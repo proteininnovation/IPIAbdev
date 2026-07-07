@@ -1148,10 +1148,14 @@ class XGBoostModel:
         _tmp_inst.fb_    = FeatureBuilder(_tmp_inst.config)
         if override_features:
             _oh_seq_tmp = override_features.get('_onehot_sequence')
+            _km_seq_tmp = override_features.get('_kmer_sequence')
             _tmp_inst.config['features'].update(
-                {k: v for k, v in override_features.items() if k != '_onehot_sequence'})
+                {k: v for k, v in override_features.items()
+                 if k not in ('_onehot_sequence', '_kmer_sequence')})
             if _oh_seq_tmp:
                 _tmp_inst.config.setdefault('onehot', {})['sequence'] = _oh_seq_tmp
+            if _km_seq_tmp:
+                _tmp_inst.config.setdefault('kmer', {})['sequence'] = _km_seq_tmp
         # For feature building only — no search yet, so no params to protect
         _tmp_inst.apply_lm_profile(embedding_lm, logger=logger)
         X_all = _tmp_inst.fb_.fit_transform(X_df, embeddings)

@@ -1,0 +1,15 @@
+{
+  "_source": "revision2_redteam/NEW_RESULTS/R1_germline_out.py (XGBoost+AbLang2, verified deterministic, re-run reproduces)",
+  "anchor_cluster_auc": 0.9648,
+  "germline_out_auc": 0.9025,
+  "pair_out_auc": 0.9480,
+  "per_germline": [
+    {"name": "VH5-51", "n": 520,  "pass": 489,  "fail": 31,   "pass_frac": 0.940, "auc": 0.7991},
+    {"name": "VH3-15", "n": 247,  "pass": 225,  "fail": 22,   "pass_frac": 0.911, "auc": 0.8741},
+    {"name": "VH1-69", "n": 2442, "pass": 1717, "fail": 725,  "pass_frac": 0.703, "auc": 0.7998},
+    {"name": "VH3-7",  "n": 1298, "pass": 908,  "fail": 390,  "pass_frac": 0.700, "auc": 0.9474},
+    {"name": "VH1-46", "n": 378,  "pass": 201,  "fail": 177,  "pass_frac": 0.532, "auc": 0.8933},
+    {"name": "VH3-23", "n": 5451, "pass": 2087, "fail": 3364, "pass_frac": 0.383, "auc": 0.9461},
+    {"name": "VH4-34", "n": 877,  "pass": 266,  "fail": 611,  "pass_frac": 0.303, "auc": 0.9436}
+  ]
+}

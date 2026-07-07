@@ -206,7 +206,7 @@ import matplotlib.pyplot as plt
 from scipy import stats
 
 
-# ── Nature Biotechnology style ────────────────────────────────────────────────
+# ── publication-quality style ────────────────────────────────────────────────
 _MM         = 1 / 25.4
 DOUBLE_COL  = 183 * _MM
 FONT_FAMILY = 'Arial'

@@ -21,7 +21,7 @@ Outputs
                • Threshold_Metrics (all methods × all metrics)
                • Predictions_with_OptimalLabels (original data +
                  optimal_label columns for each threshold method)
-  3. TIFF    — Nature Biotechnology-style ROC figure (300 DPI)
+  3. TIFF    — publication-quality style ROC figure (300 DPI)
   4. TIFF    — Score density plot by class (300 DPI)
   5. PNG     — Quick-view preview for both figures (200 DPI)
 """
@@ -149,14 +149,14 @@ def find_thresholds(y_true, y_score, cost_fp=1.0, cost_fn=3.0):
 # ══════════════════════════════════════════════════════════════════════════════
 # SCORE DENSITY PLOT
 # ══════════════════════════════════════════════════════════════════════════════
-# SCORE DENSITY PLOT — Nature Biotech style
+# SCORE DENSITY PLOT — publication-quality style
 # ══════════════════════════════════════════════════════════════════════════════
 
 def plot_score_density(y_true, y_score, thresh_dict,
                        out_tiff, label_col='', auc_val=None,
                        file_label=''):
     """
-    Score distribution as bar histogram by class — Nature Biotech style.
+    Score distribution as bar histogram by class — publication-quality style.
     Pure histogram — no KDE overlay. See plot_kde_density() for smooth curves.
     """
     _nature_rcparams()
@@ -220,7 +220,7 @@ def plot_kde_density(y_true, y_score, thresh_dict,
                      out_tiff, label_col='', auc_val=None,
                      file_label=''):
     """
-    Score distribution as KDE density curves by class — Nature Biotech style.
+    Score distribution as KDE density curves by class — publication-quality style.
     Smooth curves only — no histogram bars. See plot_score_density() for bars.
     Requires scipy; falls back gracefully if absent.
     """
@@ -301,7 +301,7 @@ def plot_kde_density(y_true, y_score, thresh_dict,
 
 
 def _nature_rcparams():
-    """Apply Nature Biotech rcParams — call at start of every plot function."""
+    """Apply double-column rcParams — call at start of every plot function."""
     plt.rcParams.update({
         'font.family':      'sans-serif',
         'font.sans-serif':  ['Arial', 'Helvetica', 'DejaVu Sans'],
@@ -342,7 +342,7 @@ def _save_fig(fig, out_tiff, label=''):
 def plot_roc_nature(y_true, y_score, auc_val, thresh_dict,
                     out_tiff, label='', cost_fn=3.0, cost_fp=1.0):
     """
-    ROC curve meeting Nature Biotechnology / Nature Methods figure standards:
+    ROC curve meeting double-column / Nature Methods figure standards:
       - 3.5 x 3.5 inches  (single column width)
       - 300 DPI TIFF + 200 DPI PNG preview
       - Arial / Helvetica, 7 pt body, clean white background
@@ -691,7 +691,7 @@ def evaluate(file, target, score_col, cost_fp=1.0, cost_fn=3.0,
     for suffix, (method_name, t) in label_cols.items():
         print(f"[eval]     {model_prefix}_{suffix}  (t={t:.4f}, method={method_name})")
 
-    # ── Nature Biotech ROC ────────────────────────────────────────────────────
+    # ── double-column ROC ────────────────────────────────────────────────────
     _label = (f"{os.path.basename(file).replace('.xlsx','').replace('.csv','')}"
               f" | {_label_col}")
     plot_roc_nature(y, s, auc_val, thresh_dict,
@@ -776,7 +776,7 @@ def evaluate(file, target, score_col, cost_fp=1.0, cost_fn=3.0,
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='Evaluate model: AUC + optimal thresholds + Nature-style ROC',
+        description='Evaluate model: AUC + optimal thresholds + publication-quality ROC',
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument('--file',        required=True)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Figure6_interpretability.py — DELPHI · Nature Biotechnology Figure 6
+Figure6_interpretability.py — DELPHI · double-column Figure 6
 =====================================================================
 
 QUICK START
