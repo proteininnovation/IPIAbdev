@@ -1,16 +1,16 @@
 """
-Extended Data Figure 4 (publication-quality) — full external-clinical-validation grid.
-  a  AUC-ROC heatmap     : every language model × every assay readout
+Extended Data Figure 4 (publication-quality) — external-transfer grid.
+  a  AUC-ROC heatmap     : every encoding × the two Jain readouts
   b  Spearman ρ heatmap  : P(Pass) score vs continuous assay, with significance stars
 
-Main Figure 5b summarises external validation for the deployed model
-(Transformer + AbLang2). This ED figure preserves the full grid that was in the
-original Figure 4 (every LM × every assay) so nothing is lost.
+Main Figure 4 summarises external transfer for the deployed model (Transformer
++ AbLang2). This figure reports Jain AUCs and the full encoding-by-readout rank
+correlation grid.
 
-Data logic (score_col / safe_auc / safe_rho_p / heatmap_matrices / thresholds)
-is copied VERBATIM from figures_nature_v1/code/fig4.py — no thresholds or
-formulas changed. Only the within-distribution CV / cross-dataset bars are
-dropped here; those already live in the main figures.
+The Jain endpoints use the study-specific developability flags reported by Jain
+et al. GDPa1 and GDPa3 have no comparable binary boundary and are evaluated by
+rank correlation only. GDPa3 one-hot values are unavailable because verified
+CDR H3 sequences were not available for that analysis.
 """
 import sys, os, warnings
 import numpy as np, pandas as pd
@@ -58,17 +58,15 @@ def safe_rho_p(df, sc, col):
 
 def heatmap_matrices(jain, g1, g3):
     n = len(HM_LM_ORDER)
-    auc = np.full((n, 6), np.nan); rho = np.full((n, 6), np.nan); pv = np.full((n, 6), np.nan)
+    auc = np.full((n, 2), np.nan); rho = np.full((n, 6), np.nan); pv = np.full((n, 6), np.nan)
     for i, lm in enumerate(HM_LM_ORDER):
         c = score_col(lm)
         if c in jain.columns:
             auc[i, 0] = safe_auc(jain, c, 'PSR_SMP_Score'); auc[i, 1] = safe_auc(jain, c, 'ELISA', thresh=THRESH_ELISA)
             rho[i, 0], pv[i, 0] = safe_rho_p(jain, c, 'PSR_SMP_Score'); rho[i, 1], pv[i, 1] = safe_rho_p(jain, c, 'ELISA')
         if c in g1.columns:
-            auc[i, 2] = safe_auc(g1, c, 'polyreactivity_prscore_ova_avg'); auc[i, 3] = safe_auc(g1, c, 'polyreactivity_prscore_cho_avg')
             rho[i, 2], pv[i, 2] = safe_rho_p(g1, c, 'polyreactivity_prscore_ova_avg'); rho[i, 3], pv[i, 3] = safe_rho_p(g1, c, 'polyreactivity_prscore_cho_avg')
-        if c in g3.columns:
-            auc[i, 4] = safe_auc(g3, c, 'polyreactivity_prscore_ova_avg', min_fail=3); auc[i, 5] = safe_auc(g3, c, 'polyreactivity_prscore_cho_avg')
+        if c in g3.columns and lm != 'onehot':
             rho[i, 4], pv[i, 4] = safe_rho_p(g3, c, 'polyreactivity_prscore_ova_avg'); rho[i, 5], pv[i, 5] = safe_rho_p(g3, c, 'polyreactivity_prscore_cho_avg')
     return auc, rho, pv
 
@@ -129,15 +127,14 @@ fig = plt.figure(figsize=(ok.DOUBLE, 150 * ok.MM))
 gs = GridSpec(2, 1, figure=fig, height_ratios=[1.0, 1.0],
               hspace=0.95, left=0.135, right=0.94, top=0.90, bottom=0.105)
 
-# AUC panel restricted to the two Jain 2017 readouts (their own developability flags).
-# GDPa columns use THRESH=0.27, which is the Jain PSR flag, not valid for Ginkgo's ELISA
-# PR-CHO scale -> shown by Spearman only in panel b.
+# AUC is restricted to the two Jain 2017 readouts and their own developability
+# flags. Ginkgo readouts are shown by Spearman correlation only in panel b.
 axa = fig.add_subplot(gs[0, 0])
-draw_heatmap(axa, auc_mat[:, :2], HM_LM_DISPLAY, DATASETS[:2], "Jain 2017 clinical panel · AUC-ROC",
+draw_heatmap(axa, auc_mat, HM_LM_DISPLAY, DATASETS[:2], "Jain 2017 clinical panel · AUC-ROC",
              vmin=0.20, vmax=0.90, vcenter=0.5, cbar_label='AUC-ROC', fmt='.3f', letter='a', col_sep=(),
              subtitle=f"Jain developability flags: PSR SMP < {THRESH}; ELISA < {THRESH_ELISA}. Ginkgo cohorts: rank correlation only (b)")
 axb = fig.add_subplot(gs[1, 0])
-draw_heatmap(axb, rho_mat, HM_LM_DISPLAY, DATASETS, "External clinical validation · Spearman ρ",
+draw_heatmap(axb, rho_mat, HM_LM_DISPLAY, DATASETS, "External-panel transfer · Spearman ρ",
              vmin=-0.80, vmax=0.20, vcenter=0.0, cbar_label='Spearman ρ', fmt='.2f',
              cbar_ticks=[-0.8, -0.4, 0.0, 0.2], pval=pv, letter='b',
              subtitle="P(Pass) vs polyreactivity assay score   (*** p<0.001  ** p<0.01  * p<0.05)")
