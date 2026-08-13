@@ -12,11 +12,13 @@ DELPHI deployed score column (all external tables):
   higher score => more PASS => LESS polyreactive.
 """
 import numpy as np, pandas as pd
+from pathlib import Path
 from scipy.stats import spearmanr, fisher_exact
 from sklearn.metrics import roc_auc_score, average_precision_score
 
-DELPHI = "/Users/Andre.Teixeira/Library/CloudStorage/GoogleDrive-andre.teixeira@proteininnovation.org/.shortcut-targets-by-id/1pzqwNBoHnehFObY0PzrgligSRKxpVPPY/DELPHI"
-DATA = f"{DELPHI}/data"
+PAPER = Path(__file__).resolve().parents[1]
+SHARE = PAPER / "data" / "shareable"
+LOCAL = PAPER / "data" / "local_only" / "raw"
 
 DELPHI_SC = "transformer_lm_ablang_ipi_psr_trainset_score"
 THRESH = 0.27
@@ -72,9 +74,9 @@ print("=" * 90)
 print("PART A: EXTERNAL COHORTS  (DELPHI = transformer_lm_ablang_ipi_psr_trainset_score)")
 print("=" * 90)
 
-jain = pd.read_excel(f"{DATA}/Jain2017_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx")
-g1   = pd.read_excel(f"{DATA}/GDPa1_v1.3_20251027_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx")
-g3   = pd.read_excel(f"{DATA}/GDPa3_20260106_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx")
+jain = pd.read_excel(SHARE / "Jain2017_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx")
+g1   = pd.read_excel(SHARE / "GDPa1_v1.3_20251027_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx")
+g3   = pd.read_excel(SHARE / "GDPa3_20260106_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx")
 
 # Each cohort spec: (name, dataframe, assay_continuous_col, binary_pass_col_or_None)
 # y_pass: 1 = PASS (less polyreactive). If binary col given use it; else (assay < THRESH).
@@ -203,8 +205,8 @@ print("\n" + "=" * 90)
 print("PART C: DUAL-LIABILITY CROSS-ASSAY TEST  (PSR vs SEC, HCDR3 charge)")
 print("=" * 90)
 
-sec = pd.read_excel(f"{DATA}/ipi_sec_5000.xlsx", sheet_name="Sheet1")
-psrtrain = pd.read_excel(f"{DATA}/ipi_psr_trainset.xlsx", sheet_name="Sheet1")
+sec = pd.read_excel(LOCAL / "ipi_sec_5000.xlsx", sheet_name="Sheet1")
+psrtrain = pd.read_excel(LOCAL / "ipi_psr_trainset.xlsx", sheet_name="Sheet1")
 
 # --- VERIFY sec_filter polarity vs retention_time / peak_area (1 should = Pass = better SEC)
 # peak_area_pct & retention_time_mins are object cols: most rows are single numbers, but a few

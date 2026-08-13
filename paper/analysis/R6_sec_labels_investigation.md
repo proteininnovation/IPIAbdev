@@ -149,8 +149,7 @@ the same; that figure reads `sec_retention_time_figure1.xlsx`, see §3.)
 
 ## 2. Pipeline: how the SEC PASS labels were constructed and whether the denoiser touched them
 
-Pipeline at `/Users/Andre.Teixeira/temp/delphi` (= `<DELPHI>/delphi` symlink, confirmed:
-`delphi -> /Users/Andre.Teixeira/temp/delphi`).
+Pipeline at `<DELPHI_REPOSITORY>` (the working repository used for the analysis).
 
 ### 2a. The k-mer consensus filter is a row-SELECTOR, not a label-MAKER — and it's optional
 
@@ -296,8 +295,8 @@ SEC is a physically-labeled, separately-trained assay.
 - `<DELPHI>/data/ipi_sec_val.xlsx` — 1803×101; `sec_filter`, `sec_retention_time` (raw), `xgboost_antiberta2-cssp_label` (ML pred).
 - `<DELPHI>/data/ipi_sec_5000.xlsx.{ablang,antiberta2,antiberta2-cssp,antiberty,igbert}.emb.csv` — embeddings, no labels.
 - `<DELPHI>/data/ED_Table3_SEC.xlsx`, `<DELPHI>/backup/ED_Table1_SEC.xlsx` — results tables, no raw labels.
-- `/Users/Andre.Teixeira/temp/delphi/utils/build_balanced_dataset_v4.py:1-54, 451-535` — consensus = optional row selector on existing label.
-- `/Users/Andre.Teixeira/temp/delphi/delphi.py:831-890` (`load_data`, `y = df[label_col].values`); training path has no consensus/denoise call.
-- `/Users/Andre.Teixeira/temp/delphi/config/model_registry.yaml:225` — SEC trainset = `manuscripts/data/ipi_sec_5000.xlsx`.
-- `/Users/Andre.Teixeira/temp/delphi/utils/Figure1_datasetcurration.py:413-459` — SEC trace format / multi-peak = FAIL.
-- `/Users/Andre.Teixeira/temp/delphi/README.md:60, 577, 586-612, 880, 1059` — curation framing, label def, optional build-dataset, cross-assay claim.
+- `<DELPHI_REPOSITORY>/utils/build_balanced_dataset_v4.py:1-54, 451-535` — consensus = optional row selector on existing label.
+- `<DELPHI_REPOSITORY>/delphi.py:831-890` (`load_data`, `y = df[label_col].values`); training path has no consensus/denoise call.
+- `<DELPHI_REPOSITORY>/config/model_registry.yaml:225` — SEC trainset = `manuscripts/data/ipi_sec_5000.xlsx`.
+- `<DELPHI_REPOSITORY>/utils/Figure1_datasetcurration.py:413-459` — SEC trace format / multi-peak = FAIL.
+- `<DELPHI_REPOSITORY>/README.md:60, 577, 586-612, 880, 1059` — curation framing, label def, optional build-dataset, cross-assay claim.

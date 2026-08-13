@@ -3,13 +3,15 @@
 R7 SEC mean-AUC definition, R4 PSR multiplicity facts + holdout AUC CIs.
 Every number printed here is read from source files; nothing invented."""
 import numpy as np, pandas as pd
+from pathlib import Path
 from sklearn.metrics import roc_auc_score
-D = "/Users/Andre.Teixeira/Library/CloudStorage/GoogleDrive-andre.teixeira@proteininnovation.org/.shortcut-targets-by-id/1pzqwNBoHnehFObY0PzrgligSRKxpVPPY/DELPHI/data"
+PAPER = Path(__file__).resolve().parents[1]
+D = PAPER / "data" / "local_only" / "raw"
 PLMS = {"AbLang2","AntiBERTy","AntiBERTa2","AntiBERTa2-CSSP","IgBert"}
 
 print("="*78); print("R8 | VH germline reconciliation (replicates fig1.py load_germline EXACTLY)")
 print("="*78)
-df = pd.read_excel(f"{D}/ipi_psr_trainset.xlsx").dropna(subset=["psr_filter","vh_scaffold"])
+df = pd.read_excel(D / "ipi_psr_trainset.xlsx").dropna(subset=["psr_filter","vh_scaffold"])
 df["vh_scaffold"] = df["vh_scaffold"].astype(str).replace({"VH3-23_A":"VH3-23","VH3-7_A":"VH3-7"})
 overall = df["psr_filter"].mean()
 g = df.groupby("vh_scaffold")["psr_filter"].agg(rate="mean", n="count").sort_values("rate", ascending=False)
@@ -26,16 +28,16 @@ print(f"  of these, present with n>=100: {[x for x in claimed5 if x in present]}
 print(f"  EXTRA germlines present (n>=100) NOT in the claimed 5: {[x for x in present if x not in claimed5]}")
 print(f"  claimed-but-absent (n>=100): {[x for x in claimed5 if x not in present]}")
 # also raw (unmerged) to see sub-alleles
-raw = pd.read_excel(f"{D}/ipi_psr_trainset.xlsx").dropna(subset=["psr_filter","vh_scaffold"])
+raw = pd.read_excel(D / "ipi_psr_trainset.xlsx").dropna(subset=["psr_filter","vh_scaffold"])
 rawc = raw["vh_scaffold"].astype(str).value_counts()
 print(f"\nRAW vh_scaffold value_counts (unmerged, all):\n{rawc.to_string()}")
 # VL germlines
-vl = pd.read_excel(f"{D}/ipi_psr_trainset.xlsx").dropna(subset=["vl_scaffold"])
+vl = pd.read_excel(D / "ipi_psr_trainset.xlsx").dropna(subset=["vl_scaffold"])
 print(f"\nVL scaffold value_counts:\n{vl['vl_scaffold'].astype(str).value_counts().to_string()}")
 
 print("\n"+"="*78); print("R7 | SEC mean-AUC definition (ED_Table3_SEC.xlsx)")
 print("="*78)
-t3 = pd.read_excel(f"{D}/ED_Table3_SEC.xlsx", header=1).dropna(how="all")
+t3 = pd.read_excel(D / "ED_Table3_SEC.xlsx", header=1).dropna(how="all")
 t3.columns = ["Architecture","LM","Acc","Prec","Rec","F1","AUC"]
 t3["Architecture"] = t3["Architecture"].ffill()
 t3["AUC"] = pd.to_numeric(t3["AUC"], errors="coerce")
@@ -53,7 +55,7 @@ print("non-PLM SEC rows:"); print(nonplm[["Architecture","LMs","AUC"]].to_string
 
 print("\n"+"="*78); print("R4 | PSR 25-combo facts (ED_Table1_PSR.xlsx)")
 print("="*78)
-t1 = pd.read_excel(f"{D}/ED_Table1_PSR.xlsx", header=1).dropna(how="all")
+t1 = pd.read_excel(D / "ED_Table1_PSR.xlsx", header=1).dropna(how="all")
 t1.columns = ["Architecture","LM","Acc","Prec","Rec","F1","AUC"]
 t1["Architecture"]=t1["Architecture"].ffill(); t1["AUC"]=pd.to_numeric(t1["AUC"],errors="coerce")
 t1["LMs"]=t1["LM"].astype(str).str.strip()
@@ -73,7 +75,7 @@ for _,r in nonplm1.iterrows():
 
 print("\n"+"="*78); print("R4 supp | held-out 20% AUC + bootstrap 95% CI (validation CSV; fig5 bootstrap)")
 print("="*78)
-v = pd.read_csv(f"{D}/IPI_PSR_TRAINSET_validation20pct_muliple_models_output.csv")
+v = pd.read_csv(D / "IPI_PSR_TRAINSET_validation20pct_muliple_models_output.csv")
 y = v["psr_filter"].astype(int).values
 rng = np.random.default_rng(0)
 def auc_ci(s):

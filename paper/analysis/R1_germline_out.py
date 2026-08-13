@@ -17,16 +17,16 @@ Same classifier config for every protocol. Pooled out-of-fold AUC each time.
 Every number printed is computed from this run. No values are hard-coded.
 """
 import sys
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import StratifiedGroupKFold, LeaveOneGroupOut
 from sklearn.metrics import roc_auc_score
 
-ROOT = ("/Users/Andre.Teixeira/Library/CloudStorage/"
-        "GoogleDrive-andre.teixeira@proteininnovation.org/"
-        ".shortcut-targets-by-id/1pzqwNBoHnehFObY0PzrgligSRKxpVPPY/DELPHI")
-EMB_CSV = ROOT + "/data/ipi_psr_trainset.xlsx.ablang.emb.csv"
-LABEL_XLSX = ROOT + "/data/ipi_psr_trainset.xlsx"
+PAPER = Path(__file__).resolve().parents[1]
+LOCAL = PAPER / "data" / "local_only"
+EMB_CSV = LOCAL / "embeddings" / "ipi_psr_trainset.xlsx.ablang.emb.csv"
+LABEL_XLSX = LOCAL / "raw" / "ipi_psr_trainset.xlsx"
 
 RANDOM_STATE = 42
 EMB_DIM = 480
