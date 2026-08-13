@@ -21,12 +21,12 @@ from sklearn.metrics import roc_curve, roc_auc_score, precision_recall_curve, av
 from sklearn.calibration import calibration_curve
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import okabe_style as ok
+from paths import data_file, ensure_output
 warnings.filterwarnings("ignore")
 
-DELPHI = "/Users/Andre.Teixeira/Library/CloudStorage/GoogleDrive-andre.teixeira@proteininnovation.org/.shortcut-targets-by-id/1pzqwNBoHnehFObY0PzrgligSRKxpVPPY/DELPHI"
-DATA = f"{DELPHI}/data"
-SUPPL = f"{DELPHI}/suppl_doc_table_figure"
-OUT = f"{DELPHI}/revision2_redteam/figures/output"
+DATA = str(data_file("IPI_PSR_TRAINSET_validation20pct_muliple_models_output.csv").parent)
+SUPPL = str(data_file("learning_curve_ipi_replicated_summary.csv").parent)
+OUT = str(ensure_output())
 ok.set_style(base_pt=6.5)
 
 # ── representative models (column -> display name), shared across a/b/c ──────────
@@ -41,7 +41,7 @@ COLS = ok.qualitative(5)                      # blue, orange, green, purple, sky
 LINESTYLES = ["-", "--", "-.", ":", (0, (3, 1, 1, 1))]   # greyscale-safe distinction
 
 # ── load 20% internal validation; truth psr_filter (1 = Pass), higher score = Pass
-val = pd.read_csv(f"{DATA}/IPI_PSR_TRAINSET_validation20pct_muliple_models_output.csv")
+val = pd.read_csv(data_file("IPI_PSR_TRAINSET_validation20pct_muliple_models_output.csv"))
 Y = val["psr_filter"].astype(int).values     # 1 = Pass
 
 RNG = np.random.default_rng(0)
@@ -91,7 +91,7 @@ for (col, name), c, ls in zip(MODELS, COLS, LINESTYLES):
 
 
 # ── panel d: 10-fold CV AUC, grouped by architecture ────────────────────────────
-cv = pd.read_excel(f"{DATA}/Figure4_data.xlsx", sheet_name="Fig4A_IPI_10fold_CV", skiprows=1)
+cv = pd.read_excel(data_file("Figure4_data.xlsx"), sheet_name="Fig4A_IPI_10fold_CV", skiprows=1)
 cv.columns = cv.columns.str.strip()
 cv["Architecture"] = cv["Architecture"].ffill()
 cv = cv.dropna(subset=["Language Model"]).rename(columns={"Language Model": "LM"})
@@ -127,8 +127,8 @@ for col, name in cm_models:
 #    subsample + CDR3-cluster split + init per training-set size (TransformerLM + AbLang2).
 #    IPI: 17 sizes × 12 reps; DS1: 12 reps (≤26k) / 4 (>26k). Replaces the old single-draw
 #    points + quadratic fit, which were noise-dominated below ~2,000.
-ipi = pd.read_csv(f"{SUPPL}/learning_curve_ipi_replicated_summary.csv").sort_values("size")
-ds1 = pd.read_csv(f"{SUPPL}/learning_curve_DS1_replicated_summary.csv").sort_values("size")
+ipi = pd.read_csv(data_file("learning_curve_ipi_replicated_summary.csv")).sort_values("size")
+ds1 = pd.read_csv(data_file("learning_curve_DS1_replicated_summary.csv")).sort_values("size")
 
 
 # =====================================================================================

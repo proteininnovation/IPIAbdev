@@ -8,7 +8,7 @@ Faithful to utils/Extended_fig3.py; restyled (sequential blue heatmaps instead o
 viridis; Okabe-Ito for the 9-model KDE).
 Data: figures_tables/Suppl_Table2_prediction_score_val.xlsx
 """
-import sys, os, re, warnings
+import argparse, sys, os, re, warnings
 import numpy as np, pandas as pd
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -20,9 +20,13 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import okabe_style as ok
 warnings.filterwarnings("ignore")
 
-DELPHI = "/Users/Andre.Teixeira/Library/CloudStorage/GoogleDrive-andre.teixeira@proteininnovation.org/.shortcut-targets-by-id/1pzqwNBoHnehFObY0PzrgligSRKxpVPPY/DELPHI"
-XLSX = f"{DELPHI}/figures_tables/Suppl_Table2_prediction_score_val.xlsx"
-OUT = f"{DELPHI}/revision2_redteam/figures/output"
+parser = argparse.ArgumentParser(description="Generate updated DELPHI Extended Data Figure 3.")
+parser.add_argument("--xlsx", required=True)
+parser.add_argument("--output-dir", required=True)
+args = parser.parse_args()
+XLSX = os.path.abspath(args.xlsx)
+OUT = os.path.abspath(args.output_dir)
+os.makedirs(OUT, exist_ok=True)
 ok.set_style(base_pt=6)
 ARCH = {'Trans': 0, 'CNN': 1, 'XGB': 2, 'RF': 3}
 EMB = {'AbLang2': 0, 'IgBert': 1, 'AntiBERTy': 2, 'AntiBERTa2': 3, 'AntiBERTa2-CSSP': 4,
@@ -43,6 +47,12 @@ def shorten(col):
 def load(sheet):
     df = pd.read_excel(XLSX, sheet_name=sheet)
     sc = [c for c in df.columns if c.endswith('_train_score')]
+    if sheet == 'ipi_psr_trainset_val':
+        # Manuscript benchmark contains 25 models. The extra RF + OneHot column
+        # in the supplied workbook is intentionally excluded by author decision.
+        sc = [c for c in sc if c != 'rf_onehot_ipi_psr_trainset_train_score']
+        if len(sc) != 25:
+            raise ValueError(f"Expected 25 IPI models after RF+OneHot exclusion, found {len(sc)}")
     s = df[sc].copy(); s.columns = [shorten(c) for c in sc]
     return s
 

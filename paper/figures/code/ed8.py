@@ -12,7 +12,7 @@ is copied VERBATIM from figures_nature_v1/code/fig4.py — no thresholds or
 formulas changed. Only the within-distribution CV / cross-dataset bars are
 dropped here; those already live in the main figures.
 """
-import sys, os, warnings
+import argparse, sys, os, warnings
 import numpy as np, pandas as pd
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -25,9 +25,14 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import okabe_style as ok
 warnings.filterwarnings("ignore")
 
-DELPHI = "/Users/Andre.Teixeira/Library/CloudStorage/GoogleDrive-andre.teixeira@proteininnovation.org/.shortcut-targets-by-id/1pzqwNBoHnehFObY0PzrgligSRKxpVPPY/DELPHI"
-DATA = f"{DELPHI}/data"
-OUT = f"{DELPHI}/revision2_redteam/figures/output"
+parser = argparse.ArgumentParser(description="Generate updated DELPHI Extended Data Figure 4.")
+parser.add_argument("--jain", required=True)
+parser.add_argument("--gdpa1", required=True)
+parser.add_argument("--gdpa3", required=True)
+parser.add_argument("--output-dir", required=True)
+args = parser.parse_args()
+OUT = os.path.abspath(args.output_dir)
+os.makedirs(OUT, exist_ok=True)
 ok.set_style(base_pt=6.5)
 
 # ── constants (verbatim from v1 fig4.py) ──────────────────────────────────────
@@ -120,22 +125,29 @@ def draw_heatmap(ax, mat, row_labels, col_labels, title, vmin, vmax, vcenter,
 
 
 # ── build ─────────────────────────────────────────────────────────────────────
-jain = pd.read_excel(f"{DATA}/Jain2017_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx")
-g1 = pd.read_excel(f"{DATA}/GDPa1_v1.3_20251027_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx")
-g3 = pd.read_excel(f"{DATA}/GDPa3_20260106_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx")
+jain = pd.read_excel(args.jain)
+g1 = pd.read_excel(args.gdpa1)
+g3 = pd.read_excel(args.gdpa3)
 auc_mat, rho_mat, pv = heatmap_matrices(jain, g1, g3)
 
 fig = plt.figure(figsize=(ok.DOUBLE, 150 * ok.MM))
 gs = GridSpec(2, 1, figure=fig, height_ratios=[1.0, 1.0],
               hspace=0.95, left=0.135, right=0.94, top=0.90, bottom=0.105)
 
-# AUC panel restricted to the two Jain 2017 readouts (their own developability flags).
-# GDPa columns use THRESH=0.27, which is the Jain PSR flag, not valid for Ginkgo's ELISA
-# PR-CHO scale -> shown by Spearman only in panel b.
+# AUC panel restricted to the two Jain 2017 readouts and their developability flags.
 axa = fig.add_subplot(gs[0, 0])
+# Keep this two-column panel compact instead of stretching two cells across the page.
+axa_box = axa.get_position()
+compact_width = axa_box.width * 0.46
+axa.set_position([
+    axa_box.x0 + (axa_box.width - compact_width) / 2,
+    axa_box.y0,
+    compact_width,
+    axa_box.height,
+])
 draw_heatmap(axa, auc_mat[:, :2], HM_LM_DISPLAY, DATASETS[:2], "Jain 2017 clinical panel · AUC-ROC",
              vmin=0.20, vmax=0.90, vcenter=0.5, cbar_label='AUC-ROC', fmt='.3f', letter='a', col_sep=(),
-             subtitle=f"Jain developability flags: PSR SMP < {THRESH}; ELISA < {THRESH_ELISA}. Ginkgo cohorts: rank correlation only (b)")
+             subtitle=f"Jain developability flags: PSR SMP < {THRESH}; ELISA < {THRESH_ELISA}")
 axb = fig.add_subplot(gs[1, 0])
 draw_heatmap(axb, rho_mat, HM_LM_DISPLAY, DATASETS, "External clinical validation · Spearman ρ",
              vmin=-0.80, vmax=0.20, vcenter=0.0, cbar_label='Spearman ρ', fmt='.2f',

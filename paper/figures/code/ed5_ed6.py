@@ -17,11 +17,13 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.lines import Line2D
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import okabe_style as ok
+from paths import DATA_ROOT, ensure_output
 warnings.filterwarnings("ignore")
 
-DELPHI = "/Users/Andre.Teixeira/Library/CloudStorage/GoogleDrive-andre.teixeira@proteininnovation.org/.shortcut-targets-by-id/1pzqwNBoHnehFObY0PzrgligSRKxpVPPY/DELPHI"
-AR = f"{DELPHI}/GENERATED_NBT_revision/analysis_runs"
-OUT = f"{DELPHI}/revision2_redteam/figures/output"
+PUBLIC_AR = DATA_ROOT / "shareable" / "interpretability"
+PRIVATE_AR = DATA_ROOT / "local_only" / "interpretability"
+AR = str(PUBLIC_AR if PUBLIC_AR.exists() else PRIVATE_AR)
+OUT = str(ensure_output())
 ok.set_style(base_pt=6.5)
 RNG = np.random.default_rng(0)
 N_SHOW = 1500
@@ -81,7 +83,7 @@ def ig_beeswarm(ax, df, n_top=22):
 
 
 def build(tag, db_stem, label, outname):
-    base = f"{AR}/interp_{tag}_{db_stem}/interp_{tag}_biophysical_biophysical_onehot_{db_stem}_beeswarm"
+    base = f"{AR}/interp_{tag}_biophysical_biophysical_onehot_{db_stem}_beeswarm"
     rf = pd.read_csv(f"{base}_RF_{tag}.csv")
     xgb = pd.read_csv(f"{base}_XGBoost_{tag}.csv")
     tr = pd.read_csv(f"{base}_Transformer_{tag}.csv")
@@ -112,5 +114,5 @@ def build(tag, db_stem, label, outname):
     print(outname, "done")
 
 
-build("psr_filter", "ipi_psr", "PSR", "ED_Fig6")   # renumbered: SHAP/IG beeswarm PSR -> Extended Data Fig. 6
+build("psr_filter", "ipi_psr_trainset", "PSR", "ED_Fig6")   # renumbered: SHAP/IG beeswarm PSR -> Extended Data Fig. 6
 build("sec_filter", "ipi_sec_5000", "SEC", "ED_Fig7")   # renumbered: SHAP/IG beeswarm SEC -> Extended Data Fig. 7

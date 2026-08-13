@@ -25,10 +25,10 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import cross_val_score, StratifiedKFold
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import okabe_style as ok
+from paths import data_file, ensure_output
 warnings.filterwarnings("ignore"); np.random.seed(42)
 
-DELPHI = "/Users/Andre.Teixeira/Library/CloudStorage/GoogleDrive-andre.teixeira@proteininnovation.org/.shortcut-targets-by-id/1pzqwNBoHnehFObY0PzrgligSRKxpVPPY/DELPHI"
-DATA = f"{DELPHI}/data"; OUT = f"{DELPHI}/revision2_redteam/figures/output"
+DATA = str(data_file("ipi_psr_trainset.xlsx").parent); OUT = str(ensure_output())
 DATA_FILE = "ipi_psr_trainset.xlsx"
 ok.set_style(base_pt=6.5)
 PLMS   = ["ablang", "igbert", "antiberty", "antiberta2", "antiberta2-cssp"]
@@ -95,7 +95,7 @@ vh_cmap = color_map(data[VH_COL])
 tsne_xy, aligned = {}, {}
 for plm in PLMS:
     print("t-SNE", plm)
-    emb = pd.read_csv(f"{DATA}/{DATA_FILE}.{plm}.emb.csv").set_index("BARCODE")
+    emb = pd.read_csv(data_file(f"{DATA_FILE}.{plm}.emb.csv")).set_index("BARCODE")
     want = set(data["BARCODE"])
     missing = want - set(emb.index)
     if missing:                       # NO silent drop: every antibody must be embedded

@@ -23,15 +23,19 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.lines import Line2D
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import okabe_style as ok
+from paths import DATA_ROOT, ensure_output
 warnings.filterwarnings("ignore")
 
-DELPHI = "/Users/Andre.Teixeira/Library/CloudStorage/GoogleDrive-andre.teixeira@proteininnovation.org/.shortcut-targets-by-id/1pzqwNBoHnehFObY0PzrgligSRKxpVPPY/DELPHI"
-AR = f"{DELPHI}/GENERATED_NBT_revision/analysis_runs"
-OUT = f"{DELPHI}/revision2_redteam/figures/output"
-PSR_DIR = f"{AR}/interp_psr_filter_ipi_psr"
-SEC_DIR = f"{AR}/interp_sec_filter_ipi_sec_5000"
-PSR_SHAP = f"{PSR_DIR}/shap_xgb_FULL_psr_filter_biophysical_ipi_psr.csv"
-SEC_SHAP = f"{SEC_DIR}/shap_xgb_FULL_sec_filter_biophysical_ipi_sec_5000.csv"
+PUBLIC_AR = DATA_ROOT / "shareable" / "interpretability"
+PRIVATE_AR = DATA_ROOT / "local_only" / "interpretability"
+AR = str(PUBLIC_AR if PUBLIC_AR.exists() else PRIVATE_AR)
+OUT = str(ensure_output())
+PSR_DIR = AR
+SEC_DIR = AR
+PSR_SHAP = str(PUBLIC_AR / "shap_xgb_FULL_psr_filter_biophysical_ipi_psr_trainset_sequence_free.csv") \
+    if PUBLIC_AR.exists() else f"{PSR_DIR}/shap_xgb_FULL_psr_filter_biophysical_ipi_psr_trainset.csv"
+SEC_SHAP = str(PUBLIC_AR / "shap_xgb_FULL_sec_filter_biophysical_ipi_sec_5000_sequence_free.csv") \
+    if PUBLIC_AR.exists() else f"{SEC_DIR}/shap_xgb_FULL_sec_filter_biophysical_ipi_sec_5000.csv"
 ok.set_style(base_pt=6.5)
 
 AAORD = list("RKH" "DE" "WFY" "AGILMPV" "STNQC")
@@ -45,12 +49,26 @@ REGIONS = ["HCDR3", "VH", "VL"]
 
 
 def load(dir_, tag):
-    ig = pd.read_csv(f"{dir_}/ig_FULL_{tag}_onehot_{os.path.basename(dir_).replace('interp_'+tag+'_','')}.csv")
-    ra = pd.read_csv(f"{dir_}/region_attribution_{tag}_{os.path.basename(dir_).replace('interp_'+tag+'_','')}.csv")
+    stem = "ipi_psr_trainset" if tag == "psr_filter" else "ipi_sec_5000"
+    assay = "psr" if tag == "psr_filter" else "sec"
+    public_pos = PUBLIC_AR / f"fig6_{assay}_ig_by_position.csv"
+    public_heat = PUBLIC_AR / f"fig6_{assay}_ig_by_aa_position.csv"
+    if public_pos.exists() and public_heat.exists():
+        ig = {"position": pd.read_csv(public_pos), "heat": pd.read_csv(public_heat)}
+        ra = pd.read_csv(PUBLIC_AR / f"region_attribution_{tag}_{stem}.csv")
+        return ig, ra
+    ig = pd.read_csv(f"{dir_}/ig_FULL_{tag}_onehot_{stem}.csv")
+    ra = pd.read_csv(f"{dir_}/region_attribution_{tag}_{stem}.csv")
     return ig, ra
 
 
 def positional(ig, min_n=10):
+    if isinstance(ig, dict):
+        data = ig["position"].copy()
+        data.loc[data["n"] < min_n, "mean_abs_ig"] = np.nan
+        cdr3 = data[data["region"] == "CDR3"].sort_values("position")["mean_abs_ig"].to_numpy()
+        vh = data[data["region"] == "VH"].sort_values("position")["mean_abs_ig"].to_numpy()
+        return cdr3, vh
     cdr3 = [c for c in ig.columns if c.startswith("ig_CDR3_")]
     vh = [c for c in ig.columns if c.startswith("ig_VH_")]
     def _mean(cols):                                  # mean |IG| per position, blanking
@@ -62,6 +80,15 @@ def positional(ig, min_n=10):
 
 
 def heat(ig, pmax=20):
+    if isinstance(ig, dict):
+        data = ig["heat"]
+        M = np.full((len(AAORD), pmax), np.nan)
+        for ai, aa in enumerate(AAORD):
+            sub = data[(data["aa"] == aa) & (data["position"] <= pmax)].set_index("position")
+            for position in range(1, pmax + 1):
+                if position in sub.index and int(sub.at[position, "n"]) >= 10:
+                    M[ai, position - 1] = float(sub.at[position, "mean_signed_ig"])
+        return M
     M = np.full((len(AAORD), pmax), np.nan)
     seqs = ig["hcdr3_seq"].astype(str).values
     for p in range(1, pmax + 1):
@@ -119,7 +146,9 @@ def dependence(ax, shap_csv, fcol, scol, xlabel, ylabel, title, vline=True, inte
 psr_ig, psr_ra = load(PSR_DIR, "psr_filter")
 sec_ig, sec_ra = load(SEC_DIR, "sec_filter")
 
-fig = plt.figure(figsize=(ok.DOUBLE, 212 * ok.MM))
+# The final manuscript render is 215 mm high. Keeping that explicit here makes
+# the generated PNG dimensions match the submitted source figure exactly.
+fig = plt.figure(figsize=(ok.DOUBLE, 215 * ok.MM))
 outer = GridSpec(4, 1, figure=fig, left=0.070, right=0.972, top=0.965, bottom=0.058,
                  hspace=0.58, height_ratios=[0.82, 1.16, 0.90, 0.94])
 row_ab = outer[0].subgridspec(1, 2, wspace=0.28)

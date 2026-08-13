@@ -8,7 +8,7 @@ Demoted out of the main figure set (old main Fig 5) into Extended Data.
 Data logic identical to figures_nature_v1/code/fig5.py.
 Data: figures_tables/Suppl_Table2_prediction_score_val.xlsx  (sheets: ipi_psr_trainset_val, DS1)
 """
-import sys, os, warnings
+import argparse, sys, os, warnings
 import numpy as np, pandas as pd
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -19,9 +19,13 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import okabe_style as ok
 warnings.filterwarnings("ignore")
 
-DELPHI = "/Users/Andre.Teixeira/Library/CloudStorage/GoogleDrive-andre.teixeira@proteininnovation.org/.shortcut-targets-by-id/1pzqwNBoHnehFObY0PzrgligSRKxpVPPY/DELPHI"
-XLSX = f"{DELPHI}/figures_tables/Suppl_Table2_prediction_score_val.xlsx"
-OUT = f"{DELPHI}/revision2_redteam/figures/output"
+parser = argparse.ArgumentParser(description="Generate updated DELPHI Extended Data Figure 5.")
+parser.add_argument("--xlsx", required=True)
+parser.add_argument("--output-dir", required=True)
+args = parser.parse_args()
+XLSX = os.path.abspath(args.xlsx)
+OUT = os.path.abspath(args.output_dir)
+os.makedirs(OUT, exist_ok=True)
 ok.set_style(base_pt=6.5)
 PASS, FAIL = ok.PASS, ok.FAIL
 STD_COL, Y_COL = ok.OI_GREY, "#222222"
@@ -59,7 +63,10 @@ def draw(ax, s, y, title, letter):
     # threshold labels: std anchored left of its line, Youden right of its line,
     # so they never sit on top of each other even when the two lines coincide
     ax.text(STD - 0.03, 1.12, "0.5", color=STD_COL, ha='right', va='bottom', fontsize=5, fontweight='bold')
-    ax.text(ty + 0.03, 1.12, f"Y={ty:.2f}", color=Y_COL, ha='left', va='bottom', fontsize=5)
+    if ty > 0.82:
+        ax.text(ty - 0.03, 1.12, f"Y={ty:.2f}", color=Y_COL, ha='right', va='bottom', fontsize=5)
+    else:
+        ax.text(ty + 0.03, 1.12, f"Y={ty:.2f}", color=Y_COL, ha='left', va='bottom', fontsize=5)
     ax.set_title(title, fontsize=6.3, fontweight='bold', pad=3)
     ax.grid(alpha=0.22, lw=0.3, axis='y')
     ax.text(0.05, 0.97, f"AUC {auc:.3f}\nAcc {a_std:.2f}/{a_y:.2f}\nn {int((y==1).sum()):,}/{int((y==0).sum()):,}",
@@ -73,7 +80,10 @@ ds1 = pd.read_excel(XLSX, sheet_name='DS1')
 print(f"IPI val n={len(ipi):,}  DS1 n={len(ds1):,}")
 
 fig, axes = plt.subplots(2, 5, figsize=(ok.DOUBLE, 95 * ok.MM), sharex=True)
-fig.subplots_adjust(left=0.085, right=0.985, top=0.90, bottom=0.155, hspace=0.42, wspace=0.28)
+# Reserve enough space for the two multiline row labels at journal page size.
+# The previous 0.085 margin clipped "IPI validation" and "DS1 public dataset"
+# after the standalone figure was placed into the compiled Extended Data PDF.
+fig.subplots_adjust(left=0.14, right=0.985, top=0.90, bottom=0.155, hspace=0.42, wspace=0.30)
 
 for row, (df, letters) in enumerate([(ipi, [p[2] for p in PANELS]), (ds1, LETTERS2)]):
     yv = df['psr_filter'].values.astype(int)
@@ -83,7 +93,7 @@ for row, (df, letters) in enumerate([(ipi, [p[2] for p in PANELS]), (ds1, LETTER
             ax.set_axis_off(); continue
         s = df[sc].values; m = ~np.isnan(s) & ~np.isnan(yv)
         draw(ax, s[m], yv[m], title, letters[col])
-        ok.panel_label(fig, ax, letters[col], dx=-0.018, dy=0.030, size=8)
+        ok.panel_label(fig, ax, letters[col], dx=-0.027, dy=0.030, size=8)
 
 axes[0, 0].set_ylabel("IPI validation\n(within-distribution)\n\nRel. frequency", fontsize=6.3)
 axes[1, 0].set_ylabel("DS1 public dataset\n(cross-library)\n\nRel. frequency", fontsize=6.3)

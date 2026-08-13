@@ -17,12 +17,12 @@ from sklearn.metrics import roc_auc_score
 from scipy.stats import fisher_exact
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import okabe_style as ok
+from paths import data_file, ensure_output
 warnings.filterwarnings("ignore")
 
-DELPHI = "/Users/Andre.Teixeira/Library/CloudStorage/GoogleDrive-andre.teixeira@proteininnovation.org/.shortcut-targets-by-id/1pzqwNBoHnehFObY0PzrgligSRKxpVPPY/DELPHI"
-DATA = f"{DELPHI}/data"
-OUT = f"{DELPHI}/revision2_redteam/figures/output"
-R1J = f"{DELPHI}/revision2_redteam/NEW_RESULTS/R1_results.json"
+DATA = str(data_file("ipi_sec_5000.xlsx").parent)
+OUT = str(ensure_output())
+R1J = str(data_file("R1_results.json"))
 ok.set_style(base_pt=6.5)
 PASS, FAIL, NEUTRAL = ok.PASS, ok.FAIL, ok.NEUTRAL
 CHARGE = ok.OI_PURPLE

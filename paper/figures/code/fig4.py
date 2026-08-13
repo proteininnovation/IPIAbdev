@@ -19,7 +19,7 @@ Every point estimate carries a bootstrap 95% CI (2000 resamples, rng seed 0).
 No number is invented — all read from the data files.
 Data: data/{Figure4_data.xlsx, Jain2017_*, GDPa1_*, GDPa3_*}.
 """
-import sys, os, warnings
+import argparse, sys, os, warnings
 import numpy as np, pandas as pd
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -31,9 +31,15 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import okabe_style as ok
 warnings.filterwarnings("ignore")
 
-DELPHI = "/Users/Andre.Teixeira/Library/CloudStorage/GoogleDrive-andre.teixeira@proteininnovation.org/.shortcut-targets-by-id/1pzqwNBoHnehFObY0PzrgligSRKxpVPPY/DELPHI"
-DATA = f"{DELPHI}/data"
-OUT = f"{DELPHI}/revision2_redteam/figures/output"
+parser = argparse.ArgumentParser(description="Generate updated DELPHI Main Figure 4.")
+parser.add_argument("--figure4-data", required=True)
+parser.add_argument("--jain", required=True)
+parser.add_argument("--gdpa1", required=True)
+parser.add_argument("--gdpa3", required=True)
+parser.add_argument("--output-dir", required=True)
+args = parser.parse_args()
+OUT = os.path.abspath(args.output_dir)
+os.makedirs(OUT, exist_ok=True)
 ok.set_style(base_pt=6.5)
 PASS, FAIL, NEUTRAL = ok.PASS, ok.FAIL, ok.NEUTRAL
 GREY = ok.OI_GREY
@@ -108,14 +114,14 @@ def rho_signed_ci(s, a):
 
 
 # ── load ──────────────────────────────────────────────────────────────────────
-f4 = pd.read_excel(f"{DATA}/Figure4_data.xlsx", sheet_name="Fig4B_Cross_Dataset", skiprows=1)
+f4 = pd.read_excel(args.figure4_data, sheet_name="Fig4B_Cross_Dataset", skiprows=1)
 f4.columns = f4.columns.str.strip()
 f4["Condition"] = f4["Condition"].ffill()
 f4 = f4.dropna(subset=["Language Model"])
 
-jain = pd.read_excel(f"{DATA}/Jain2017_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx")
-g1 = pd.read_excel(f"{DATA}/GDPa1_v1.3_20251027_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx")
-g3 = pd.read_excel(f"{DATA}/GDPa3_20260106_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx")
+jain = pd.read_excel(args.jain)
+g1 = pd.read_excel(args.gdpa1)
+g3 = pd.read_excel(args.gdpa3)
 
 
 def cohort_arrays(df, assay_col, thr=THRESH, binary_col=None):
@@ -148,7 +154,7 @@ COHORTS = [
 # FIGURE
 # ════════════════════════════════════════════════════════════════════════════
 fig, axes = plt.subplots(2, 3, figsize=(ok.DOUBLE, 120 * ok.MM))
-fig.subplots_adjust(left=0.075, right=0.985, top=0.905, bottom=0.085,
+fig.subplots_adjust(left=0.12, right=0.985, top=0.905, bottom=0.085,
                     hspace=0.55, wspace=0.40)
 (axa, axb, axc), (axd, axe, axf) = axes
 
@@ -174,9 +180,9 @@ def panel_a(ax):
                label="IPI→DS1  (designed→natural)", clip_on=False)
     ax.set_yticks(y); ax.set_yticklabels(lms, fontsize=5.8)
     ax.set_ylim(-0.6, len(lms) - 0.4 + 1.0)        # headroom above the top bar for the legend
-    ax.set_xlim(0.5, 0.97)
+    ax.set_xlim(0.70, 0.97)
+    ax.set_xticks([0.70, 0.80, 0.90])
     ax.set_xlabel("Transfer AUC", fontsize=6.5)
-    ax.axvline(0.5, color="#cccccc", lw=0.5, ls=":")
     ax.grid(axis="x", lw=0.25, alpha=0.4)
     ax.set_title("Cross-library transfer", fontsize=6.8, fontweight="bold",
                  loc="left", pad=3)

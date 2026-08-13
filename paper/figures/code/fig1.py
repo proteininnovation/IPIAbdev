@@ -24,11 +24,11 @@ from matplotlib.patches import Rectangle, FancyBboxPatch, FancyArrowPatch
 import seaborn as sns
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import okabe_style as ok
+from paths import data_file, ensure_output
 warnings.filterwarnings("ignore")
 
-DELPHI = "/Users/Andre.Teixeira/Library/CloudStorage/GoogleDrive-andre.teixeira@proteininnovation.org/.shortcut-targets-by-id/1pzqwNBoHnehFObY0PzrgligSRKxpVPPY/DELPHI"
-DATA = f"{DELPHI}/data"
-OUT  = f"{DELPHI}/revision2_redteam/figures/output"
+DATA = str(data_file("ipi_psr_trainset.xlsx").parent)
+OUT = str(ensure_output())
 ok.set_style(base_pt=7)
 PASS, FAIL, NEUTRAL = ok.PASS, ok.FAIL, ok.NEUTRAL
 

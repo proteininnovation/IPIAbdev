@@ -15,9 +15,10 @@ values invented. Example antibodies are selected by predicted score (PASS = high
 true-pass; FAIL = a true-fail in P(Pass) 0.2-0.45, the informative-mutagenesis band).
 """
 import sys, os, warnings
-sys.path.insert(0, "/Users/Andre.Teixeira/temp/delphi")
-os.chdir("/Users/Andre.Teixeira/temp/delphi")
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from paths import REPO_ROOT, DATA_ROOT, data_file, ensure_output
+sys.path.insert(0, str(REPO_ROOT))
+os.chdir(REPO_ROOT)
 import numpy as np, pandas as pd
 import torch
 import matplotlib; matplotlib.use("Agg")
@@ -30,9 +31,8 @@ from models.transformer_onehot import TransformerOneHotModel, one_hot_encode_seq
 import okabe_style as ok
 warnings.filterwarnings("ignore")
 
-DELPHI = "/Users/Andre.Teixeira/Library/CloudStorage/GoogleDrive-andre.teixeira@proteininnovation.org/.shortcut-targets-by-id/1pzqwNBoHnehFObY0PzrgligSRKxpVPPY/DELPHI"
-MODELS = "/Users/Andre.Teixeira/temp/delphi/pretrained_202605"
-OUT = f"{DELPHI}/revision2_redteam/figures/output"
+MODELS = str(DATA_ROOT / "local_only" / "models")
+OUT = str(ensure_output())
 ok.set_style(base_pt=6.5)
 AMINO = "ACDEFGHIKLMNPQRSTVWY"
 AA_IDX = {a: i for i, a in enumerate(AMINO)}
@@ -48,12 +48,18 @@ def seqs(d):
 
 
 def compute_ig(m, vh, vl, cdr3):
-    enc_h = torch.from_numpy(one_hot_encode_sequence_2d(vh, m.max_heavy_len)).float()
-    enc_c = torch.from_numpy(one_hot_encode_sequence_2d(cdr3, m.max_hcdr3_len)).float()
+    # torch.from_numpy can fail in environments where PyTorch and NumPy were
+    # loaded from different ABI builds. Constructing from the nested values is
+    # slower for these tiny tensors but portable and numerically identical.
+    def as_float_tensor(encoded):
+        return torch.tensor(encoded.tolist(), dtype=torch.float32)
+
+    enc_h = as_float_tensor(one_hot_encode_sequence_2d(vh, m.max_heavy_len))
+    enc_c = as_float_tensor(one_hot_encode_sequence_2d(cdr3, m.max_hcdr3_len))
     if m._vh_only():
         enc_hl = enc_h.unsqueeze(0).to(m.device)
     else:
-        enc_l = torch.from_numpy(one_hot_encode_sequence_2d(vl or "", m.max_light_len)).float()
+        enc_l = as_float_tensor(one_hot_encode_sequence_2d(vl or "", m.max_light_len))
         enc_hl = torch.cat([enc_h, enc_l], 0).unsqueeze(0).to(m.device)
     enc_c = enc_c.unsqueeze(0).to(m.device)
     m.model.eval()
@@ -133,8 +139,8 @@ def draw_mut(ax, H, cdr3, fig):
 print("loading models + data ...")
 m_psr = TransformerOneHotModel.load(f"{MODELS}/FINAL_psr_filter_onehot_transformer_onehot_ipi_psr_trainset.pt")
 m_sec = TransformerOneHotModel.load(f"{MODELS}/FINAL_sec_filter_onehot_transformer_onehot_ipi_sec_5000.pt")
-psr = pd.read_excel(f"{DELPHI}/data/ipi_psr_trainset.xlsx").dropna(subset=["psr_filter"]).set_index("BARCODE")
-sec = pd.read_excel(f"{DELPHI}/data/ipi_sec_5000.xlsx").dropna(subset=["sec_filter"]).set_index("BARCODE")
+psr = pd.read_excel(data_file("ipi_psr_trainset.xlsx")).dropna(subset=["psr_filter"]).set_index("BARCODE")
+sec = pd.read_excel(data_file("ipi_sec_5000.xlsx")).dropna(subset=["sec_filter"]).set_index("BARCODE")
 
 fig = plt.figure(figsize=(ok.DOUBLE, 165 * ok.MM))
 gs = GridSpec(2, 3, figure=fig, width_ratios=[1.0, 1.0, 1.25], left=0.075, right=0.95,
