@@ -1,0 +1,244 @@
+{
+  "source_directory": "paper/data/local_only/interpretability",
+  "policy": "No literal IPI VH, VL, HSEQ, LSEQ, CDR3, or HCDR3 sequences; sequence-bearing barcodes removed.",
+  "files": [
+    {
+      "file": "fig6_psr_ig_by_position.csv",
+      "rows": 160,
+      "columns": [
+        "assay",
+        "region",
+        "position",
+        "mean_abs_ig",
+        "n"
+      ]
+    },
+    {
+      "file": "fig6_psr_ig_by_aa_position.csv",
+      "rows": 500,
+      "columns": [
+        "assay",
+        "position",
+        "aa",
+        "mean_signed_ig",
+        "n"
+      ]
+    },
+    {
+      "file": "fig6_sec_ig_by_position.csv",
+      "rows": 160,
+      "columns": [
+        "assay",
+        "region",
+        "position",
+        "mean_abs_ig",
+        "n"
+      ]
+    },
+    {
+      "file": "fig6_sec_ig_by_aa_position.csv",
+      "rows": 500,
+      "columns": [
+        "assay",
+        "position",
+        "aa",
+        "mean_signed_ig",
+        "n"
+      ]
+    },
+    {
+      "file": "region_attribution_psr_filter_ipi_psr_trainset.csv",
+      "rows": 7,
+      "columns": [
+        "method",
+        "region",
+        "fraction_of_mass"
+      ]
+    },
+    {
+      "file": "region_attribution_sec_filter_ipi_sec_5000.csv",
+      "rows": 7,
+      "columns": [
+        "method",
+        "region",
+        "fraction_of_mass"
+      ]
+    },
+    {
+      "file": "shap_xgb_FULL_psr_filter_biophysical_ipi_psr_trainset_sequence_free.csv",
+      "rows": 3000,
+      "columns": [
+        "model",
+        "true_label",
+        "pred_prob",
+        "shap_cdr3_length",
+        "shap_cdr3_pi",
+        "shap_cdr3_charge",
+        "shap_cdr3_hydrophobicity",
+        "shap_cdr3_aromaticity",
+        "shap_cdr3_instability",
+        "shap_cdr3_frac_charged",
+        "shap_cdr3_frac_hydrophobic",
+        "shap_cdr3_D",
+        "shap_cdr3_E",
+        "shap_cdr3_R",
+        "shap_cdr3_K",
+        "shap_cdr3_H",
+        "shap_cdr3_W",
+        "shap_cdr3_Y",
+        "shap_cdr3_F",
+        "shap_cdr3_G",
+        "shap_cdr3_P",
+        "shap_cdr3_C",
+        "shap_vh_length",
+        "shap_vh_cdr3_length_ratio",
+        "shap_vh_charge",
+        "shap_vh_hydrophobicity",
+        "fval_cdr3_length",
+        "fval_cdr3_pi",
+        "fval_cdr3_charge",
+        "fval_cdr3_hydrophobicity",
+        "fval_cdr3_aromaticity",
+        "fval_cdr3_instability",
+        "fval_cdr3_frac_charged",
+        "fval_cdr3_frac_hydrophobic",
+        "fval_cdr3_D",
+        "fval_cdr3_E",
+        "fval_cdr3_R",
+        "fval_cdr3_K",
+        "fval_cdr3_H",
+        "fval_cdr3_W",
+        "fval_cdr3_Y",
+        "fval_cdr3_F",
+        "fval_cdr3_G",
+        "fval_cdr3_P",
+        "fval_cdr3_C",
+        "fval_vh_length",
+        "fval_vh_cdr3_length_ratio",
+        "fval_vh_charge",
+        "fval_vh_hydrophobicity"
+      ]
+    },
+    {
+      "file": "shap_xgb_FULL_sec_filter_biophysical_ipi_sec_5000_sequence_free.csv",
+      "rows": 3000,
+      "columns": [
+        "model",
+        "true_label",
+        "pred_prob",
+        "shap_cdr3_length",
+        "shap_cdr3_pi",
+        "shap_cdr3_charge",
+        "shap_cdr3_hydrophobicity",
+        "shap_cdr3_aromaticity",
+        "shap_cdr3_instability",
+        "shap_cdr3_frac_charged",
+        "shap_cdr3_frac_hydrophobic",
+        "shap_cdr3_D",
+        "shap_cdr3_E",
+        "shap_cdr3_R",
+        "shap_cdr3_K",
+        "shap_cdr3_H",
+        "shap_cdr3_W",
+        "shap_cdr3_Y",
+        "shap_cdr3_F",
+        "shap_cdr3_G",
+        "shap_cdr3_P",
+        "shap_cdr3_C",
+        "shap_vh_length",
+        "shap_vh_cdr3_length_ratio",
+        "shap_vh_charge",
+        "shap_vh_hydrophobicity",
+        "fval_cdr3_length",
+        "fval_cdr3_pi",
+        "fval_cdr3_charge",
+        "fval_cdr3_hydrophobicity",
+        "fval_cdr3_aromaticity",
+        "fval_cdr3_instability",
+        "fval_cdr3_frac_charged",
+        "fval_cdr3_frac_hydrophobic",
+        "fval_cdr3_D",
+        "fval_cdr3_E",
+        "fval_cdr3_R",
+        "fval_cdr3_K",
+        "fval_cdr3_H",
+        "fval_cdr3_W",
+        "fval_cdr3_Y",
+        "fval_cdr3_F",
+        "fval_cdr3_G",
+        "fval_cdr3_P",
+        "fval_cdr3_C",
+        "fval_vh_length",
+        "fval_vh_cdr3_length_ratio",
+        "fval_vh_charge",
+        "fval_vh_hydrophobicity"
+      ]
+    },
+    {
+      "file": "interp_psr_filter_biophysical_biophysical_onehot_ipi_psr_trainset_beeswarm_RF_psr_filter.csv",
+      "rows": 60000,
+      "columns": [
+        "model",
+        "rank",
+        "feature",
+        "shap_value",
+        "feature_value"
+      ]
+    },
+    {
+      "file": "interp_psr_filter_biophysical_biophysical_onehot_ipi_psr_trainset_beeswarm_Transformer_psr_filter.csv",
+      "rows": 20000,
+      "columns": [
+        "model",
+        "region",
+        "aa",
+        "ig_value"
+      ]
+    },
+    {
+      "file": "interp_psr_filter_biophysical_biophysical_onehot_ipi_psr_trainset_beeswarm_XGBoost_psr_filter.csv",
+      "rows": 60000,
+      "columns": [
+        "model",
+        "rank",
+        "feature",
+        "shap_value",
+        "feature_value"
+      ]
+    },
+    {
+      "file": "interp_sec_filter_biophysical_biophysical_onehot_ipi_sec_5000_beeswarm_RF_sec_filter.csv",
+      "rows": 60000,
+      "columns": [
+        "model",
+        "rank",
+        "feature",
+        "shap_value",
+        "feature_value"
+      ]
+    },
+    {
+      "file": "interp_sec_filter_biophysical_biophysical_onehot_ipi_sec_5000_beeswarm_Transformer_sec_filter.csv",
+      "rows": 20000,
+      "columns": [
+        "model",
+        "region",
+        "aa",
+        "ig_value"
+      ]
+    },
+    {
+      "file": "interp_sec_filter_biophysical_biophysical_onehot_ipi_sec_5000_beeswarm_XGBoost_sec_filter.csv",
+      "rows": 60000,
+      "columns": [
+        "model",
+        "rank",
+        "feature",
+        "shap_value",
+        "feature_value"
+      ]
+    }
+  ],
+  "audit": "passed",
+  "audit_errors": []
+}

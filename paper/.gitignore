@@ -1,0 +1,9 @@
+data/local_only/
+figures/output/*.tiff
+figures/output/*.tif
+**/.DS_Store
+**/__pycache__/
+test_output/
+full_test_output/
+*.pyc
+~$*

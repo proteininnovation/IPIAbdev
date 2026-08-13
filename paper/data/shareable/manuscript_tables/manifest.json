@@ -1,0 +1,181 @@
+{
+  "policy": "No private IPI antibody sequences. Public DS1/Jain2017/GDPa cohort sequences are retained in the official supplementary tables.",
+  "files": [
+    {
+      "file": "DELPHI_Supplementary_Table_2.xlsx",
+      "source": "DELPHI_Supplementary_Table_2.xlsx",
+      "exact_copy_of_final_submission": true,
+      "public_sequence_sheets": [],
+      "sha256": "bc051930ae77bc417b27ea0d76e942935d9b011bfefd8dab827390322fdae6ca",
+      "sheets": [
+        {
+          "name": "cross dataset generalization",
+          "rows": 29,
+          "columns": 7,
+          "formula_cells": 0,
+          "sequence_like_cells": 0
+        }
+      ],
+      "errors": []
+    },
+    {
+      "file": "DELPHI_Supplementary_Table_4.xlsx",
+      "source": "DELPHI_Supplementary_Table_4.xlsx",
+      "exact_copy_of_final_submission": true,
+      "public_sequence_sheets": [
+        "DS1"
+      ],
+      "sha256": "fbb5b873fb0a697055567438d6b2b7e13b1a2cace896c6a51042483d509512d9",
+      "sheets": [
+        {
+          "name": "ipi_psr_trainset_val",
+          "rows": 2254,
+          "columns": 78,
+          "formula_cells": 0,
+          "sequence_like_cells": 0
+        },
+        {
+          "name": "DS1",
+          "rows": 246294,
+          "columns": 33,
+          "formula_cells": 0,
+          "sequence_like_cells": 481751
+        }
+      ],
+      "errors": []
+    },
+    {
+      "file": "DELPHI_Supplementary_Table_5.xlsx",
+      "source": "DELPHI_Supplementary_Table_5.xlsx",
+      "exact_copy_of_final_submission": true,
+      "public_sequence_sheets": [
+        "GDPa1",
+        "GDPa3",
+        "Jain2017"
+      ],
+      "sha256": "79bd23496eac04a5610d8c65ca14072e37154296207f58ae08c9819b3b9d9248",
+      "sheets": [
+        {
+          "name": "Jain2017",
+          "rows": null,
+          "columns": null,
+          "formula_cells": 0,
+          "sequence_like_cells": 272
+        },
+        {
+          "name": "GDPa1",
+          "rows": null,
+          "columns": null,
+          "formula_cells": 0,
+          "sequence_like_cells": 390
+        },
+        {
+          "name": "GDPa3",
+          "rows": null,
+          "columns": null,
+          "formula_cells": 0,
+          "sequence_like_cells": 140
+        }
+      ],
+      "errors": []
+    },
+    {
+      "file": "DELPHI_Supplementary_Table_7.xlsx",
+      "source": "DELPHI_Supplementary_Table_7.xlsx",
+      "exact_copy_of_final_submission": true,
+      "public_sequence_sheets": [],
+      "sha256": "f3e4c72619d7185d3fcd614eff780002b71995aa8f6520ddbd9a4f28570b16fc",
+      "sheets": [
+        {
+          "name": "README",
+          "rows": null,
+          "columns": null,
+          "formula_cells": 0,
+          "sequence_like_cells": 0
+        },
+        {
+          "name": "IPI_raw",
+          "rows": null,
+          "columns": null,
+          "formula_cells": 0,
+          "sequence_like_cells": 0
+        },
+        {
+          "name": "IPI_summary",
+          "rows": null,
+          "columns": null,
+          "formula_cells": 0,
+          "sequence_like_cells": 0
+        },
+        {
+          "name": "DS1_raw",
+          "rows": null,
+          "columns": null,
+          "formula_cells": 0,
+          "sequence_like_cells": 0
+        },
+        {
+          "name": "DS1_summary",
+          "rows": null,
+          "columns": null,
+          "formula_cells": 0,
+          "sequence_like_cells": 0
+        }
+      ],
+      "errors": []
+    },
+    {
+      "file": "DELPHI_Extended_Data_Table_1.xlsx",
+      "source": "ED_Table1_PSR.xlsx",
+      "exact_copy_of_source": true,
+      "public_sequence_sheets": [],
+      "sha256": "803ffe40665af46365287e287487c68073bcd96a353d7ed2beea700252ef94ab",
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": 27,
+          "columns": 7,
+          "formula_cells": 0,
+          "sequence_like_cells": 0
+        }
+      ],
+      "errors": []
+    },
+    {
+      "file": "DELPHI_Extended_Data_Table_2.xlsx",
+      "source": "ED_Table2_PSR.xlsx",
+      "exact_copy_of_source": true,
+      "public_sequence_sheets": [],
+      "sha256": "90db5dd2fb9263acd2b186782efd1849cd54a06513464a5b79cb7fe57b36299b",
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": 22,
+          "columns": 7,
+          "formula_cells": 0,
+          "sequence_like_cells": 0
+        }
+      ],
+      "errors": []
+    },
+    {
+      "file": "DELPHI_Extended_Data_Table_3.xlsx",
+      "source": "ED_Table3_SEC.xlsx",
+      "exact_copy_of_source": true,
+      "public_sequence_sheets": [],
+      "sha256": "bd334f585e4dc9991f433daeaee70bec2fdf2a0b44a8d999ba40c51ce3663a48",
+      "sheets": [
+        {
+          "name": "Extended Table2_SEC Prediction",
+          "rows": 27,
+          "columns": 7,
+          "formula_cells": 0,
+          "sequence_like_cells": 0
+        }
+      ],
+      "errors": []
+    }
+  ],
+  "audit": "passed",
+  "audit_errors": []
+}
