@@ -17,6 +17,8 @@ PAPER = Path(__file__).resolve().parents[1]
 SOURCE = PAPER / "data" / "local_only" / "interpretability"
 OUTPUT = PAPER / "data" / "shareable" / "interpretability"
 AA_ORDER = list("RKH" "DE" "WFY" "AGILMPV" "STNQC")
+IG_BASELINE = "length-matched uniform amino-acid reference"
+IG_STEPS = 200
 SEQUENCE_RE = re.compile(r"(?:Biotin_)?C[ACDEFGHIKLMNPQRSTVWY]{6,30}(?=[:_\s]|$)")
 
 
@@ -41,6 +43,9 @@ def aggregate_ig(source_name: str, assay: str) -> list[dict]:
                 "position": int(column.rsplit("_", 1)[1]),
                 "mean_abs_ig": values.abs().mean(),
                 "n": int(values.notna().sum()),
+                "cohort_n": len(data),
+                "ig_baseline": IG_BASELINE,
+                "ig_steps": IG_STEPS,
             })
 
     heatmap = []
@@ -56,6 +61,9 @@ def aggregate_ig(source_name: str, assay: str) -> list[dict]:
                 "aa": aa,
                 "mean_signed_ig": float(values[selected].mean()) if selected.any() else np.nan,
                 "n": int(selected.sum()),
+                "cohort_n": len(data),
+                "ig_baseline": IG_BASELINE,
+                "ig_steps": IG_STEPS,
             })
 
     return [
@@ -87,6 +95,10 @@ def audit_sequence_free() -> list[str]:
 
 def main() -> None:
     OUTPUT.mkdir(parents=True, exist_ok=True)
+    psr_n = len(pd.read_csv(SOURCE / "ig_FULL_psr_filter_onehot_ipi_psr_trainset.csv",
+                            usecols=["barcode"]))
+    sec_n = len(pd.read_csv(SOURCE / "ig_FULL_sec_filter_onehot_ipi_sec_5000.csv",
+                            usecols=["barcode"]))
     records = []
     records += aggregate_ig("ig_FULL_psr_filter_onehot_ipi_psr_trainset.csv", "PSR")
     records += aggregate_ig("ig_FULL_sec_filter_onehot_ipi_sec_5000.csv", "SEC")
@@ -107,6 +119,15 @@ def main() -> None:
     manifest = {
         "source_directory": "paper/data/local_only/interpretability",
         "policy": "No literal IPI VH, VL, HSEQ, LSEQ, CDR3, or HCDR3 sequences; sequence-bearing barcodes removed.",
+        "integrated_gradients": {
+            "target_class": 1,
+            "baseline": IG_BASELINE,
+            "baseline_detail": "1/20 in each amino-acid channel at observed positions; zero only at true padding",
+            "integration_steps": IG_STEPS,
+            "cohort_size_by_assay": {"PSR": psr_n, "SEC": sec_n},
+            "cohort_selection": "all antibodies with a non-missing assay label",
+            "convergence_delta_location": "private row-level ig_FULL_*.csv files",
+        },
         "files": records,
         "audit": "passed" if not errors else "failed",
         "audit_errors": errors,

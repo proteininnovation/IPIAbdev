@@ -196,7 +196,7 @@ for col, (ra, name) in enumerate([(psr_ra, "PSR"), (sec_ra, "SEC")]):
         bars = ax.bar(x + (k - 1) * w, vals, w, color=mcol, label=mlab)
         for xi, vv in zip(x + (k - 1) * w, vals):
             if vv > 1:
-                ax.text(xi, vv + 1.5, f"{vv:.0f}", ha="center", fontsize=4.8)
+                ax.text(xi, vv + 1.5, f"{vv:.1f}", ha="center", fontsize=4.8)
     ax.set_xticks(x); ax.set_xticklabels([r.replace("HCDR3", "CDR H3") for r in REGIONS], fontsize=6.3)
     if col == 0:                                     # shared y-label: leftmost panel only
         ax.set_ylabel("% of total |IG| mass", fontsize=6.3, labelpad=2)

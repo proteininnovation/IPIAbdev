@@ -390,12 +390,15 @@ def _compute_tree_shap(model, X_df: pd.DataFrame, max_samples: int, log: _Log
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _compute_ig(model, df: pd.DataFrame, n_samples: int, n_steps: int,
-                log: _Log, ig_baseline: str = 'zero') -> Optional[dict]:
+                log: _Log, ig_baseline: str = 'uniform') -> Optional[dict]:
     """
     Compute Integrated Gradients on the trained Transformer-onehot model.
 
-    ig_baseline : 'zero' (default) — standard zero one-hot baseline
-                  'mean'           — average one-hot encoding across all antibodies
+    ig_baseline : 'uniform' (default) — 1/20 at each observed residue position,
+                                        zero at true padding positions
+                  'zero'              — legacy all-zero reference (unsafe for
+                                        models that infer masks from zero rows)
+                  'mean'              — average one-hot encoding across all antibodies
                                      suppresses attribution at conserved positions (e.g. CAR)
 
     Returns dict with:
@@ -408,7 +411,7 @@ def _compute_ig(model, df: pd.DataFrame, n_samples: int, n_steps: int,
     try:
         import torch
         from captum.attr import IntegratedGradients
-        from models.transformer_onehot import AntibodyDataset
+        from models.transformer_onehot import AntibodyDataset, length_matched_uniform_baseline
         from torch.utils.data import DataLoader
     except ImportError as e:
         log(f"[IG] cannot import captum/torch/models — {e}"); return None
@@ -469,6 +472,7 @@ def _compute_ig(model, df: pd.DataFrame, n_samples: int, n_steps: int,
     attrs_enc  = []
     attrs_cdr3 = []
     probs_all  = []
+    deltas_all = []
 
     for enc, cdr3_enc, lbl, *_ in loader:
         enc      = enc.to(model.device)
@@ -478,18 +482,33 @@ def _compute_ig(model, df: pd.DataFrame, n_samples: int, n_steps: int,
             # Broadcast mean baseline to batch size
             base_enc  = mean_base_enc.expand_as(enc).to(model.device)
             base_cdr3 = mean_base_cdr3.expand_as(cdr3_enc).to(model.device)
-        else:
-            # Standard zero baseline (Captum default for one-hot)
+        elif ig_baseline == 'zero':
+            # Retained only for explicit legacy comparisons. An all-zero
+            # sequence can be interpreted as fully padded by this architecture.
             base_enc  = torch.zeros_like(enc)
             base_cdr3 = torch.zeros_like(cdr3_enc)
+        else:
+            base_enc, base_cdr3 = length_matched_uniform_baseline(enc, cdr3_enc)
 
-        attr = ig.attribute(
+        with torch.no_grad():
+            base_logits = fb_model(base_enc, base_cdr3)
+        if not torch.isfinite(base_logits).all():
+            raise RuntimeError(
+                f"IG baseline '{ig_baseline}' produced non-finite model output; "
+                "use the padding-safe uniform baseline")
+
+        attr, delta = ig.attribute(
             (enc, cdr3_enc),
             baselines=(base_enc, base_cdr3),
-            target=1, n_steps=n_steps
+            target=1, n_steps=n_steps,
+            internal_batch_size=max(enc.shape[0] * 4, enc.shape[0]),
+            return_convergence_delta=True,
         )
+        if not torch.isfinite(delta).all():
+            raise RuntimeError("Non-finite Integrated Gradients convergence delta")
         attrs_enc.append(attr[0].detach().cpu().numpy())
         attrs_cdr3.append(attr[1].detach().cpu().numpy())
+        deltas_all.append(delta.detach().cpu().numpy())
 
         with torch.no_grad():
             logits = fb_model(enc, cdr3_enc)
@@ -499,8 +518,12 @@ def _compute_ig(model, df: pd.DataFrame, n_samples: int, n_steps: int,
     attr_enc  = np.concatenate(attrs_enc,  axis=0)   # (n, L1, 20)
     attr_cdr3 = np.concatenate(attrs_cdr3, axis=0)   # (n, 25, 20)
     probs     = np.asarray(probs_all, dtype=np.float64)
+    deltas    = np.concatenate(deltas_all, axis=0).astype(np.float64)
 
     log(f"[IG] done  attr_enc={attr_enc.shape}  attr_cdr3={attr_cdr3.shape}")
+    abs_delta = np.abs(deltas)
+    log(f"[IG] convergence |delta|: median={np.median(abs_delta):.3g}  "
+        f"p95={np.quantile(abs_delta, 0.95):.3g}  max={np.max(abs_delta):.3g}")
 
     return {
         'attr_enc':   attr_enc,
@@ -508,6 +531,9 @@ def _compute_ig(model, df: pd.DataFrame, n_samples: int, n_steps: int,
         'hcdr3_seqs': hcdr3,
         'barcodes':   barcodes,
         'probs':      probs,
+        'convergence_delta': deltas,
+        'baseline':   ig_baseline,
+        'n_steps':    n_steps,
         'vh_only':    vh_only,
         'max_vh':     model.max_heavy_len,
         'max_vl':     model.max_light_len,
@@ -2104,6 +2130,9 @@ def _export_full_ig_csv(ig_data: dict, df: pd.DataFrame, target: str,
                 'model':   model_name,
                 'true_label': int(df.loc[bc, target]) if bc in df.index else 'unknown',
                 'transformer_prob': float(probs[idx]),
+                'ig_convergence_delta': float(ig_data['convergence_delta'][idx]),
+                'ig_baseline': ig_data.get('baseline', 'unknown'),
+                'ig_steps': int(ig_data.get('n_steps', 0)),
                 'hcdr3_seq': hcdr3_seqs[idx] if idx < len(hcdr3_seqs) else '',
             }
             # CDR3 positions
@@ -3043,7 +3072,7 @@ def _run_one_dataset(args, db_path: str, target: str,
                                      else 'onehot')
                 ig_data = (_compute_ig(tr_model, df,
                                        args.ig_max_samples, args.ig_steps, log,
-                                       ig_baseline=getattr(args, 'ig_baseline', 'zero'))
+                                       ig_baseline=getattr(args, 'ig_baseline', 'uniform'))
                            if df is not None else None)
                 if ig_data is not None:
                     result['ig_data'] = ig_data
@@ -3055,6 +3084,9 @@ def _run_one_dataset(args, db_path: str, target: str,
                         barcodes   = np.array(ig_data['barcodes']),
                         hcdr3_seqs = np.array(ig_data['hcdr3_seqs']),
                         probs      = ig_data['probs'],
+                        convergence_delta = ig_data['convergence_delta'],
+                        baseline   = ig_data['baseline'],
+                        n_steps    = ig_data['n_steps'],
                         vh_only    = ig_data['vh_only'],
                         max_vh     = ig_data['max_vh'],
                         max_vl     = ig_data['max_vl'],
@@ -3204,7 +3236,7 @@ def _run_predict_dataset(args, predict_path: str, target: str,
             from models.transformer_onehot import TransformerOneHotModel
             m = TransformerOneHotModel.load(tr_path)
             ig_out = _compute_ig(m, df, args.ig_max_samples, args.ig_steps, log,
-                                    ig_baseline=getattr(args, 'ig_baseline', 'zero'))
+                                    ig_baseline=getattr(args, 'ig_baseline', 'uniform'))
             if ig_out is not None:
                 prob_tr = {bc: float(p)
                            for bc, p in zip(ig_out['barcodes'], ig_out['probs'])}
@@ -5811,13 +5843,14 @@ def main():
     ap.add_argument('--ig-max-samples',   type=int, default=None,
                     help="[legacy] Use --max-samples instead. "
                          "0 = use ALL (default, recommended for final figures).")
-    ap.add_argument('--ig-baseline',      default='zero',
-                    choices=['zero', 'mean'],
-                    help="IG baseline: 'zero' (standard one-hot baseline, default) or "
+    ap.add_argument('--ig-baseline',      default='uniform',
+                    choices=['uniform', 'zero', 'mean'],
+                    help="IG baseline: 'uniform' (padding-safe length-matched amino-acid "
+                         "reference, default), 'zero' (legacy; unsafe when zero rows define "
+                         "padding), or "
                          "'mean' (average antibody baseline — suppresses attribution "
                          "at conserved positions like CAR anchor). "
-                         "Use 'mean' to test whether position 3_R signal disappears. "
-                         "(default: zero)")
+                         "Use 'mean' as a sensitivity analysis. (default: uniform)")
     ap.add_argument('--ig-steps',         type=int, default=200,
                     help="IG integration steps (default: 200)")
     ap.add_argument('--n-pairs',          type=int, default=20,

@@ -126,6 +126,23 @@ def one_hot_encode_sequence(sequence: str, max_length: int) -> np.ndarray:
     return one_hot_encode_sequence_1d(sequence, max_length)
 
 
+def length_matched_uniform_baseline(*encoded_inputs: torch.Tensor):
+    """Return padding-safe IG references for one-hot sequence tensors.
+
+    Every observed residue position is represented by a uniform distribution
+    over the 20 amino acids. True padding positions remain all-zero so the
+    model's dynamically inferred padding mask is unchanged along the IG path.
+    """
+    baselines = []
+    for encoded in encoded_inputs:
+        observed = encoded.abs().sum(dim=-1, keepdim=True).gt(0)
+        baselines.append(
+            observed.expand_as(encoded).to(dtype=encoded.dtype)
+            / float(len(AMINO_ACIDS))
+        )
+    return tuple(baselines)
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # 2.  DATASET
 #
@@ -177,9 +194,9 @@ class AntibodyDataset(Dataset):
         # builds reject non-writable arrays in from_numpy). .copy() ensures a
         # fresh contiguous writable array at negligible cost vs I/O + inference.
         return (
-            torch.from_numpy(self._encoding[idx].copy()),   # (270, 20)
-            torch.from_numpy(self._cdr3[idx].copy()),        # (25,  20)
-            torch.tensor(self._labels[idx]),
+            torch.as_tensor(self._encoding[idx].copy()),     # (270, 20)
+            torch.as_tensor(self._cdr3[idx].copy()),          # (25,  20)
+            torch.tensor(int(self._labels[idx]), dtype=torch.long),
             self._barcodes[idx],
             self._h_seqs[idx],
             self._l_seqs[idx],
@@ -1639,8 +1656,8 @@ class TransformerOneHotModel:
             # Fast path: already encoded — wrap directly in a minimal Dataset
             class _ArrayDS(Dataset):
                 def __init__(self, enc, cdr3):
-                    self.enc  = torch.from_numpy(enc)
-                    self.cdr3 = torch.from_numpy(cdr3)
+                    self.enc  = torch.as_tensor(enc)
+                    self.cdr3 = torch.as_tensor(cdr3)
                 def __len__(self): return len(self.enc)
                 def __getitem__(self, i): return self.enc[i], self.cdr3[i]
 
@@ -1762,13 +1779,13 @@ class TransformerOneHotModel:
 
     def predict_single(self, barcode, VH, VL, HCDR3):
         """Predict probability for a single antibody. VL is ignored in onehot_vh mode."""
-        enc_h = torch.from_numpy(one_hot_encode_sequence_2d(VH,    self.max_heavy_len)).float()
-        enc_c = torch.from_numpy(one_hot_encode_sequence_2d(HCDR3, self.max_hcdr3_len)).float()
+        enc_h = torch.as_tensor(one_hot_encode_sequence_2d(VH,    self.max_heavy_len)).float()
+        enc_c = torch.as_tensor(one_hot_encode_sequence_2d(HCDR3, self.max_hcdr3_len)).float()
         if self._vh_only():
             enc_hl = enc_h.unsqueeze(0).to(self.device)          # (1, 135, 20)
         else:
             _VL   = VL or ''
-            enc_l = torch.from_numpy(one_hot_encode_sequence_2d(_VL, self.max_light_len)).float()
+            enc_l = torch.as_tensor(one_hot_encode_sequence_2d(_VL, self.max_light_len)).float()
             enc_hl = torch.cat([enc_h, enc_l], dim=0).unsqueeze(0).to(self.device)  # (1, 270, 20)
         enc_c = enc_c.unsqueeze(0).to(self.device)
         with torch.no_grad():
@@ -1825,20 +1842,25 @@ class TransformerOneHotModel:
         self.model.eval()
         enc_h = one_hot_encode_sequence_2d(vh_seq, self.max_heavy_len)
         if self._vh_only():
-            enc_hl = torch.from_numpy(enc_h).float().unsqueeze(0).to(self.device)
+            enc_hl = torch.as_tensor(enc_h).float().unsqueeze(0).to(self.device)
         else:
             enc_l  = one_hot_encode_sequence_2d(vl_seq or '', self.max_light_len)
-            enc_hl = torch.from_numpy(
+            enc_hl = torch.as_tensor(
                 np.concatenate([enc_h, enc_l], axis=0)
             ).float().unsqueeze(0).to(self.device)
-        enc_c = torch.from_numpy(
+        enc_c = torch.as_tensor(
             one_hot_encode_sequence_2d(hcdr3_seq, self.max_hcdr3_len)
         ).float().unsqueeze(0).to(self.device)
-        attr = IntegratedGradients(self.model).attribute(
+        baselines = length_matched_uniform_baseline(enc_hl, enc_c)
+        attr, delta = IntegratedGradients(self.model).attribute(
             (enc_hl, enc_c),
-            baselines=(torch.zeros_like(enc_hl), torch.zeros_like(enc_c)),
-            target=1, n_steps=n_steps
+            baselines=baselines,
+            target=1, n_steps=n_steps,
+            internal_batch_size=4,
+            return_convergence_delta=True,
         )
+        if not torch.isfinite(delta).all():
+            raise RuntimeError("Non-finite Integrated Gradients convergence delta")
         return np.concatenate([
             attr[0].squeeze(0).cpu().numpy().sum(axis=1),
             attr[1].squeeze(0).cpu().numpy().sum(axis=1),
@@ -1855,29 +1877,40 @@ class TransformerOneHotModel:
         ig = IntegratedGradients(self.model)
 
         loader = DataLoader(dataset, batch_size=32, shuffle=False)
-        all_enc, all_cdr3 = [], []
+        all_enc, all_cdr3, all_delta = [], [], []
 
         for enc, cdr3_enc, *_ in loader:
             enc = enc.to(self.device)
             cdr3_enc = cdr3_enc.to(self.device)
 
             # Attribute to positive class (class=1 = pass/developable)
-            attr = ig.attribute(
+            baselines = length_matched_uniform_baseline(enc, cdr3_enc)
+            attr, delta = ig.attribute(
                 (enc, cdr3_enc),
-                baselines=(torch.zeros_like(enc), torch.zeros_like(cdr3_enc)),
+                baselines=baselines,
                 target=1,                    # ← Fixed: target=1 for positive class
-                n_steps=n_steps
+                n_steps=n_steps,
+                internal_batch_size=max(enc.shape[0] * 4, enc.shape[0]),
+                return_convergence_delta=True,
             )
+
+            if not torch.isfinite(delta).all():
+                raise RuntimeError("Non-finite Integrated Gradients convergence delta")
 
             all_enc.append(attr[0].sum(dim=-1).detach().cpu().numpy())   # sum over AA dim
             all_cdr3.append(attr[1].sum(dim=-1).detach().cpu().numpy())
+            all_delta.append(delta.detach().cpu().numpy())
 
         attr_enc = np.concatenate(all_enc, axis=0)
         attr_cdr3 = np.concatenate(all_cdr3, axis=0)
+        convergence_delta = np.concatenate(all_delta, axis=0)
 
         hcdr3_seqs = [dataset[i][6] for i in range(len(dataset))]
         self._plot_global_importance_2d(attr_enc, attr_cdr3, output_prefix, top_feat)
         self._plot_hcdr3_residue_heatmap_2d(attr_cdr3, hcdr3_seqs, output_prefix)
+        print(f"[IG] convergence |delta|: median={np.median(np.abs(convergence_delta)):.3g}, "
+              f"p95={np.quantile(np.abs(convergence_delta), 0.95):.3g}, "
+              f"max={np.max(np.abs(convergence_delta)):.3g}")
         print(f"[IG] Complete. Prefix: {output_prefix}")
 
     def _plot_global_importance_2d(self, attr_encoding, attr_cdr3, prefix, top_n=60):
