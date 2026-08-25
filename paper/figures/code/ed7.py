@@ -6,8 +6,9 @@ Extended Data Figure 8 — per-antibody interpretability.
         c/f  same FAIL antibody    — CDR3 single-point mutagenesis heatmap
 
 Runs the DELPHI one-hot Transformer (pretrained_202605) directly:
-  * IG (waterfalls) via captum IntegratedGradients — exactly the call the original
-    `_waterfall_single_ab` uses (baselines=zero, target=1).
+  * IG (waterfalls) via Captum IntegratedGradients, using a length-matched
+    uniform amino-acid reference at observed positions and zeros only at true
+    padding positions (target=1, 200 integration steps).
   * Mutagenesis via model.predict_single over every position × 20 amino acids — the
     exact computation in the original `_render_mutagenesis_heatmap`.
 Both come from the SAME loaded model, so the panels are internally consistent. No
@@ -27,7 +28,9 @@ import matplotlib.colors as mcolors
 from matplotlib.gridspec import GridSpec
 from matplotlib.lines import Line2D
 from captum.attr import IntegratedGradients
-from models.transformer_onehot import TransformerOneHotModel, one_hot_encode_sequence_2d
+from models.transformer_onehot import (TransformerOneHotModel,
+                                       one_hot_encode_sequence_2d,
+                                       length_matched_uniform_baseline)
 import okabe_style as ok
 warnings.filterwarnings("ignore")
 
@@ -37,7 +40,8 @@ ok.set_style(base_pt=6.5)
 AMINO = "ACDEFGHIKLMNPQRSTVWY"
 AA_IDX = {a: i for i, a in enumerate(AMINO)}
 MUT_CMAP = ok.DIVERGING.reversed()   # P(Pass): 0->vermilion(Fail), 0.5->white, 1->blue(Pass)
-IG_STEPS = 100
+IG_STEPS = 200
+IG_DELTAS = []
 
 
 def seqs(d):
@@ -63,9 +67,14 @@ def compute_ig(m, vh, vl, cdr3):
         enc_hl = torch.cat([enc_h, enc_l], 0).unsqueeze(0).to(m.device)
     enc_c = enc_c.unsqueeze(0).to(m.device)
     m.model.eval()
-    attr = IntegratedGradients(m.model).attribute(
-        (enc_hl, enc_c), baselines=(torch.zeros_like(enc_hl), torch.zeros_like(enc_c)),
-        target=1, n_steps=IG_STEPS)
+    baselines = length_matched_uniform_baseline(enc_hl, enc_c)
+    attr, delta = IntegratedGradients(m.model).attribute(
+        (enc_hl, enc_c), baselines=baselines,
+        target=1, n_steps=IG_STEPS, internal_batch_size=4,
+        return_convergence_delta=True)
+    if not torch.isfinite(delta).all():
+        raise RuntimeError("Non-finite Integrated Gradients convergence delta")
+    IG_DELTAS.extend(delta.detach().cpu().numpy().tolist())
     return attr[0].squeeze(0).detach().cpu().numpy(), attr[1].squeeze(0).detach().cpu().numpy()
 
 
@@ -74,8 +83,10 @@ def waterfall_rows(attr_enc, attr_cdr3, vh, cdr3, n_vh=5):
     for pos, aa in enumerate(cdr3):
         if pos >= attr_cdr3.shape[0]: break
         ig = float(attr_cdr3[pos, AA_IDX[aa]]) if aa in AA_IDX else 0.0
-        rows.append((f"CDR3 {pos+1:02d} {aa}", ig))
-    vh_rows = [(f"VH {pos+1} {aa}", float(attr_enc[pos, AA_IDX[aa]]))
+        # Position-only public label: attribution is preserved without exposing
+        # the complete proprietary CDR3 sequence through the axis labels.
+        rows.append((f"CDR3 {pos+1:02d}", ig))
+    vh_rows = [(f"VH {pos+1}", float(attr_enc[pos, AA_IDX[aa]]))
                for pos, aa in enumerate(vh) if pos < attr_enc.shape[0] and aa in AA_IDX]
     vh_rows = sorted(vh_rows, key=lambda r: abs(r[1]), reverse=True)[:n_vh]
     return rows + vh_rows   # HCDR3 block (sequence order) then top VH
@@ -124,12 +135,12 @@ def draw_waterfall(ax, rows, prob, true_lab, bc):
 def draw_mut(ax, H, cdr3, fig):
     im = ax.imshow(H, cmap=MUT_CMAP, vmin=0.0, vmax=1.0,
                    aspect="auto", interpolation="nearest")
-    for pos, aa in enumerate(cdr3):
-        if aa in AA_IDX:
-            ax.plot(pos, AA_IDX[aa], "s", ms=2.6, mfc="#000000", mec="white", mew=0.4, zorder=5)
-    ax.set_xticks(range(len(cdr3))); ax.set_xticklabels(list(cdr3), fontsize=5.0, fontfamily="monospace")
+    # Do not box the wild-type residue or print the wild-type sequence. The
+    # score matrix is unchanged; only sequence-bearing annotations are omitted.
+    ax.set_xticks(range(len(cdr3)))
+    ax.set_xticklabels([str(i + 1) for i in range(len(cdr3))], fontsize=5.0)
     ax.set_yticks(range(len(AMINO))); ax.set_yticklabels(list(AMINO), fontsize=4.6, fontfamily="monospace")
-    ax.set_xlabel("CDR3 position (WT residue)", fontsize=6.0); ax.set_ylabel("Mutant AA", fontsize=6.0)
+    ax.set_xlabel("CDR3 position", fontsize=6.0); ax.set_ylabel("Mutant AA", fontsize=6.0)
     cb = fig.colorbar(im, ax=ax, fraction=0.04, pad=0.03, ticks=[0, 0.5, 1])
     cb.ax.set_yticklabels(["Fail", "0.5", "Pass"], fontsize=5)
     cb.set_label("P(Pass) after substitution", fontsize=5.4)
@@ -177,4 +188,5 @@ fig.legend(handles=[Line2D([0], [0], color=ok.PASS, lw=5, label="IG → Pass"),
                     Line2D([0], [0], color=ok.FAIL, lw=5, label="IG → Fail")],
            loc="lower left", bbox_to_anchor=(0.075, 0.005), ncol=2, fontsize=6, frameon=False)
 ok.save_fig(fig, "ED_Fig8", OUT)   # renumbered: per-antibody interpretation is now Extended Data Fig. 8
+print(f"IG convergence |delta|: max={np.max(np.abs(IG_DELTAS)):.3g}")
 print("ED(per-antibody -> ED_Fig8) done")

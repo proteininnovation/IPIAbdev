@@ -5,15 +5,16 @@ AbLang2, trained on IPI PSR) is applied UNCHANGED to external libraries and
 public clinical-stage antibody panels.
 
   a  Cross-library transfer dumbbell  — IPI→DS1 vs DS1→IPI AUC per LM (asymmetry)
-  b  Per-cohort external ROC          — Jain / GDPa1 / GDPa3 (AUC + 95% CI + n)
+  b  External ROC                     — Jain 2017 only (AUC + 95% CI + n)
   c  Score-vs-assay scatter           — DELPHI score vs GDPa1 PR-CHO (neg. corr.)
   d  Score by subgroup                — GDPa1 score split by IgG subtype & clin. status
   e  Competition forest               — GDPa3 PR-CHO |Spearman ρ| per LM vs 113-team band
   f  Zero-shot |ρ| by cohort          — best-model |ρ| for Jain / GDPa1 / GDPa3
 
 Sign convention: DELPHI score (transformer_lm_*_score) higher = more Pass = LESS
-polyreactive. Assay PR/PSR scores higher = MORE polyreactive. So score-vs-assay
-is NEGATIVE; for ROC, Pass = assay < threshold and higher score predicts Pass.
+polyreactive. Assay PR/PSR scores higher = MORE polyreactive, so score-vs-assay
+correlations are negative. Binary ROC/AUC is restricted to Jain 2017, which has
+its own developability flag; GDPa1/GDPa3 are evaluated as continuous readouts.
 
 Every point estimate carries a bootstrap 95% CI (2000 resamples, rng seed 0).
 No number is invented — all read from the data files.
@@ -23,15 +24,13 @@ import argparse, sys, os, warnings
 import numpy as np, pandas as pd
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
-from matplotlib.patches import Patch
 from scipy.stats import spearmanr, linregress
 from sklearn.metrics import roc_auc_score, roc_curve
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import okabe_style as ok
 warnings.filterwarnings("ignore")
 
-parser = argparse.ArgumentParser(description="Generate updated DELPHI Main Figure 4.")
+parser = argparse.ArgumentParser(description="Generate DELPHI Main Figure 4.")
 parser.add_argument("--figure4-data", required=True)
 parser.add_argument("--jain", required=True)
 parser.add_argument("--gdpa1", required=True)
@@ -44,7 +43,7 @@ ok.set_style(base_pt=6.5)
 PASS, FAIL, NEUTRAL = ok.PASS, ok.FAIL, ok.NEUTRAL
 GREY = ok.OI_GREY
 
-THRESH = 0.27          # PR/PSR Pass cutoff (assay < THRESH => Pass)
+THRESH = 0.27          # Jain 2017 PSR developability cutoff only
 COMP_BEST = 0.337   # best 113-team competition PR-CHO submission (van Niekerk et al. mAbs 2026, Results; abstract lists 0.356 for polyreactivity vs 0.337 self-association)
 N_BOOT = 2000
 RNG = np.random.default_rng(0)
@@ -124,24 +123,26 @@ g1 = pd.read_excel(args.gdpa1)
 g3 = pd.read_excel(args.gdpa3)
 
 
-def cohort_arrays(df, assay_col, thr=THRESH, binary_col=None):
-    """Return (score, assay_continuous, y_pass) with NaNs dropped. y_pass=1 => Pass.
-    If binary_col given, use it directly as Pass=1 truth; else Pass = assay<thr."""
-    cols = [DELPHI_SC, assay_col] + ([binary_col] if binary_col else [])
+def cohort_arrays(df, assay_col, binary_col):
+    """Return score, continuous assay, and an existing binary Pass label."""
+    cols = [DELPHI_SC, assay_col, binary_col]
     sub = df[cols].dropna()
     s = sub[DELPHI_SC].values
     a = sub[assay_col].values
-    if binary_col:
-        y = sub[binary_col].astype(int).values
-    else:
-        y = (a < thr).astype(int)
+    y = sub[binary_col].astype(int).values
     return s, a, y
 
 
+def continuous_arrays(df, assay_col):
+    """Return score and continuous assay values with paired NaNs removed."""
+    sub = df[[DELPHI_SC, assay_col]].dropna()
+    return sub[DELPHI_SC].values, sub[assay_col].values
+
+
 # Jain: binarise on psr_filter (already Pass=1); continuous = PSR_SMP_Score
-jain_s, jain_a, jain_y = cohort_arrays(jain, "PSR_SMP_Score", binary_col="psr_filter")
-g1_s, g1_a, g1_y = cohort_arrays(g1, "polyreactivity_prscore_cho_avg")
-g3_s, g3_a, g3_y = cohort_arrays(g3, "polyreactivity_prscore_cho_avg")
+jain_s, jain_a, jain_y = cohort_arrays(jain, "PSR_SMP_Score", "psr_filter")
+g1_s, g1_a = continuous_arrays(g1, "polyreactivity_prscore_cho_avg")
+g3_s, g3_a = continuous_arrays(g3, "polyreactivity_prscore_cho_avg")
 
 COHORTS = [
     ("Jain 2017", jain_s, jain_a, jain_y, ok.OI_BLUE, "-"),
@@ -209,24 +210,26 @@ def panel_b(ax):
     ax.set_xlabel("False-positive rate", fontsize=6.5)
     ax.set_ylabel("True-positive rate", fontsize=6.5)
     ax.set_aspect("equal", adjustable="box")
-    ax.set_title("External ROC (zero-shot)", fontsize=6.8, fontweight="bold",
+    ax.set_title("External ROC (Jain 2017)", fontsize=6.8, fontweight="bold",
                  loc="left", pad=3)
     # colour-coded stat block in the empty lower-right triangle: ROC-AUC+CI and PR-AUC(Fail)+no-skill
     for k, (name, col, auc, lo, hi, n, prauc, nfail) in enumerate(stats):
-        ax.text(0.975, 0.035 + 0.118 * (len(stats) - 1 - k),
-                f"{name}  ROC {auc:.2f} [{lo:.2f}–{hi:.2f}]\nPR(Fail) {prauc:.2f} "
-                f"(no-skill {nfail/n:.2f}); n={n}, {nfail}F",
+        ax.text(0.975, 0.025 + 0.118 * (len(stats) - 1 - k),
+                f"{name} ROC-AUC {auc:.2f}\n"
+                f"(95% CI {lo:.2f}–{hi:.2f})\n"
+                f"PR-AUC (Fail) {prauc:.2f}; random baseline {nfail/n:.2f}\n"
+                f"n = {n} ({nfail} Fail)",
                 transform=ax.transAxes, ha="right", va="bottom",
-                fontsize=4.3, color=col, fontweight="bold", linespacing=1.1)
+                fontsize=3.9, color=col, fontweight="bold", linespacing=1.05)
     ax.text(0.03, 0.96, "Jain PSR flag\n(score < 0.27)", transform=ax.transAxes,
             fontsize=4.6, va="top", ha="left", color="#555555")
 
 
 # ── panel c: score vs assay scatter (GDPa1 PR-CHO) ───────────────────────────
 def panel_c(ax):
-    s, a, y = g1_s, g1_a, g1_y
-    cols = np.where(y == 1, PASS, FAIL)
-    ax.scatter(s, a, s=11, c=cols, alpha=0.55, edgecolor="none", zorder=2)
+    s, a = g1_s, g1_a
+    ax.scatter(s, a, s=11, color=ok.OI_BLUE, alpha=0.55,
+               edgecolor="none", zorder=2)
     # regression of assay on score + 95% CI band
     lr = linregress(s, a)
     xs = np.linspace(s.min(), s.max(), 100)
@@ -239,7 +242,6 @@ def panel_c(ax):
     ax.plot(xs, ys, color="#222222", lw=1.1, zorder=3)
     ax.fill_between(xs, ys - tval * se_line, ys + tval * se_line,
                     color="#222222", alpha=0.12, lw=0, zorder=1)
-    ax.axhline(THRESH, color=GREY, lw=0.6, ls="--", zorder=1)
     rho, lo, hi = rho_signed_ci(s, a)
     ax.set_xlabel("DELPHI score  P(Pass)", fontsize=6.5)
     ax.set_ylabel("GDPa1 PR-CHO\n(polyreactivity)", fontsize=6.5)
@@ -252,10 +254,6 @@ def panel_c(ax):
             transform=ax.transAxes, fontsize=5.4, va="top", ha="right",
             bbox=dict(boxstyle="round,pad=0.3", facecolor="white",
                       edgecolor="#bbbbbb", alpha=0.9, lw=0.4))
-    ax.legend(handles=[Line2D([0], [0], marker="o", ls="", color=PASS, ms=3.5, label="Pass"),
-                       Line2D([0], [0], marker="o", ls="", color=FAIL, ms=3.5, label="Fail")],
-              loc="lower left", fontsize=5, handletextpad=0.2, labelspacing=0.2,
-              borderpad=0.3, frameon=False)
 
 
 # ── panel d: DELPHI score by subgroup (GDPa1) ────────────────────────────────
@@ -349,9 +347,9 @@ def panel_e(ax):
 # ── panel f: zero-shot |rho| by cohort (best model = DELPHI/AbLang2) ─────────
 def panel_f(ax):
     bars = []
-    for name, s, a, y in [("Jain 2017", jain_s, jain_a, len(jain_s)),
-                          ("GDPa1", g1_s, g1_a, len(g1_s)),
-                          ("GDPa3", g3_s, g3_a, len(g3_s))]:
+    for name, s, a in [("Jain 2017", jain_s, jain_a),
+                       ("GDPa1", g1_s, g1_a),
+                       ("GDPa3", g3_s, g3_a)]:
         pt, lo, hi = absrho_ci(s, a)
         bars.append((name, pt, lo, hi, len(s)))
     x = np.arange(len(bars))
