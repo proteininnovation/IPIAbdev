@@ -198,7 +198,7 @@ and extract them into `data/`. Models are located by filename convention
 # Full test suite (sections 0-8)
 python tests/test_delphi.py
 
-# Fast mode — 5-fold CV instead of 10 (Test 4), skips final training (Test 5)
+# Fast mode — keeps the 5-fold smoke CV (Test 4), skips final training (Test 5)
 python tests/test_delphi.py --fast
 
 # Run a single section (0-8)
@@ -228,8 +228,8 @@ python utils/download_zenodo.py
 | 1 | Test data: `DS1_psr_500.xlsx` — 500 antibodies, balanced 50-50 | no |
 | 2 | Embedding generation: ABlang2, AntiBERTy, AntiBERTa2, AntiBERTa2-CSSP, IgBERT | no |
 | 3 | PSR + SEC prediction using IPI pretrained models via `--model_path` | yes |
-| 4 | k-fold cross-validation (10-fold, or 5-fold with `--fast`): transformer, RF, XGBoost | no |
-| 5 | Train final models (rf, xgboost, transformer_onehot) | no |
+| 4 | 5-fold smoke validation: Transformer + AbLang2, RF + biophysical, XGBoost + biophysical | no |
+| 5 | Train 7 smoke-test combinations: 3 Transformers, 2 RF and 2 XGBoost | no |
 | 6 | Interpretability: SHAP + Integrated Gradients + per-antibody waterfall + CDR3 mutagenesis | no |
 | 7 | Interpretability on an IPI pretrained PSR model | yes |
 | 8 | Interpretability on IPI pretrained PSR + SEC models (dual-target) | yes |
@@ -245,8 +245,8 @@ because models were not downloaded):**
   PASS  Test 1: Data file (DS1_psr_500.xlsx)
   PASS  Test 2: Embedding generation  (5 PLMs)
   SKIP  Test 3: PSR prediction        (6 pretrained models)
-  PASS  Test 4: 10-fold cross-validation  (4 models)
-  PASS  Test 5: Build final models  (4 models)
+  PASS  Test 4: 5-fold smoke validation  (3 models)
+  PASS  Test 5: Build final models    (7 combinations)
   PASS  Test 6: Interpretability  (psr_filter, 500 samples)
   SKIP  Test 7: Interpretability      (IPI PSR pretrained model)
   SKIP  Test 8: Interpretability      (IPI PSR+SEC pretrained, dual-target)

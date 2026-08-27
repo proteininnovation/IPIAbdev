@@ -243,6 +243,14 @@ def _register_model(model_path: str, target: str, lm: str, model: str,
     import os as _os
     import yaml as _yaml
 
+    # Integration/smoke tests train temporary models and must not append
+    # machine-specific paths to the tracked project registry.
+    if _os.environ.get("DELPHI_DISABLE_MODEL_REGISTRY", "").lower() in {
+        "1", "true", "yes", "on"
+    }:
+        print("[registry] skipped (DELPHI_DISABLE_MODEL_REGISTRY=1)")
+        return
+
     key = _os.path.basename(model_path)
     _os.makedirs(_os.path.dirname(registry_path) or ".", exist_ok=True)
 

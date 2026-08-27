@@ -12,9 +12,9 @@
 #   2. Embedding generation  (igbert, ablang, antiberty,
 #                             antiberta2, antiberta2-cssp)
 #   3. PSR prediction        (IPI pretrained models, all LMs)
-#   4. 5-fold validation     (transformer_lm/ablang, transformer_onehot,
-#                             rf/biophysical, xgboost/biophysical)
-#   5. Build final models    (same 4 models)
+#   4. 5-fold smoke validation (transformer_lm/ablang,
+#                               rf/biophysical, xgboost/biophysical)
+#   5. Build final models    (7 model/representation combinations)
 #   6. Interpretability      (psr_filter, IG+SHAP, 500 samples)
 #
 # Usage:
@@ -95,6 +95,7 @@ def _run(cmd: list, label: str, timeout: int = None) -> bool:
     env = os.environ.copy()
     env["TRANSFORMERS_VERBOSITY"]     = "error"
     env["TOKENIZERS_PARALLELISM"]     = "false"
+    env["DELPHI_DISABLE_MODEL_REGISTRY"] = "1"
 
     buffered = []
     try:
@@ -746,8 +747,8 @@ def main():
         1: f"Data file ({TEST_DATA.name})",
         2: "Embedding generation  (5 PLMs)",
         3: "PSR prediction        (6 pretrained models)",
-        4: "5-fold cross-validation  (4 models)",
-        5: "Build final models    (4 models)",
+        4: "5-fold smoke validation  (3 models)",
+        5: "Build final models    (7 combinations)",
         6: "Interpretability      (psr_filter, 500 samples)",
         7: "Interpretability      (IPI PSR pretrained model)",
         8: "Interpretability      (IPI PSR+SEC pretrained, dual-target)",
