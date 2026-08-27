@@ -11,3 +11,6 @@
 8. Resolve the Supplementary Figures 1-4 provenance gap: editable sources exist, but no dedicated programmatic generation scripts were found.
 9. Run `python paper/validate_package.py` and `python paper/run_reproduction_tests.py --repo-root /path/to/delphi` after copying. Review `TEST_REPORT.md` and regenerate from a clean environment before release.
 10. Update the root manuscript-code availability statement only after the public branch contains the selected scripts and approved source data.
+11. Add `data/shareable/DELPHI_Extended_Data_Figure_3_Source_Data.xlsx`; it is the sequence-free canonical 25-model source used by `ed3.py`.
+12. Delete the obsolete `figures/output/ED_Fig8.pdf` and `figures/output/ED_Fig8.png`. Do not replace them with the final render because it displays selected WT CDR3-loop residues.
+13. Run `python paper/run_reproduction_tests.py --public`; the expected result for this patch is 7/7 commands passed with all regenerated PNGs pixel-identical to their baselines.

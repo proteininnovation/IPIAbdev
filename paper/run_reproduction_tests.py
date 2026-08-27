@@ -52,7 +52,8 @@ def command_specs(repo_root: Path, output: Path, skip_expensive: bool):
         ("Figure 6", [py, str(CODE / "fig6.py")]),
         ("Extended Data Figures 1-2", [py, str(CODE / "ed1_ed2.py")]),
         ("Extended Data Figure 3", [py, str(CODE / "ed3.py"),
-          "--xlsx", str(raw / "Suppl_Table2_prediction_score_val.xlsx"),
+          "--ipi-xlsx", str(SHARE / "DELPHI_Extended_Data_Figure_3_Source_Data.xlsx"),
+          "--ds1-xlsx", str(SHARE / "manuscript_tables" / "DELPHI_Supplementary_Table_4.xlsx"),
           "--output-dir", str(output)]),
         ("Extended Data Figure 4", [py, str(CODE / "ed8.py"),
           "--jain", str(SHARE / "Jain2017_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx"),
@@ -83,6 +84,7 @@ def public_command_specs(output: Path):
     tables = SHARE / "manuscript_tables"
     table4 = tables / "DELPHI_Supplementary_Table_4.xlsx"
     return [
+        ("Figure 3", [py, str(CODE / "fig3.py")]),
         ("Figure 4", [py, str(CODE / "fig4.py"),
           "--figure4-data", str(SHARE / "Figure4_data.xlsx"),
           "--jain", str(SHARE / "Jain2017_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx"),
@@ -91,7 +93,8 @@ def public_command_specs(output: Path):
           "--output-dir", str(output)]),
         ("Figure 6", [py, str(CODE / "fig6.py")]),
         ("Extended Data Figure 3", [py, str(CODE / "ed3.py"),
-          "--xlsx", str(table4), "--output-dir", str(output)]),
+          "--ipi-xlsx", str(SHARE / "DELPHI_Extended_Data_Figure_3_Source_Data.xlsx"),
+          "--ds1-xlsx", str(table4), "--output-dir", str(output)]),
         ("Extended Data Figure 4", [py, str(CODE / "ed8.py"),
           "--jain", str(SHARE / "Jain2017_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx"),
           "--gdpa1", str(SHARE / "GDPa1_v1.3_20251027_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx"),

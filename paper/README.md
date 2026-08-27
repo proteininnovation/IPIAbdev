@@ -60,6 +60,12 @@ the final figures exactly but do not allow recomputation of IG/SHAP values from
 the underlying private antibody sequences.
 
 `data/shareable/manuscript_tables/` contains the final Supplementary Tables 2,
-4, 5, and 7 and Extended Data Tables 1-3. Supplementary Table 4 includes DS1
-prediction scores and enables public regeneration of Extended Data Figures 3
-and 5. 
+4, 5, and 7 and Extended Data Tables 1-3. Supplementary Table 4 provides the
+sequence-free IPI validation scores used by Main Figure 3 and the public DS1
+prediction scores used by Extended Data Figures 3 and 5. The canonical
+25-model IPI source for Extended Data Figure 3 is provided separately as
+`data/shareable/DELPHI_Extended_Data_Figure_3_Source_Data.xlsx`.
+
+Extended Data Figure 8 requires private IPI sequences and checkpoints. Its
+generator is public, but its final render and input data are intentionally not
+stored in this repository.

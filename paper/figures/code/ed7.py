@@ -3,14 +3,14 @@ Extended Data Figure 8 — per-antibody interpretability.
   rows: PSR | SEC
   cols: a/d  example PASS antibody — per-residue IG waterfall
         b/e  example FAIL antibody — per-residue IG waterfall
-        c/f  same FAIL antibody    — CDR3 single-point mutagenesis heatmap
+        c/f  same FAIL antibody    — CDR3-loop ΔP(Pass) mutagenesis heatmap
 
 Runs the DELPHI one-hot Transformer (pretrained_202605) directly:
   * IG (waterfalls) via Captum IntegratedGradients, using a length-matched
     uniform amino-acid reference at observed positions and zeros only at true
     padding positions (target=1, 200 integration steps).
-  * Mutagenesis via model.predict_single over every position × 20 amino acids — the
-    exact computation in the original `_render_mutagenesis_heatmap`.
+  * Mutagenesis via model.predict_single over each internal CDR3-loop position
+    × 20 amino acids, reported as mutant P(Pass) minus wild-type P(Pass).
 Both come from the SAME loaded model, so the panels are internally consistent. No
 values invented. Example antibodies are selected by predicted score (PASS = highest
 true-pass; FAIL = a true-fail in P(Pass) 0.2-0.45, the informative-mutagenesis band).
@@ -39,7 +39,7 @@ OUT = str(ensure_output())
 ok.set_style(base_pt=6.5)
 AMINO = "ACDEFGHIKLMNPQRSTVWY"
 AA_IDX = {a: i for i, a in enumerate(AMINO)}
-MUT_CMAP = ok.DIVERGING.reversed()   # P(Pass): 0->vermilion(Fail), 0.5->white, 1->blue(Pass)
+MUT_CMAP = ok.DIVERGING.reversed()   # delta P(Pass): negative->orange, 0->white, positive->blue
 IG_STEPS = 200
 IG_DELTAS = []
 
@@ -93,14 +93,21 @@ def waterfall_rows(attr_enc, attr_cdr3, vh, cdr3, n_vh=5):
 
 
 def mutagenesis(m, bc, vh, vl, cdr3):
-    n = len(cdr3); H = np.full((len(AMINO), n), np.nan, dtype=np.float32)
+    n = len(cdr3)
+    positions = list(range(2, n - 3))
+    loop = "".join(cdr3[pos] for pos in positions)
+    H = np.full((len(AMINO), len(positions)), np.nan, dtype=np.float32)
+    wt = float(m.predict_single(bc, vh, vl, cdr3))
     cs = vh.find(cdr3)
-    for pos in range(n):
+    for loop_pos, pos in enumerate(positions):
         for ai, aa in enumerate(AMINO):
             mc = cdr3[:pos] + aa + cdr3[pos+1:]
             vm = vh[:cs] + mc + vh[cs+n:] if cs >= 0 else vh
-            H[ai, pos] = m.predict_single(bc, vm, vl, mc)
-    return H
+            H[ai, loop_pos] = float(m.predict_single(bc, vm, vl, mc)) - wt
+    wt_delta = np.array([H[AA_IDX[aa], pos] for pos, aa in enumerate(loop)])
+    if not np.allclose(wt_delta, 0.0, atol=1e-7):
+        raise RuntimeError(f"Non-zero WT mutagenesis delta: {wt_delta}")
+    return H, loop, wt
 
 
 def pick_examples(m, df, fcol, seed=0, max_len=18):
@@ -132,18 +139,23 @@ def draw_waterfall(ax, rows, prob, true_lab, bc):
     ax.set_title(f"{bc} · actual {out}\nP(Pass) = {prob:.3f}", fontsize=6.0, fontweight="bold", pad=3)
 
 
-def draw_mut(ax, H, cdr3, fig):
-    im = ax.imshow(H, cmap=MUT_CMAP, vmin=0.0, vmax=1.0,
+def draw_mut(ax, H, loop, fig):
+    limit = float(np.nanmax(np.abs(H)))
+    if not np.isfinite(limit) or limit == 0:
+        limit = 1.0
+    norm = mcolors.TwoSlopeNorm(vmin=-limit, vcenter=0.0, vmax=limit)
+    im = ax.imshow(H, cmap=MUT_CMAP, norm=norm,
                    aspect="auto", interpolation="nearest")
-    # Do not box the wild-type residue or print the wild-type sequence. The
-    # score matrix is unchanged; only sequence-bearing annotations are omitted.
-    ax.set_xticks(range(len(cdr3)))
-    ax.set_xticklabels([str(i + 1) for i in range(len(cdr3))], fontsize=5.0)
+    for pos, aa in enumerate(loop):
+        if aa in AA_IDX:
+            ax.plot(pos, AA_IDX[aa], "s", ms=2.6, mfc="#000000", mec="white", mew=0.4, zorder=5)
+    ax.set_xticks(range(len(loop)))
+    ax.set_xticklabels(list(loop), fontsize=5.0, fontfamily="monospace")
     ax.set_yticks(range(len(AMINO))); ax.set_yticklabels(list(AMINO), fontsize=4.6, fontfamily="monospace")
-    ax.set_xlabel("CDR3 position", fontsize=6.0); ax.set_ylabel("Mutant AA", fontsize=6.0)
-    cb = fig.colorbar(im, ax=ax, fraction=0.04, pad=0.03, ticks=[0, 0.5, 1])
-    cb.ax.set_yticklabels(["Fail", "0.5", "Pass"], fontsize=5)
-    cb.set_label("P(Pass) after substitution", fontsize=5.4)
+    ax.set_xlabel("WT CDR3 loop residue", fontsize=6.0); ax.set_ylabel("Mutant AA", fontsize=6.0)
+    cb = fig.colorbar(im, ax=ax, fraction=0.04, pad=0.03, ticks=[-limit, 0, limit])
+    cb.ax.set_yticklabels([f"{-limit:.2f}", "0", f"+{limit:.2f}"], fontsize=5)
+    cb.set_label("ΔP(Pass) relative to WT\n(mutant − WT)", fontsize=5.4)
 
 
 # ── build ─────────────────────────────────────────────────────────────────────
@@ -176,10 +188,10 @@ for ri, (m, df, fcol, name) in enumerate([(m_psr, psr, "psr_filter", "PSR"),
         ok.panel_label(fig, ax, letters[ri][ci], dx=-0.058, dy=0.022, size=8.5)
     # mutagenesis on the FAIL example
     d = df.loc[fail_bc]; vh, vl, cdr3 = seqs(d)
-    H = mutagenesis(m, fail_bc, vh, vl, cdr3)
+    H, loop, wt = mutagenesis(m, fail_bc, vh, vl, cdr3)
     axm = fig.add_subplot(gs[ri, 2])
-    draw_mut(axm, H, cdr3, fig)
-    axm.set_title(f"CDR3 mutagenesis · {name}\n{fail_bc} (actual FAIL)", fontsize=6.0, fontweight="bold", pad=3)
+    draw_mut(axm, H, loop, fig)
+    axm.set_title(f"CDR3 loop mutagenesis · {name}\n{fail_bc} (actual FAIL); WT P(Pass) = {wt:.3f}", fontsize=6.0, fontweight="bold", pad=3)
     ok.panel_label(fig, axm, letters[ri][2], dx=-0.06, dy=0.022, size=8.5)
 
 fig.text(0.5, 0.965, "Per-antibody attribution — DELPHI one-hot Transformer",

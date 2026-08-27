@@ -24,8 +24,6 @@ import okabe_style as ok
 from paths import data_file, ensure_output
 warnings.filterwarnings("ignore")
 
-DATA = str(data_file("IPI_PSR_TRAINSET_validation20pct_muliple_models_output.csv").parent)
-SUPPL = str(data_file("learning_curve_ipi_replicated_summary.csv").parent)
 OUT = str(ensure_output())
 ok.set_style(base_pt=6.5)
 
@@ -40,8 +38,27 @@ MODELS = [
 COLS = ok.qualitative(5)                      # blue, orange, green, purple, skyblue
 LINESTYLES = ["-", "--", "-.", ":", (0, (3, 1, 1, 1))]   # greyscale-safe distinction
 
-# ── load 20% internal validation; truth psr_filter (1 = Pass), higher score = Pass
-val = pd.read_csv(data_file("IPI_PSR_TRAINSET_validation20pct_muliple_models_output.csv"))
+# ── load the authoritative 20% validation split from public Supplementary Table 4
+validation_workbook = data_file(
+    "manuscript_tables/DELPHI_Supplementary_Table_4.xlsx"
+)
+validation_source = pd.read_excel(
+    validation_workbook, sheet_name="ipi_psr_trainset_val"
+)
+validation_columns = {
+    "trans_ablang": "transformer_lm_ablang_ipi_psr_trainset_train_score",
+    "cnn_ablang": "cnn_ablang_ipi_psr_trainset_train_score",
+    "xgb_ablang": "xgboost_ablang_ipi_psr_trainset_train_score",
+    "rf_ablang": "rf_ablang_ipi_psr_trainset_train_score",
+    "trans_one_hot": "transformer_onehot_onehot_ipi_psr_trainset_train_score",
+}
+missing = [column for column in validation_columns.values()
+           if column not in validation_source.columns]
+if missing:
+    raise ValueError(f"Supplementary Table 4 is missing columns: {missing}")
+val = validation_source[["psr_filter", *validation_columns.values()]].rename(
+    columns={source: display for display, source in validation_columns.items()}
+)
 Y = val["psr_filter"].astype(int).values     # 1 = Pass
 
 RNG = np.random.default_rng(0)
