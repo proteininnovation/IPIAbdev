@@ -167,7 +167,7 @@ env) rather than `python3`, or call `$CONDA_PREFIX/bin/python` directly.
 
 ### Step 2: Download IPI pretrained models from Zenodo
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20785877.svg)](https://doi.org/10.5281/zenodo.20785877)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21823887.svg)](https://doi.org/10.5281/zenodo.21823887)
 
 ```bash
 # Download all 52 pretrained models to pretrained_202605/  and public DS1 dataset
@@ -275,7 +275,7 @@ IPI provides pretrained models for PSR, SEC, HIC, and AC-SINS.
 
 **Download pretrained models** from Zenodo:
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20785877.svg)](https://doi.org/10.5281/zenodo.20785877)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21823887.svg)](https://doi.org/10.5281/zenodo.21823887)
 
 ```bash
 # Download all 52 pretrained models (PSR + SEC)
