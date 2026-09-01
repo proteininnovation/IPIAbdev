@@ -21,10 +21,10 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 
-RECORD_ID  = "20785877"
-ZENODO_DOI = "10.5281/zenodo.20785877"
+RECORD_ID  = "21823887"
+ZENODO_DOI = "10.5281/zenodo.21823887"
 ZENODO_URL = f"https://zenodo.org/records/{RECORD_ID}"
-DS1_EMB_URL = "https://zenodo.org/records/20785877/files/DS1_embedding.tar.gz?download=1"
+DS1_EMB_URL = "https://zenodo.org/records/21823887/files/DS1_embedding.tar.gz?download=1"
 _ROOT      = Path(__file__).resolve().parent.parent
 OUT_DIR    = _ROOT / "pretrained_202605"
 
