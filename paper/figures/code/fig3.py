@@ -24,6 +24,8 @@ import okabe_style as ok
 from paths import data_file, ensure_output
 warnings.filterwarnings("ignore")
 
+DATA = str(data_file("manuscript_tables/DELPHI_Supplementary_Table_4.xlsx").parent)
+SUPPL = str(data_file("learning_curve_ipi_replicated_summary.csv").parent)
 OUT = str(ensure_output())
 ok.set_style(base_pt=6.5)
 
@@ -38,26 +40,22 @@ MODELS = [
 COLS = ok.qualitative(5)                      # blue, orange, green, purple, skyblue
 LINESTYLES = ["-", "--", "-.", ":", (0, (3, 1, 1, 1))]   # greyscale-safe distinction
 
-# ── load the authoritative 20% validation split from public Supplementary Table 4
-validation_workbook = data_file(
-    "manuscript_tables/DELPHI_Supplementary_Table_4.xlsx"
+# ── load the complete 20% internal validation set from Supplementary Table 4.
+# The earlier intermediate CSV contained only 2,209 rows and is not the canonical
+# source for the manuscript figure. Truth psr_filter: 1 = Pass; higher score = Pass.
+_val_raw = pd.read_excel(
+    data_file("manuscript_tables/DELPHI_Supplementary_Table_4.xlsx"),
+    sheet_name="ipi_psr_trainset_val",
 )
-validation_source = pd.read_excel(
-    validation_workbook, sheet_name="ipi_psr_trainset_val"
-)
-validation_columns = {
+_score_columns = {
     "trans_ablang": "transformer_lm_ablang_ipi_psr_trainset_train_score",
     "cnn_ablang": "cnn_ablang_ipi_psr_trainset_train_score",
     "xgb_ablang": "xgboost_ablang_ipi_psr_trainset_train_score",
     "rf_ablang": "rf_ablang_ipi_psr_trainset_train_score",
     "trans_one_hot": "transformer_onehot_onehot_ipi_psr_trainset_train_score",
 }
-missing = [column for column in validation_columns.values()
-           if column not in validation_source.columns]
-if missing:
-    raise ValueError(f"Supplementary Table 4 is missing columns: {missing}")
-val = validation_source[["psr_filter", *validation_columns.values()]].rename(
-    columns={source: display for display, source in validation_columns.items()}
+val = _val_raw[["BARCODE", "psr_filter", *_score_columns.values()]].rename(
+    columns={v: k for k, v in _score_columns.items()}
 )
 Y = val["psr_filter"].astype(int).values     # 1 = Pass
 
@@ -151,10 +149,10 @@ ds1 = pd.read_csv(data_file("learning_curve_DS1_replicated_summary.csv")).sort_v
 # =====================================================================================
 # FIGURE
 # =====================================================================================
-fig = plt.figure(figsize=(ok.DOUBLE, 118 * ok.MM))
+fig = plt.figure(figsize=(ok.DOUBLE, 100 * ok.MM))
 gs = GridSpec(2, 3, figure=fig,
-              hspace=0.95, wspace=0.34,
-              left=0.065, right=0.985, top=0.91, bottom=0.16)
+              hspace=0.52, wspace=0.34,
+              left=0.065, right=0.985, top=0.91, bottom=0.18)
 
 axa = fig.add_subplot(gs[0, 0])
 axb = fig.add_subplot(gs[0, 1])
@@ -185,10 +183,13 @@ axa.set_title("ROC — internal 20% validation", fontsize=6.8, pad=4,
 # ── b: Precision-Recall ──────────────────────────────────────────────────────────
 base = (Y == 1).mean()
 axb.axhline(base, color=ok.OI_GREY, lw=0.6, ls=(0, (1, 1)), zorder=1)
+axb.text(0.98, base + 0.018, f"No-skill baseline = {base:.3f}",
+         transform=axb.get_yaxis_transform(), ha="right", va="bottom",
+         fontsize=4.5, color="#666666")
 for name, c, ls, rec, prec, ap in pr_data:
     axb.plot(rec, prec, color=c, ls=ls, lw=1.1, zorder=3,
              label=f"{name}\nAP {ap:.3f}")
-axb.set_xlim(-0.02, 1.02); axb.set_ylim(0, 1.02)
+axb.set_xlim(-0.02, 1.02); axb.set_ylim(0.4, 1.02)
 axb.set_xlabel("Recall (Pass)", labelpad=2)
 axb.set_ylabel("Precision (Pass)", labelpad=2)
 axb.legend(loc="lower left", fontsize=4.5, handlelength=1.4, handletextpad=0.4,
@@ -211,7 +212,8 @@ _ch, _cl = axc.get_legend_handles_labels()
 _cshort = {"Transformer + AbLang2": "Transformer", "CNN + AbLang2": "CNN",
            "XGBoost + AbLang2": "XGBoost", "RF + AbLang2": "RF",
            "Transformer + one-hot": "Transformer (1-hot)"}
-axc.legend(_ch, [_cshort.get(l, l) for l in _cl], loc="lower right", fontsize=4.2,
+axc.legend(_ch, [_cshort.get(l, l) for l in _cl], loc="lower right",
+           bbox_to_anchor=(1.30, 0.02), fontsize=4.2,
            handlelength=1.3, handletextpad=0.35, labelspacing=0.32, borderpad=0.25,
            frameon=True, framealpha=0.9, edgecolor="#cccccc").get_frame().set_linewidth(0.4)
 axc.set_title("Calibration", fontsize=6.8, pad=4, fontweight="bold", loc="left")
@@ -283,7 +285,7 @@ draw_cm(axe1, *cm_data[0])
 draw_cm(axe2, *cm_data[1])
 # shared panel-e header (figure coords so it sits above both heatmaps)
 bbe = axe1.get_position(); bbe2 = axe2.get_position()
-fig.text((bbe.x0 + bbe2.x1) / 2, bbe.y1 + 0.085,
+fig.text((bbe.x0 + bbe2.x1) / 2, bbe.y1 + 0.055,
          "Confusion @ Youden-J threshold", fontsize=6.8, fontweight="bold",
          ha="center", va="baseline")
 
@@ -302,7 +304,7 @@ axf.yaxis.set_major_locator(ticker.MultipleLocator(0.1))
 axf.grid(axis="y", lw=0.25, alpha=0.4, zorder=0)
 # practical-plateau band: IPI reaches ~0.95 by ~5,000 and plateaus ~0.95–0.96; DS1 higher (~0.98)
 axf.axvspan(5000, 6000, color=ok.OI_GREY, alpha=0.18, zorder=1, lw=0)
-axf.annotate("IPI plateau ≈0.95–0.96\nfrom ~5,000", xy=(5300, 0.951), xytext=(330, 0.80),
+axf.annotate("IPI plateau ≈0.95–0.96\nfrom ~5,000", xy=(5300, 0.951), xytext=(12500, 0.84),
              fontsize=4.8, ha="left", va="center",
              arrowprops=dict(arrowstyle="->", color="#333333", lw=0.6))
 axf.legend(loc="lower right", fontsize=4.8, handlelength=1.2, handletextpad=0.4,
@@ -316,7 +318,7 @@ ok.panel_label(fig, axa, "a", dx=-0.045, dy=0.052, size=9)
 ok.panel_label(fig, axb, "b", dx=-0.045, dy=0.052, size=9)
 ok.panel_label(fig, axc, "c", dx=-0.045, dy=0.052, size=9)
 ok.panel_label(fig, axd, "d", dx=-0.045, dy=0.052, size=9)
-ok.panel_label(fig, axe1, "e", dx=-0.060, dy=0.115, size=9)
+ok.panel_label(fig, axe1, "e", dx=-0.060, dy=0.085, size=9)
 ok.panel_label(fig, axf, "f", dx=-0.045, dy=0.052, size=9)
 
 ok.save_fig(fig, "Figure3", OUT)

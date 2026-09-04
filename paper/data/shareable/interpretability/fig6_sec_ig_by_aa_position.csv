@@ -1,501 +1,501 @@
-assay,position,aa,mean_signed_ig,n,cohort_n,ig_baseline,ig_steps
-SEC,1,R,,0,5045,length-matched uniform amino-acid reference,200
-SEC,1,K,,0,5045,length-matched uniform amino-acid reference,200
-SEC,1,H,,0,5045,length-matched uniform amino-acid reference,200
-SEC,1,D,,0,5045,length-matched uniform amino-acid reference,200
-SEC,1,E,,0,5045,length-matched uniform amino-acid reference,200
-SEC,1,W,,0,5045,length-matched uniform amino-acid reference,200
-SEC,1,F,-0.0068936859024687994,4,5045,length-matched uniform amino-acid reference,200
-SEC,1,Y,-0.006691465464731,3,5045,length-matched uniform amino-acid reference,200
-SEC,1,A,-0.030024517432441708,5038,5045,length-matched uniform amino-acid reference,200
-SEC,1,G,,0,5045,length-matched uniform amino-acid reference,200
-SEC,1,I,,0,5045,length-matched uniform amino-acid reference,200
-SEC,1,L,,0,5045,length-matched uniform amino-acid reference,200
-SEC,1,M,,0,5045,length-matched uniform amino-acid reference,200
-SEC,1,P,,0,5045,length-matched uniform amino-acid reference,200
-SEC,1,V,,0,5045,length-matched uniform amino-acid reference,200
-SEC,1,S,,0,5045,length-matched uniform amino-acid reference,200
-SEC,1,T,,0,5045,length-matched uniform amino-acid reference,200
-SEC,1,N,,0,5045,length-matched uniform amino-acid reference,200
-SEC,1,Q,,0,5045,length-matched uniform amino-acid reference,200
-SEC,1,C,,0,5045,length-matched uniform amino-acid reference,200
-SEC,2,R,-0.31968608078145566,5032,5045,length-matched uniform amino-acid reference,200
-SEC,2,K,,0,5045,length-matched uniform amino-acid reference,200
-SEC,2,H,,0,5045,length-matched uniform amino-acid reference,200
-SEC,2,D,,0,5045,length-matched uniform amino-acid reference,200
-SEC,2,E,,0,5045,length-matched uniform amino-acid reference,200
-SEC,2,W,,0,5045,length-matched uniform amino-acid reference,200
-SEC,2,F,,0,5045,length-matched uniform amino-acid reference,200
-SEC,2,Y,,0,5045,length-matched uniform amino-acid reference,200
-SEC,2,A,0.0034217468928545002,2,5045,length-matched uniform amino-acid reference,200
-SEC,2,G,,0,5045,length-matched uniform amino-acid reference,200
-SEC,2,I,0.07559355845053986,3,5045,length-matched uniform amino-acid reference,200
-SEC,2,L,,0,5045,length-matched uniform amino-acid reference,200
-SEC,2,M,,0,5045,length-matched uniform amino-acid reference,200
-SEC,2,P,,0,5045,length-matched uniform amino-acid reference,200
-SEC,2,V,0.008466310217045199,4,5045,length-matched uniform amino-acid reference,200
-SEC,2,S,0.002166079590097,1,5045,length-matched uniform amino-acid reference,200
-SEC,2,T,0.0309380572289228,3,5045,length-matched uniform amino-acid reference,200
-SEC,2,N,,0,5045,length-matched uniform amino-acid reference,200
-SEC,2,Q,,0,5045,length-matched uniform amino-acid reference,200
-SEC,2,C,,0,5045,length-matched uniform amino-acid reference,200
-SEC,3,R,-0.5811053897286284,58,5045,length-matched uniform amino-acid reference,200
-SEC,3,K,-1.1977257457646457,11,5045,length-matched uniform amino-acid reference,200
-SEC,3,H,-0.024306930295082643,189,5045,length-matched uniform amino-acid reference,200
-SEC,3,D,0.5860356238254972,708,5045,length-matched uniform amino-acid reference,200
-SEC,3,E,0.41006422639746715,611,5045,length-matched uniform amino-acid reference,200
-SEC,3,W,-0.6704122850282507,91,5045,length-matched uniform amino-acid reference,200
-SEC,3,F,-0.06763836161196958,102,5045,length-matched uniform amino-acid reference,200
-SEC,3,Y,-0.1684828347134874,283,5045,length-matched uniform amino-acid reference,200
-SEC,3,A,0.03178991469455312,401,5045,length-matched uniform amino-acid reference,200
-SEC,3,G,0.0562954526842467,811,5045,length-matched uniform amino-acid reference,200
-SEC,3,I,0.19716497093239532,168,5045,length-matched uniform amino-acid reference,200
-SEC,3,L,0.15307984573848218,251,5045,length-matched uniform amino-acid reference,200
-SEC,3,M,,0,5045,length-matched uniform amino-acid reference,200
-SEC,3,P,0.20662341439572063,206,5045,length-matched uniform amino-acid reference,200
-SEC,3,V,0.18147093710574977,458,5045,length-matched uniform amino-acid reference,200
-SEC,3,S,-0.0008629555939379878,351,5045,length-matched uniform amino-acid reference,200
-SEC,3,T,0.11656800505912135,180,5045,length-matched uniform amino-acid reference,200
-SEC,3,N,0.052604535737131884,49,5045,length-matched uniform amino-acid reference,200
-SEC,3,Q,-0.04232377304225901,117,5045,length-matched uniform amino-acid reference,200
-SEC,3,C,,0,5045,length-matched uniform amino-acid reference,200
-SEC,4,R,-0.861087283231318,500,5045,length-matched uniform amino-acid reference,200
-SEC,4,K,-1.508932591277234,94,5045,length-matched uniform amino-acid reference,200
-SEC,4,H,-0.07465888456707549,98,5045,length-matched uniform amino-acid reference,200
-SEC,4,D,0.4044801231899432,350,5045,length-matched uniform amino-acid reference,200
-SEC,4,E,0.3778991725670515,169,5045,length-matched uniform amino-acid reference,200
-SEC,4,W,-1.2694126625318785,111,5045,length-matched uniform amino-acid reference,200
-SEC,4,F,-0.130852713855362,123,5045,length-matched uniform amino-acid reference,200
-SEC,4,Y,-0.1329524733749379,399,5045,length-matched uniform amino-acid reference,200
-SEC,4,A,0.11288869357881465,327,5045,length-matched uniform amino-acid reference,200
-SEC,4,G,0.13259640922865917,485,5045,length-matched uniform amino-acid reference,200
-SEC,4,I,0.239144142627357,249,5045,length-matched uniform amino-acid reference,200
-SEC,4,L,0.1927438148111105,350,5045,length-matched uniform amino-acid reference,200
-SEC,4,M,,0,5045,length-matched uniform amino-acid reference,200
-SEC,4,P,0.23974539005148734,591,5045,length-matched uniform amino-acid reference,200
-SEC,4,V,0.23361448095107595,334,5045,length-matched uniform amino-acid reference,200
-SEC,4,S,0.047003387656385995,438,5045,length-matched uniform amino-acid reference,200
-SEC,4,T,0.16574894024920211,212,5045,length-matched uniform amino-acid reference,200
-SEC,4,N,0.06037239073728669,99,5045,length-matched uniform amino-acid reference,200
-SEC,4,Q,-0.0007758595396096613,115,5045,length-matched uniform amino-acid reference,200
-SEC,4,C,0.0010742094600573,1,5045,length-matched uniform amino-acid reference,200
-SEC,5,R,-0.9316394384230923,466,5045,length-matched uniform amino-acid reference,200
-SEC,5,K,-1.2934883039886669,59,5045,length-matched uniform amino-acid reference,200
-SEC,5,H,-0.07073161961949043,85,5045,length-matched uniform amino-acid reference,200
-SEC,5,D,0.6282194292769944,471,5045,length-matched uniform amino-acid reference,200
-SEC,5,E,0.39299755407616904,218,5045,length-matched uniform amino-acid reference,200
-SEC,5,W,-2.0321616314694473,239,5045,length-matched uniform amino-acid reference,200
-SEC,5,F,-0.13132296050361425,104,5045,length-matched uniform amino-acid reference,200
-SEC,5,Y,-0.06367541285351633,725,5045,length-matched uniform amino-acid reference,200
-SEC,5,A,0.18472609457200492,241,5045,length-matched uniform amino-acid reference,200
-SEC,5,G,0.2430891634160003,559,5045,length-matched uniform amino-acid reference,200
-SEC,5,I,0.2716225857172716,188,5045,length-matched uniform amino-acid reference,200
-SEC,5,L,0.19906963294432048,310,5045,length-matched uniform amino-acid reference,200
-SEC,5,M,,0,5045,length-matched uniform amino-acid reference,200
-SEC,5,P,0.21663061506385634,344,5045,length-matched uniform amino-acid reference,200
-SEC,5,V,0.2677049885568177,232,5045,length-matched uniform amino-acid reference,200
-SEC,5,S,0.15566872878575427,463,5045,length-matched uniform amino-acid reference,200
-SEC,5,T,0.2455498829962098,187,5045,length-matched uniform amino-acid reference,200
-SEC,5,N,0.09172300355438189,79,5045,length-matched uniform amino-acid reference,200
-SEC,5,Q,0.06289861607520528,75,5045,length-matched uniform amino-acid reference,200
-SEC,5,C,,0,5045,length-matched uniform amino-acid reference,200
-SEC,6,R,-0.9225568252747873,331,5045,length-matched uniform amino-acid reference,200
-SEC,6,K,-1.3220093897048464,47,5045,length-matched uniform amino-acid reference,200
-SEC,6,H,-0.054827621340814744,59,5045,length-matched uniform amino-acid reference,200
-SEC,6,D,0.623354329652725,311,5045,length-matched uniform amino-acid reference,200
-SEC,6,E,0.30691649533726806,183,5045,length-matched uniform amino-acid reference,200
-SEC,6,W,-2.114837600012957,295,5045,length-matched uniform amino-acid reference,200
-SEC,6,F,-0.14914851158487896,121,5045,length-matched uniform amino-acid reference,200
-SEC,6,Y,-0.05180542926700935,764,5045,length-matched uniform amino-acid reference,200
-SEC,6,A,0.23671568840248539,317,5045,length-matched uniform amino-acid reference,200
-SEC,6,G,0.2790244279697911,638,5045,length-matched uniform amino-acid reference,200
-SEC,6,I,0.20645118776176657,210,5045,length-matched uniform amino-acid reference,200
-SEC,6,L,0.17707999681526448,339,5045,length-matched uniform amino-acid reference,200
-SEC,6,M,,0,5045,length-matched uniform amino-acid reference,200
-SEC,6,P,0.3153816581793172,354,5045,length-matched uniform amino-acid reference,200
-SEC,6,V,0.3042573050445165,272,5045,length-matched uniform amino-acid reference,200
-SEC,6,S,0.33466865395062734,448,5045,length-matched uniform amino-acid reference,200
-SEC,6,T,0.22072178115578076,190,5045,length-matched uniform amino-acid reference,200
-SEC,6,N,0.1452230102020419,72,5045,length-matched uniform amino-acid reference,200
-SEC,6,Q,0.10230613488733685,94,5045,length-matched uniform amino-acid reference,200
-SEC,6,C,,0,5045,length-matched uniform amino-acid reference,200
-SEC,7,R,-0.916744434630827,272,5045,length-matched uniform amino-acid reference,200
-SEC,7,K,-1.400893148034811,40,5045,length-matched uniform amino-acid reference,200
-SEC,7,H,-0.0242141999329465,37,5045,length-matched uniform amino-acid reference,200
-SEC,7,D,0.5624326095835963,394,5045,length-matched uniform amino-acid reference,200
-SEC,7,E,0.1847905260265658,190,5045,length-matched uniform amino-acid reference,200
-SEC,7,W,-2.8794695424204844,374,5045,length-matched uniform amino-acid reference,200
-SEC,7,F,-0.21580413125198464,203,5045,length-matched uniform amino-acid reference,200
-SEC,7,Y,-0.09062844718195992,862,5045,length-matched uniform amino-acid reference,200
-SEC,7,A,0.21654916620226922,324,5045,length-matched uniform amino-acid reference,200
-SEC,7,G,0.2510831219002508,618,5045,length-matched uniform amino-acid reference,200
-SEC,7,I,0.19591070455893622,118,5045,length-matched uniform amino-acid reference,200
-SEC,7,L,0.23471319401666285,315,5045,length-matched uniform amino-acid reference,200
-SEC,7,M,,0,5045,length-matched uniform amino-acid reference,200
-SEC,7,P,0.19740741535690912,203,5045,length-matched uniform amino-acid reference,200
-SEC,7,V,0.31003129352730785,220,5045,length-matched uniform amino-acid reference,200
-SEC,7,S,0.29141530461695997,516,5045,length-matched uniform amino-acid reference,200
-SEC,7,T,0.1661584465810568,202,5045,length-matched uniform amino-acid reference,200
-SEC,7,N,0.16289465474740908,72,5045,length-matched uniform amino-acid reference,200
-SEC,7,Q,0.0670756996280568,85,5045,length-matched uniform amino-acid reference,200
-SEC,7,C,,0,5045,length-matched uniform amino-acid reference,200
-SEC,8,R,-0.7258225279610332,246,5045,length-matched uniform amino-acid reference,200
-SEC,8,K,-1.1953426164231802,38,5045,length-matched uniform amino-acid reference,200
-SEC,8,H,0.02454349588106195,64,5045,length-matched uniform amino-acid reference,200
-SEC,8,D,0.5157839968819079,402,5045,length-matched uniform amino-acid reference,200
-SEC,8,E,0.24765910511596664,202,5045,length-matched uniform amino-acid reference,200
-SEC,8,W,-2.433679292503312,362,5045,length-matched uniform amino-acid reference,200
-SEC,8,F,-0.15508141685436425,234,5045,length-matched uniform amino-acid reference,200
-SEC,8,Y,-0.08059067123212225,685,5045,length-matched uniform amino-acid reference,200
-SEC,8,A,0.1922423065575288,374,5045,length-matched uniform amino-acid reference,200
-SEC,8,G,0.25604340612477106,616,5045,length-matched uniform amino-acid reference,200
-SEC,8,I,0.22960703889416023,110,5045,length-matched uniform amino-acid reference,200
-SEC,8,L,0.22942580987074518,316,5045,length-matched uniform amino-acid reference,200
-SEC,8,M,,0,5045,length-matched uniform amino-acid reference,200
-SEC,8,P,0.18405115314393858,316,5045,length-matched uniform amino-acid reference,200
-SEC,8,V,0.21598738673076565,224,5045,length-matched uniform amino-acid reference,200
-SEC,8,S,0.2465879305290603,489,5045,length-matched uniform amino-acid reference,200
-SEC,8,T,0.19888605677156843,224,5045,length-matched uniform amino-acid reference,200
-SEC,8,N,0.1579115657401936,70,5045,length-matched uniform amino-acid reference,200
-SEC,8,Q,0.028527433385957646,73,5045,length-matched uniform amino-acid reference,200
-SEC,8,C,,0,5045,length-matched uniform amino-acid reference,200
-SEC,9,R,-0.9256602379433606,218,5045,length-matched uniform amino-acid reference,200
-SEC,9,K,-1.143784333552633,28,5045,length-matched uniform amino-acid reference,200
-SEC,9,H,0.0409058413173382,75,5045,length-matched uniform amino-acid reference,200
-SEC,9,D,0.4291796818171716,402,5045,length-matched uniform amino-acid reference,200
-SEC,9,E,0.38039226229480705,183,5045,length-matched uniform amino-acid reference,200
-SEC,9,W,-2.5522103311092246,204,5045,length-matched uniform amino-acid reference,200
-SEC,9,F,-0.07998689720104402,523,5045,length-matched uniform amino-acid reference,200
-SEC,9,Y,-0.09217594431842986,643,5045,length-matched uniform amino-acid reference,200
-SEC,9,A,0.20996041339108704,359,5045,length-matched uniform amino-acid reference,200
-SEC,9,G,0.23273133734003648,651,5045,length-matched uniform amino-acid reference,200
-SEC,9,I,0.2508417002916817,124,5045,length-matched uniform amino-acid reference,200
-SEC,9,L,0.19136831707582583,317,5045,length-matched uniform amino-acid reference,200
-SEC,9,M,,0,5045,length-matched uniform amino-acid reference,200
-SEC,9,P,0.19060618291821396,285,5045,length-matched uniform amino-acid reference,200
-SEC,9,V,0.1784842873342047,181,5045,length-matched uniform amino-acid reference,200
-SEC,9,S,0.18751034354811605,453,5045,length-matched uniform amino-acid reference,200
-SEC,9,T,0.24883228712357008,234,5045,length-matched uniform amino-acid reference,200
-SEC,9,N,0.1328079512410135,83,5045,length-matched uniform amino-acid reference,200
-SEC,9,Q,-0.05830866204632908,80,5045,length-matched uniform amino-acid reference,200
-SEC,9,C,,0,5045,length-matched uniform amino-acid reference,200
-SEC,10,R,-0.920577623730614,210,5045,length-matched uniform amino-acid reference,200
-SEC,10,K,-1.0418023198843003,35,5045,length-matched uniform amino-acid reference,200
-SEC,10,H,0.015046850597204372,58,5045,length-matched uniform amino-acid reference,200
-SEC,10,D,0.35311874603891197,821,5045,length-matched uniform amino-acid reference,200
-SEC,10,E,0.3967825607430163,139,5045,length-matched uniform amino-acid reference,200
-SEC,10,W,-1.9896949477990469,150,5045,length-matched uniform amino-acid reference,200
-SEC,10,F,-0.08661596845493823,687,5045,length-matched uniform amino-acid reference,200
-SEC,10,Y,-0.0746979190103335,632,5045,length-matched uniform amino-acid reference,200
-SEC,10,A,0.25400451802533497,356,5045,length-matched uniform amino-acid reference,200
-SEC,10,G,0.2355157469166443,640,5045,length-matched uniform amino-acid reference,200
-SEC,10,I,0.17983954172167513,63,5045,length-matched uniform amino-acid reference,200
-SEC,10,L,0.20063449031004876,163,5045,length-matched uniform amino-acid reference,200
-SEC,10,M,,0,5045,length-matched uniform amino-acid reference,200
-SEC,10,P,0.25808947978554464,282,5045,length-matched uniform amino-acid reference,200
-SEC,10,V,0.17768360341859746,142,5045,length-matched uniform amino-acid reference,200
-SEC,10,S,0.16794844821918226,326,5045,length-matched uniform amino-acid reference,200
-SEC,10,T,0.31378114214009145,177,5045,length-matched uniform amino-acid reference,200
-SEC,10,N,0.16527473610327686,86,5045,length-matched uniform amino-acid reference,200
-SEC,10,Q,-0.11837315219031136,55,5045,length-matched uniform amino-acid reference,200
-SEC,10,C,,0,5045,length-matched uniform amino-acid reference,200
-SEC,11,R,-0.8531735341089803,148,5045,length-matched uniform amino-acid reference,200
-SEC,11,K,-1.1005247384309769,31,5045,length-matched uniform amino-acid reference,200
-SEC,11,H,-0.025762944676292393,54,5045,length-matched uniform amino-acid reference,200
-SEC,11,D,0.42654317795234536,838,5045,length-matched uniform amino-acid reference,200
-SEC,11,E,0.4592011690299998,93,5045,length-matched uniform amino-acid reference,200
-SEC,11,W,-1.5210457433672513,85,5045,length-matched uniform amino-acid reference,200
-SEC,11,F,-0.1099471383355978,886,5045,length-matched uniform amino-acid reference,200
-SEC,11,Y,-0.03390932106555638,979,5045,length-matched uniform amino-acid reference,200
-SEC,11,A,0.22533168007413412,298,5045,length-matched uniform amino-acid reference,200
-SEC,11,G,0.23818151152996103,439,5045,length-matched uniform amino-acid reference,200
-SEC,11,I,0.18206297926065562,76,5045,length-matched uniform amino-acid reference,200
-SEC,11,L,0.2007441822725993,130,5045,length-matched uniform amino-acid reference,200
-SEC,11,M,,0,5045,length-matched uniform amino-acid reference,200
-SEC,11,P,0.28542661286207266,229,5045,length-matched uniform amino-acid reference,200
-SEC,11,V,0.15784593229359792,131,5045,length-matched uniform amino-acid reference,200
-SEC,11,S,0.13379317538548754,254,5045,length-matched uniform amino-acid reference,200
-SEC,11,T,0.2905134955867076,142,5045,length-matched uniform amino-acid reference,200
-SEC,11,N,0.2376726460456848,75,5045,length-matched uniform amino-acid reference,200
-SEC,11,Q,-0.12631718340613268,46,5045,length-matched uniform amino-acid reference,200
-SEC,11,C,,0,5045,length-matched uniform amino-acid reference,200
-SEC,12,R,-0.7461572281352364,101,5045,length-matched uniform amino-acid reference,200
-SEC,12,K,-0.7705536415943732,13,5045,length-matched uniform amino-acid reference,200
-SEC,12,H,0.014839285786999985,43,5045,length-matched uniform amino-acid reference,200
-SEC,12,D,0.47096253914433883,981,5045,length-matched uniform amino-acid reference,200
-SEC,12,E,0.757858777588064,44,5045,length-matched uniform amino-acid reference,200
-SEC,12,W,-1.1943791131338766,62,5045,length-matched uniform amino-acid reference,200
-SEC,12,F,-0.11572719643905892,987,5045,length-matched uniform amino-acid reference,200
-SEC,12,Y,-0.017730029284605993,960,5045,length-matched uniform amino-acid reference,200
-SEC,12,A,0.14472619802332842,247,5045,length-matched uniform amino-acid reference,200
-SEC,12,G,0.23118185832802401,304,5045,length-matched uniform amino-acid reference,200
-SEC,12,I,0.15104173548105687,45,5045,length-matched uniform amino-acid reference,200
-SEC,12,L,0.16796459390648774,98,5045,length-matched uniform amino-acid reference,200
-SEC,12,M,,0,5045,length-matched uniform amino-acid reference,200
-SEC,12,P,0.2612991830776574,181,5045,length-matched uniform amino-acid reference,200
-SEC,12,V,0.18214117567531946,82,5045,length-matched uniform amino-acid reference,200
-SEC,12,S,0.14206261853537247,155,5045,length-matched uniform amino-acid reference,200
-SEC,12,T,0.1966708756517619,80,5045,length-matched uniform amino-acid reference,200
-SEC,12,N,0.11301748211993723,43,5045,length-matched uniform amino-acid reference,200
-SEC,12,Q,-0.10919260080637673,14,5045,length-matched uniform amino-acid reference,200
-SEC,12,C,,0,5045,length-matched uniform amino-acid reference,200
-SEC,13,R,-0.4426146861219752,69,5045,length-matched uniform amino-acid reference,200
-SEC,13,K,-0.4015081028143565,9,5045,length-matched uniform amino-acid reference,200
-SEC,13,H,0.046528162630765015,19,5045,length-matched uniform amino-acid reference,200
-SEC,13,D,0.556174227125447,1037,5045,length-matched uniform amino-acid reference,200
-SEC,13,E,0.5415568840503693,25,5045,length-matched uniform amino-acid reference,200
-SEC,13,W,-0.6165813274289432,38,5045,length-matched uniform amino-acid reference,200
-SEC,13,F,-0.11360769142997276,839,5045,length-matched uniform amino-acid reference,200
-SEC,13,Y,-0.0018890426347963872,1027,5045,length-matched uniform amino-acid reference,200
-SEC,13,A,0.07610174184246506,178,5045,length-matched uniform amino-acid reference,200
-SEC,13,G,0.21479168260669979,177,5045,length-matched uniform amino-acid reference,200
-SEC,13,I,0.1183230916324716,26,5045,length-matched uniform amino-acid reference,200
-SEC,13,L,0.13292128327539407,59,5045,length-matched uniform amino-acid reference,200
-SEC,13,M,,0,5045,length-matched uniform amino-acid reference,200
-SEC,13,P,0.17846491502132267,112,5045,length-matched uniform amino-acid reference,200
-SEC,13,V,0.13686240568327213,52,5045,length-matched uniform amino-acid reference,200
-SEC,13,S,0.14431125038291936,81,5045,length-matched uniform amino-acid reference,200
-SEC,13,T,0.10954475917510294,38,5045,length-matched uniform amino-acid reference,200
-SEC,13,N,0.09707444262775504,22,5045,length-matched uniform amino-acid reference,200
-SEC,13,Q,-0.03589941607788201,13,5045,length-matched uniform amino-acid reference,200
-SEC,13,C,,0,5045,length-matched uniform amino-acid reference,200
-SEC,14,R,-0.26891549485616195,39,5045,length-matched uniform amino-acid reference,200
-SEC,14,K,-0.3774269223213196,2,5045,length-matched uniform amino-acid reference,200
-SEC,14,H,0.05431936432917908,9,5045,length-matched uniform amino-acid reference,200
-SEC,14,D,0.7609931776891423,841,5045,length-matched uniform amino-acid reference,200
-SEC,14,E,0.350278472671142,13,5045,length-matched uniform amino-acid reference,200
-SEC,14,W,-0.48432886951109944,17,5045,length-matched uniform amino-acid reference,200
-SEC,14,F,-0.0555419962696668,595,5045,length-matched uniform amino-acid reference,200
-SEC,14,Y,0.0022385470498725826,1025,5045,length-matched uniform amino-acid reference,200
-SEC,14,A,0.07861536231913922,113,5045,length-matched uniform amino-acid reference,200
-SEC,14,G,0.17272157053974338,133,5045,length-matched uniform amino-acid reference,200
-SEC,14,I,0.09541844725608822,10,5045,length-matched uniform amino-acid reference,200
-SEC,14,L,0.08795269352800031,47,5045,length-matched uniform amino-acid reference,200
-SEC,14,M,,0,5045,length-matched uniform amino-acid reference,200
-SEC,14,P,0.1955775810225356,62,5045,length-matched uniform amino-acid reference,200
-SEC,14,V,0.05663856272311767,17,5045,length-matched uniform amino-acid reference,200
-SEC,14,S,0.13532537800659022,28,5045,length-matched uniform amino-acid reference,200
-SEC,14,T,0.09129795257467771,16,5045,length-matched uniform amino-acid reference,200
-SEC,14,N,0.048439291305839974,4,5045,length-matched uniform amino-acid reference,200
-SEC,14,Q,0.001346025429666,5,5045,length-matched uniform amino-acid reference,200
-SEC,14,C,,0,5045,length-matched uniform amino-acid reference,200
-SEC,15,R,-0.20211054136355713,24,5045,length-matched uniform amino-acid reference,200
-SEC,15,K,-0.15297528356313703,3,5045,length-matched uniform amino-acid reference,200
-SEC,15,H,,0,5045,length-matched uniform amino-acid reference,200
-SEC,15,D,0.7416258528073495,592,5045,length-matched uniform amino-acid reference,200
-SEC,15,E,,0,5045,length-matched uniform amino-acid reference,200
-SEC,15,W,-0.15979853570461267,5,5045,length-matched uniform amino-acid reference,200
-SEC,15,F,-0.023895142401639577,472,5045,length-matched uniform amino-acid reference,200
-SEC,15,Y,-0.04118905220457232,512,5045,length-matched uniform amino-acid reference,200
-SEC,15,A,0.031329867988824776,5,5045,length-matched uniform amino-acid reference,200
-SEC,15,G,0.13323488427946964,12,5045,length-matched uniform amino-acid reference,200
-SEC,15,I,0.1766285976175876,170,5045,length-matched uniform amino-acid reference,200
-SEC,15,L,0.02466197935147924,13,5045,length-matched uniform amino-acid reference,200
-SEC,15,M,,0,5045,length-matched uniform amino-acid reference,200
-SEC,15,P,0.256195323236964,165,5045,length-matched uniform amino-acid reference,200
-SEC,15,V,0.03643962079659099,10,5045,length-matched uniform amino-acid reference,200
-SEC,15,S,0.11444846913218495,14,5045,length-matched uniform amino-acid reference,200
-SEC,15,T,0.04620557549324899,11,5045,length-matched uniform amino-acid reference,200
-SEC,15,N,0.016425569852193133,3,5045,length-matched uniform amino-acid reference,200
-SEC,15,Q,-0.00944932518177665,4,5045,length-matched uniform amino-acid reference,200
-SEC,15,C,,0,5045,length-matched uniform amino-acid reference,200
-SEC,16,R,-0.29494682028889657,10,5045,length-matched uniform amino-acid reference,200
-SEC,16,K,,0,5045,length-matched uniform amino-acid reference,200
-SEC,16,H,,0,5045,length-matched uniform amino-acid reference,200
-SEC,16,D,0.720384896117917,471,5045,length-matched uniform amino-acid reference,200
-SEC,16,E,0.19179333746433253,2,5045,length-matched uniform amino-acid reference,200
-SEC,16,W,-0.21417798163990176,12,5045,length-matched uniform amino-acid reference,200
-SEC,16,F,-0.06067434865981335,70,5045,length-matched uniform amino-acid reference,200
-SEC,16,Y,-0.08258564157442155,364,5045,length-matched uniform amino-acid reference,200
-SEC,16,A,0.055295674130320494,2,5045,length-matched uniform amino-acid reference,200
-SEC,16,G,0.0576329361647367,6,5045,length-matched uniform amino-acid reference,200
-SEC,16,I,0.21339641877257073,111,5045,length-matched uniform amino-acid reference,200
-SEC,16,L,0.0285290423780679,1,5045,length-matched uniform amino-acid reference,200
-SEC,16,M,,0,5045,length-matched uniform amino-acid reference,200
-SEC,16,P,0.2331098478574019,130,5045,length-matched uniform amino-acid reference,200
-SEC,16,V,0.056747472845017875,4,5045,length-matched uniform amino-acid reference,200
-SEC,16,S,0.03559596448515848,9,5045,length-matched uniform amino-acid reference,200
-SEC,16,T,0.08346906453371043,5,5045,length-matched uniform amino-acid reference,200
-SEC,16,N,0.01600995101034635,2,5045,length-matched uniform amino-acid reference,200
-SEC,16,Q,,0,5045,length-matched uniform amino-acid reference,200
-SEC,16,C,,0,5045,length-matched uniform amino-acid reference,200
-SEC,17,R,-0.23212200850248338,5,5045,length-matched uniform amino-acid reference,200
-SEC,17,K,,0,5045,length-matched uniform amino-acid reference,200
-SEC,17,H,,0,5045,length-matched uniform amino-acid reference,200
-SEC,17,D,0.6835075493009997,71,5045,length-matched uniform amino-acid reference,200
-SEC,17,E,,0,5045,length-matched uniform amino-acid reference,200
-SEC,17,W,,0,5045,length-matched uniform amino-acid reference,200
-SEC,17,F,-0.061573457014229525,45,5045,length-matched uniform amino-acid reference,200
-SEC,17,Y,-0.05488190757464204,274,5045,length-matched uniform amino-acid reference,200
-SEC,17,A,0.1462370157241821,1,5045,length-matched uniform amino-acid reference,200
-SEC,17,G,0.03203253385921313,3,5045,length-matched uniform amino-acid reference,200
-SEC,17,I,0.17467470304800733,101,5045,length-matched uniform amino-acid reference,200
-SEC,17,L,0.0419891923666,1,5045,length-matched uniform amino-acid reference,200
-SEC,17,M,,0,5045,length-matched uniform amino-acid reference,200
-SEC,17,P,0.23460163663213068,104,5045,length-matched uniform amino-acid reference,200
-SEC,17,V,,0,5045,length-matched uniform amino-acid reference,200
-SEC,17,S,0.01418695617467162,5,5045,length-matched uniform amino-acid reference,200
-SEC,17,T,0.0445397235453128,1,5045,length-matched uniform amino-acid reference,200
-SEC,17,N,,0,5045,length-matched uniform amino-acid reference,200
-SEC,17,Q,,0,5045,length-matched uniform amino-acid reference,200
-SEC,17,C,,0,5045,length-matched uniform amino-acid reference,200
-SEC,18,R,,0,5045,length-matched uniform amino-acid reference,200
-SEC,18,K,,0,5045,length-matched uniform amino-acid reference,200
-SEC,18,H,,0,5045,length-matched uniform amino-acid reference,200
-SEC,18,D,0.45685931599952956,44,5045,length-matched uniform amino-acid reference,200
-SEC,18,E,,0,5045,length-matched uniform amino-acid reference,200
-SEC,18,W,,0,5045,length-matched uniform amino-acid reference,200
-SEC,18,F,-0.04995219114011728,29,5045,length-matched uniform amino-acid reference,200
-SEC,18,Y,-0.017472404985372614,70,5045,length-matched uniform amino-acid reference,200
-SEC,18,A,,0,5045,length-matched uniform amino-acid reference,200
-SEC,18,G,,0,5045,length-matched uniform amino-acid reference,200
-SEC,18,I,,0,5045,length-matched uniform amino-acid reference,200
-SEC,18,L,,0,5045,length-matched uniform amino-acid reference,200
-SEC,18,M,,0,5045,length-matched uniform amino-acid reference,200
-SEC,18,P,,0,5045,length-matched uniform amino-acid reference,200
-SEC,18,V,,0,5045,length-matched uniform amino-acid reference,200
-SEC,18,S,,0,5045,length-matched uniform amino-acid reference,200
-SEC,18,T,,0,5045,length-matched uniform amino-acid reference,200
-SEC,18,N,,0,5045,length-matched uniform amino-acid reference,200
-SEC,18,Q,,0,5045,length-matched uniform amino-acid reference,200
-SEC,18,C,,0,5045,length-matched uniform amino-acid reference,200
-SEC,19,R,,0,5045,length-matched uniform amino-acid reference,200
-SEC,19,K,,0,5045,length-matched uniform amino-acid reference,200
-SEC,19,H,,0,5045,length-matched uniform amino-acid reference,200
-SEC,19,D,0.29045178664141685,29,5045,length-matched uniform amino-acid reference,200
-SEC,19,E,,0,5045,length-matched uniform amino-acid reference,200
-SEC,19,W,,0,5045,length-matched uniform amino-acid reference,200
-SEC,19,F,,0,5045,length-matched uniform amino-acid reference,200
-SEC,19,Y,-0.014108568726276778,44,5045,length-matched uniform amino-acid reference,200
-SEC,19,A,,0,5045,length-matched uniform amino-acid reference,200
-SEC,19,G,,0,5045,length-matched uniform amino-acid reference,200
-SEC,19,I,,0,5045,length-matched uniform amino-acid reference,200
-SEC,19,L,,0,5045,length-matched uniform amino-acid reference,200
-SEC,19,M,,0,5045,length-matched uniform amino-acid reference,200
-SEC,19,P,,0,5045,length-matched uniform amino-acid reference,200
-SEC,19,V,,0,5045,length-matched uniform amino-acid reference,200
-SEC,19,S,,0,5045,length-matched uniform amino-acid reference,200
-SEC,19,T,,0,5045,length-matched uniform amino-acid reference,200
-SEC,19,N,,0,5045,length-matched uniform amino-acid reference,200
-SEC,19,Q,,0,5045,length-matched uniform amino-acid reference,200
-SEC,19,C,,0,5045,length-matched uniform amino-acid reference,200
-SEC,20,R,,0,5045,length-matched uniform amino-acid reference,200
-SEC,20,K,,0,5045,length-matched uniform amino-acid reference,200
-SEC,20,H,,0,5045,length-matched uniform amino-acid reference,200
-SEC,20,D,,0,5045,length-matched uniform amino-acid reference,200
-SEC,20,E,,0,5045,length-matched uniform amino-acid reference,200
-SEC,20,W,,0,5045,length-matched uniform amino-acid reference,200
-SEC,20,F,,0,5045,length-matched uniform amino-acid reference,200
-SEC,20,Y,-0.02423222237748314,29,5045,length-matched uniform amino-acid reference,200
-SEC,20,A,,0,5045,length-matched uniform amino-acid reference,200
-SEC,20,G,,0,5045,length-matched uniform amino-acid reference,200
-SEC,20,I,,0,5045,length-matched uniform amino-acid reference,200
-SEC,20,L,,0,5045,length-matched uniform amino-acid reference,200
-SEC,20,M,,0,5045,length-matched uniform amino-acid reference,200
-SEC,20,P,,0,5045,length-matched uniform amino-acid reference,200
-SEC,20,V,,0,5045,length-matched uniform amino-acid reference,200
-SEC,20,S,,0,5045,length-matched uniform amino-acid reference,200
-SEC,20,T,,0,5045,length-matched uniform amino-acid reference,200
-SEC,20,N,,0,5045,length-matched uniform amino-acid reference,200
-SEC,20,Q,,0,5045,length-matched uniform amino-acid reference,200
-SEC,20,C,,0,5045,length-matched uniform amino-acid reference,200
-SEC,21,R,,0,5045,length-matched uniform amino-acid reference,200
-SEC,21,K,,0,5045,length-matched uniform amino-acid reference,200
-SEC,21,H,,0,5045,length-matched uniform amino-acid reference,200
-SEC,21,D,,0,5045,length-matched uniform amino-acid reference,200
-SEC,21,E,,0,5045,length-matched uniform amino-acid reference,200
-SEC,21,W,,0,5045,length-matched uniform amino-acid reference,200
-SEC,21,F,,0,5045,length-matched uniform amino-acid reference,200
-SEC,21,Y,,0,5045,length-matched uniform amino-acid reference,200
-SEC,21,A,,0,5045,length-matched uniform amino-acid reference,200
-SEC,21,G,,0,5045,length-matched uniform amino-acid reference,200
-SEC,21,I,,0,5045,length-matched uniform amino-acid reference,200
-SEC,21,L,,0,5045,length-matched uniform amino-acid reference,200
-SEC,21,M,,0,5045,length-matched uniform amino-acid reference,200
-SEC,21,P,,0,5045,length-matched uniform amino-acid reference,200
-SEC,21,V,,0,5045,length-matched uniform amino-acid reference,200
-SEC,21,S,,0,5045,length-matched uniform amino-acid reference,200
-SEC,21,T,,0,5045,length-matched uniform amino-acid reference,200
-SEC,21,N,,0,5045,length-matched uniform amino-acid reference,200
-SEC,21,Q,,0,5045,length-matched uniform amino-acid reference,200
-SEC,21,C,,0,5045,length-matched uniform amino-acid reference,200
-SEC,22,R,,0,5045,length-matched uniform amino-acid reference,200
-SEC,22,K,,0,5045,length-matched uniform amino-acid reference,200
-SEC,22,H,,0,5045,length-matched uniform amino-acid reference,200
-SEC,22,D,,0,5045,length-matched uniform amino-acid reference,200
-SEC,22,E,,0,5045,length-matched uniform amino-acid reference,200
-SEC,22,W,,0,5045,length-matched uniform amino-acid reference,200
-SEC,22,F,,0,5045,length-matched uniform amino-acid reference,200
-SEC,22,Y,,0,5045,length-matched uniform amino-acid reference,200
-SEC,22,A,,0,5045,length-matched uniform amino-acid reference,200
-SEC,22,G,,0,5045,length-matched uniform amino-acid reference,200
-SEC,22,I,,0,5045,length-matched uniform amino-acid reference,200
-SEC,22,L,,0,5045,length-matched uniform amino-acid reference,200
-SEC,22,M,,0,5045,length-matched uniform amino-acid reference,200
-SEC,22,P,,0,5045,length-matched uniform amino-acid reference,200
-SEC,22,V,,0,5045,length-matched uniform amino-acid reference,200
-SEC,22,S,,0,5045,length-matched uniform amino-acid reference,200
-SEC,22,T,,0,5045,length-matched uniform amino-acid reference,200
-SEC,22,N,,0,5045,length-matched uniform amino-acid reference,200
-SEC,22,Q,,0,5045,length-matched uniform amino-acid reference,200
-SEC,22,C,,0,5045,length-matched uniform amino-acid reference,200
-SEC,23,R,,0,5045,length-matched uniform amino-acid reference,200
-SEC,23,K,,0,5045,length-matched uniform amino-acid reference,200
-SEC,23,H,,0,5045,length-matched uniform amino-acid reference,200
-SEC,23,D,,0,5045,length-matched uniform amino-acid reference,200
-SEC,23,E,,0,5045,length-matched uniform amino-acid reference,200
-SEC,23,W,,0,5045,length-matched uniform amino-acid reference,200
-SEC,23,F,,0,5045,length-matched uniform amino-acid reference,200
-SEC,23,Y,,0,5045,length-matched uniform amino-acid reference,200
-SEC,23,A,,0,5045,length-matched uniform amino-acid reference,200
-SEC,23,G,,0,5045,length-matched uniform amino-acid reference,200
-SEC,23,I,,0,5045,length-matched uniform amino-acid reference,200
-SEC,23,L,,0,5045,length-matched uniform amino-acid reference,200
-SEC,23,M,,0,5045,length-matched uniform amino-acid reference,200
-SEC,23,P,,0,5045,length-matched uniform amino-acid reference,200
-SEC,23,V,,0,5045,length-matched uniform amino-acid reference,200
-SEC,23,S,,0,5045,length-matched uniform amino-acid reference,200
-SEC,23,T,,0,5045,length-matched uniform amino-acid reference,200
-SEC,23,N,,0,5045,length-matched uniform amino-acid reference,200
-SEC,23,Q,,0,5045,length-matched uniform amino-acid reference,200
-SEC,23,C,,0,5045,length-matched uniform amino-acid reference,200
-SEC,24,R,,0,5045,length-matched uniform amino-acid reference,200
-SEC,24,K,,0,5045,length-matched uniform amino-acid reference,200
-SEC,24,H,,0,5045,length-matched uniform amino-acid reference,200
-SEC,24,D,,0,5045,length-matched uniform amino-acid reference,200
-SEC,24,E,,0,5045,length-matched uniform amino-acid reference,200
-SEC,24,W,,0,5045,length-matched uniform amino-acid reference,200
-SEC,24,F,,0,5045,length-matched uniform amino-acid reference,200
-SEC,24,Y,,0,5045,length-matched uniform amino-acid reference,200
-SEC,24,A,,0,5045,length-matched uniform amino-acid reference,200
-SEC,24,G,,0,5045,length-matched uniform amino-acid reference,200
-SEC,24,I,,0,5045,length-matched uniform amino-acid reference,200
-SEC,24,L,,0,5045,length-matched uniform amino-acid reference,200
-SEC,24,M,,0,5045,length-matched uniform amino-acid reference,200
-SEC,24,P,,0,5045,length-matched uniform amino-acid reference,200
-SEC,24,V,,0,5045,length-matched uniform amino-acid reference,200
-SEC,24,S,,0,5045,length-matched uniform amino-acid reference,200
-SEC,24,T,,0,5045,length-matched uniform amino-acid reference,200
-SEC,24,N,,0,5045,length-matched uniform amino-acid reference,200
-SEC,24,Q,,0,5045,length-matched uniform amino-acid reference,200
-SEC,24,C,,0,5045,length-matched uniform amino-acid reference,200
-SEC,25,R,,0,5045,length-matched uniform amino-acid reference,200
-SEC,25,K,,0,5045,length-matched uniform amino-acid reference,200
-SEC,25,H,,0,5045,length-matched uniform amino-acid reference,200
-SEC,25,D,,0,5045,length-matched uniform amino-acid reference,200
-SEC,25,E,,0,5045,length-matched uniform amino-acid reference,200
-SEC,25,W,,0,5045,length-matched uniform amino-acid reference,200
-SEC,25,F,,0,5045,length-matched uniform amino-acid reference,200
-SEC,25,Y,,0,5045,length-matched uniform amino-acid reference,200
-SEC,25,A,,0,5045,length-matched uniform amino-acid reference,200
-SEC,25,G,,0,5045,length-matched uniform amino-acid reference,200
-SEC,25,I,,0,5045,length-matched uniform amino-acid reference,200
-SEC,25,L,,0,5045,length-matched uniform amino-acid reference,200
-SEC,25,M,,0,5045,length-matched uniform amino-acid reference,200
-SEC,25,P,,0,5045,length-matched uniform amino-acid reference,200
-SEC,25,V,,0,5045,length-matched uniform amino-acid reference,200
-SEC,25,S,,0,5045,length-matched uniform amino-acid reference,200
-SEC,25,T,,0,5045,length-matched uniform amino-acid reference,200
-SEC,25,N,,0,5045,length-matched uniform amino-acid reference,200
-SEC,25,Q,,0,5045,length-matched uniform amino-acid reference,200
-SEC,25,C,,0,5045,length-matched uniform amino-acid reference,200
+assay,position,aa,mean_signed_ig,n
+SEC,1,R,,0
+SEC,1,K,,0
+SEC,1,H,,0
+SEC,1,D,,0
+SEC,1,E,,0
+SEC,1,W,,0
+SEC,1,F,-0.0068936859024687994,4
+SEC,1,Y,-0.006691465464731,3
+SEC,1,A,-0.030024517432441708,5038
+SEC,1,G,,0
+SEC,1,I,,0
+SEC,1,L,,0
+SEC,1,M,,0
+SEC,1,P,,0
+SEC,1,V,,0
+SEC,1,S,,0
+SEC,1,T,,0
+SEC,1,N,,0
+SEC,1,Q,,0
+SEC,1,C,,0
+SEC,2,R,-0.31968608078145566,5032
+SEC,2,K,,0
+SEC,2,H,,0
+SEC,2,D,,0
+SEC,2,E,,0
+SEC,2,W,,0
+SEC,2,F,,0
+SEC,2,Y,,0
+SEC,2,A,0.0034217468928545002,2
+SEC,2,G,,0
+SEC,2,I,0.07559355845053986,3
+SEC,2,L,,0
+SEC,2,M,,0
+SEC,2,P,,0
+SEC,2,V,0.008466310217045199,4
+SEC,2,S,0.002166079590097,1
+SEC,2,T,0.0309380572289228,3
+SEC,2,N,,0
+SEC,2,Q,,0
+SEC,2,C,,0
+SEC,3,R,-0.5811053897286284,58
+SEC,3,K,-1.1977257457646457,11
+SEC,3,H,-0.024306930295082643,189
+SEC,3,D,0.5860356238254972,708
+SEC,3,E,0.41006422639746715,611
+SEC,3,W,-0.6704122850282507,91
+SEC,3,F,-0.06763836161196958,102
+SEC,3,Y,-0.1684828347134874,283
+SEC,3,A,0.03178991469455312,401
+SEC,3,G,0.0562954526842467,811
+SEC,3,I,0.19716497093239532,168
+SEC,3,L,0.15307984573848218,251
+SEC,3,M,,0
+SEC,3,P,0.20662341439572063,206
+SEC,3,V,0.18147093710574977,458
+SEC,3,S,-0.0008629555939379878,351
+SEC,3,T,0.11656800505912135,180
+SEC,3,N,0.052604535737131884,49
+SEC,3,Q,-0.04232377304225901,117
+SEC,3,C,,0
+SEC,4,R,-0.861087283231318,500
+SEC,4,K,-1.508932591277234,94
+SEC,4,H,-0.07465888456707549,98
+SEC,4,D,0.4044801231899432,350
+SEC,4,E,0.3778991725670515,169
+SEC,4,W,-1.2694126625318785,111
+SEC,4,F,-0.130852713855362,123
+SEC,4,Y,-0.1329524733749379,399
+SEC,4,A,0.11288869357881465,327
+SEC,4,G,0.13259640922865917,485
+SEC,4,I,0.239144142627357,249
+SEC,4,L,0.1927438148111105,350
+SEC,4,M,,0
+SEC,4,P,0.23974539005148734,591
+SEC,4,V,0.23361448095107595,334
+SEC,4,S,0.047003387656385995,438
+SEC,4,T,0.16574894024920211,212
+SEC,4,N,0.06037239073728669,99
+SEC,4,Q,-0.0007758595396096613,115
+SEC,4,C,0.0010742094600573,1
+SEC,5,R,-0.9316394384230923,466
+SEC,5,K,-1.2934883039886669,59
+SEC,5,H,-0.07073161961949043,85
+SEC,5,D,0.6282194292769944,471
+SEC,5,E,0.39299755407616904,218
+SEC,5,W,-2.0321616314694473,239
+SEC,5,F,-0.13132296050361425,104
+SEC,5,Y,-0.06367541285351633,725
+SEC,5,A,0.18472609457200492,241
+SEC,5,G,0.2430891634160003,559
+SEC,5,I,0.2716225857172716,188
+SEC,5,L,0.19906963294432048,310
+SEC,5,M,,0
+SEC,5,P,0.21663061506385634,344
+SEC,5,V,0.2677049885568177,232
+SEC,5,S,0.15566872878575427,463
+SEC,5,T,0.2455498829962098,187
+SEC,5,N,0.09172300355438189,79
+SEC,5,Q,0.06289861607520528,75
+SEC,5,C,,0
+SEC,6,R,-0.9225568252747873,331
+SEC,6,K,-1.3220093897048464,47
+SEC,6,H,-0.054827621340814744,59
+SEC,6,D,0.623354329652725,311
+SEC,6,E,0.30691649533726806,183
+SEC,6,W,-2.114837600012957,295
+SEC,6,F,-0.14914851158487896,121
+SEC,6,Y,-0.05180542926700935,764
+SEC,6,A,0.23671568840248539,317
+SEC,6,G,0.2790244279697911,638
+SEC,6,I,0.20645118776176657,210
+SEC,6,L,0.17707999681526448,339
+SEC,6,M,,0
+SEC,6,P,0.3153816581793172,354
+SEC,6,V,0.3042573050445165,272
+SEC,6,S,0.33466865395062734,448
+SEC,6,T,0.22072178115578076,190
+SEC,6,N,0.1452230102020419,72
+SEC,6,Q,0.10230613488733685,94
+SEC,6,C,,0
+SEC,7,R,-0.916744434630827,272
+SEC,7,K,-1.400893148034811,40
+SEC,7,H,-0.0242141999329465,37
+SEC,7,D,0.5624326095835963,394
+SEC,7,E,0.1847905260265658,190
+SEC,7,W,-2.8794695424204844,374
+SEC,7,F,-0.21580413125198464,203
+SEC,7,Y,-0.09062844718195992,862
+SEC,7,A,0.21654916620226922,324
+SEC,7,G,0.2510831219002508,618
+SEC,7,I,0.19591070455893622,118
+SEC,7,L,0.23471319401666285,315
+SEC,7,M,,0
+SEC,7,P,0.19740741535690912,203
+SEC,7,V,0.31003129352730785,220
+SEC,7,S,0.29141530461695997,516
+SEC,7,T,0.1661584465810568,202
+SEC,7,N,0.16289465474740908,72
+SEC,7,Q,0.0670756996280568,85
+SEC,7,C,,0
+SEC,8,R,-0.7258225279610332,246
+SEC,8,K,-1.1953426164231802,38
+SEC,8,H,0.02454349588106195,64
+SEC,8,D,0.5157839968819079,402
+SEC,8,E,0.24765910511596664,202
+SEC,8,W,-2.433679292503312,362
+SEC,8,F,-0.15508141685436425,234
+SEC,8,Y,-0.08059067123212225,685
+SEC,8,A,0.1922423065575288,374
+SEC,8,G,0.25604340612477106,616
+SEC,8,I,0.22960703889416023,110
+SEC,8,L,0.22942580987074518,316
+SEC,8,M,,0
+SEC,8,P,0.18405115314393858,316
+SEC,8,V,0.21598738673076565,224
+SEC,8,S,0.2465879305290603,489
+SEC,8,T,0.19888605677156843,224
+SEC,8,N,0.1579115657401936,70
+SEC,8,Q,0.028527433385957646,73
+SEC,8,C,,0
+SEC,9,R,-0.9256602379433606,218
+SEC,9,K,-1.143784333552633,28
+SEC,9,H,0.0409058413173382,75
+SEC,9,D,0.4291796818171716,402
+SEC,9,E,0.38039226229480705,183
+SEC,9,W,-2.5522103311092246,204
+SEC,9,F,-0.07998689720104402,523
+SEC,9,Y,-0.09217594431842986,643
+SEC,9,A,0.20996041339108704,359
+SEC,9,G,0.23273133734003648,651
+SEC,9,I,0.2508417002916817,124
+SEC,9,L,0.19136831707582583,317
+SEC,9,M,,0
+SEC,9,P,0.19060618291821396,285
+SEC,9,V,0.1784842873342047,181
+SEC,9,S,0.18751034354811605,453
+SEC,9,T,0.24883228712357008,234
+SEC,9,N,0.1328079512410135,83
+SEC,9,Q,-0.05830866204632908,80
+SEC,9,C,,0
+SEC,10,R,-0.920577623730614,210
+SEC,10,K,-1.0418023198843003,35
+SEC,10,H,0.015046850597204372,58
+SEC,10,D,0.35311874603891197,821
+SEC,10,E,0.3967825607430163,139
+SEC,10,W,-1.9896949477990469,150
+SEC,10,F,-0.08661596845493823,687
+SEC,10,Y,-0.0746979190103335,632
+SEC,10,A,0.25400451802533497,356
+SEC,10,G,0.2355157469166443,640
+SEC,10,I,0.17983954172167513,63
+SEC,10,L,0.20063449031004876,163
+SEC,10,M,,0
+SEC,10,P,0.25808947978554464,282
+SEC,10,V,0.17768360341859746,142
+SEC,10,S,0.16794844821918226,326
+SEC,10,T,0.31378114214009145,177
+SEC,10,N,0.16527473610327686,86
+SEC,10,Q,-0.11837315219031136,55
+SEC,10,C,,0
+SEC,11,R,-0.8531735341089803,148
+SEC,11,K,-1.1005247384309769,31
+SEC,11,H,-0.025762944676292393,54
+SEC,11,D,0.42654317795234536,838
+SEC,11,E,0.4592011690299998,93
+SEC,11,W,-1.5210457433672513,85
+SEC,11,F,-0.1099471383355978,886
+SEC,11,Y,-0.03390932106555638,979
+SEC,11,A,0.22533168007413412,298
+SEC,11,G,0.23818151152996103,439
+SEC,11,I,0.18206297926065562,76
+SEC,11,L,0.2007441822725993,130
+SEC,11,M,,0
+SEC,11,P,0.28542661286207266,229
+SEC,11,V,0.15784593229359792,131
+SEC,11,S,0.13379317538548754,254
+SEC,11,T,0.2905134955867076,142
+SEC,11,N,0.2376726460456848,75
+SEC,11,Q,-0.12631718340613268,46
+SEC,11,C,,0
+SEC,12,R,-0.7461572281352364,101
+SEC,12,K,-0.7705536415943732,13
+SEC,12,H,0.014839285786999985,43
+SEC,12,D,0.47096253914433883,981
+SEC,12,E,0.757858777588064,44
+SEC,12,W,-1.1943791131338766,62
+SEC,12,F,-0.11572719643905892,987
+SEC,12,Y,-0.017730029284605993,960
+SEC,12,A,0.14472619802332842,247
+SEC,12,G,0.23118185832802401,304
+SEC,12,I,0.15104173548105687,45
+SEC,12,L,0.16796459390648774,98
+SEC,12,M,,0
+SEC,12,P,0.2612991830776574,181
+SEC,12,V,0.18214117567531946,82
+SEC,12,S,0.14206261853537247,155
+SEC,12,T,0.1966708756517619,80
+SEC,12,N,0.11301748211993723,43
+SEC,12,Q,-0.10919260080637673,14
+SEC,12,C,,0
+SEC,13,R,-0.4426146861219752,69
+SEC,13,K,-0.4015081028143565,9
+SEC,13,H,0.046528162630765015,19
+SEC,13,D,0.556174227125447,1037
+SEC,13,E,0.5415568840503693,25
+SEC,13,W,-0.6165813274289432,38
+SEC,13,F,-0.11360769142997276,839
+SEC,13,Y,-0.0018890426347963872,1027
+SEC,13,A,0.07610174184246506,178
+SEC,13,G,0.21479168260669979,177
+SEC,13,I,0.1183230916324716,26
+SEC,13,L,0.13292128327539407,59
+SEC,13,M,,0
+SEC,13,P,0.17846491502132267,112
+SEC,13,V,0.13686240568327213,52
+SEC,13,S,0.14431125038291936,81
+SEC,13,T,0.10954475917510294,38
+SEC,13,N,0.09707444262775504,22
+SEC,13,Q,-0.03589941607788201,13
+SEC,13,C,,0
+SEC,14,R,-0.26891549485616195,39
+SEC,14,K,-0.3774269223213196,2
+SEC,14,H,0.05431936432917908,9
+SEC,14,D,0.7609931776891423,841
+SEC,14,E,0.350278472671142,13
+SEC,14,W,-0.48432886951109944,17
+SEC,14,F,-0.0555419962696668,595
+SEC,14,Y,0.0022385470498725826,1025
+SEC,14,A,0.07861536231913922,113
+SEC,14,G,0.17272157053974338,133
+SEC,14,I,0.09541844725608822,10
+SEC,14,L,0.08795269352800031,47
+SEC,14,M,,0
+SEC,14,P,0.1955775810225356,62
+SEC,14,V,0.05663856272311767,17
+SEC,14,S,0.13532537800659022,28
+SEC,14,T,0.09129795257467771,16
+SEC,14,N,0.048439291305839974,4
+SEC,14,Q,0.001346025429666,5
+SEC,14,C,,0
+SEC,15,R,-0.20211054136355713,24
+SEC,15,K,-0.15297528356313703,3
+SEC,15,H,,0
+SEC,15,D,0.7416258528073495,592
+SEC,15,E,,0
+SEC,15,W,-0.15979853570461267,5
+SEC,15,F,-0.023895142401639577,472
+SEC,15,Y,-0.04118905220457232,512
+SEC,15,A,0.031329867988824776,5
+SEC,15,G,0.13323488427946964,12
+SEC,15,I,0.1766285976175876,170
+SEC,15,L,0.02466197935147924,13
+SEC,15,M,,0
+SEC,15,P,0.256195323236964,165
+SEC,15,V,0.03643962079659099,10
+SEC,15,S,0.11444846913218495,14
+SEC,15,T,0.04620557549324899,11
+SEC,15,N,0.016425569852193133,3
+SEC,15,Q,-0.00944932518177665,4
+SEC,15,C,,0
+SEC,16,R,-0.29494682028889657,10
+SEC,16,K,,0
+SEC,16,H,,0
+SEC,16,D,0.720384896117917,471
+SEC,16,E,0.19179333746433253,2
+SEC,16,W,-0.21417798163990176,12
+SEC,16,F,-0.06067434865981335,70
+SEC,16,Y,-0.08258564157442155,364
+SEC,16,A,0.055295674130320494,2
+SEC,16,G,0.0576329361647367,6
+SEC,16,I,0.21339641877257073,111
+SEC,16,L,0.0285290423780679,1
+SEC,16,M,,0
+SEC,16,P,0.2331098478574019,130
+SEC,16,V,0.056747472845017875,4
+SEC,16,S,0.03559596448515848,9
+SEC,16,T,0.08346906453371043,5
+SEC,16,N,0.01600995101034635,2
+SEC,16,Q,,0
+SEC,16,C,,0
+SEC,17,R,-0.23212200850248338,5
+SEC,17,K,,0
+SEC,17,H,,0
+SEC,17,D,0.6835075493009997,71
+SEC,17,E,,0
+SEC,17,W,,0
+SEC,17,F,-0.061573457014229525,45
+SEC,17,Y,-0.05488190757464204,274
+SEC,17,A,0.1462370157241821,1
+SEC,17,G,0.03203253385921313,3
+SEC,17,I,0.17467470304800733,101
+SEC,17,L,0.0419891923666,1
+SEC,17,M,,0
+SEC,17,P,0.23460163663213068,104
+SEC,17,V,,0
+SEC,17,S,0.01418695617467162,5
+SEC,17,T,0.0445397235453128,1
+SEC,17,N,,0
+SEC,17,Q,,0
+SEC,17,C,,0
+SEC,18,R,,0
+SEC,18,K,,0
+SEC,18,H,,0
+SEC,18,D,0.45685931599952956,44
+SEC,18,E,,0
+SEC,18,W,,0
+SEC,18,F,-0.04995219114011728,29
+SEC,18,Y,-0.017472404985372614,70
+SEC,18,A,,0
+SEC,18,G,,0
+SEC,18,I,,0
+SEC,18,L,,0
+SEC,18,M,,0
+SEC,18,P,,0
+SEC,18,V,,0
+SEC,18,S,,0
+SEC,18,T,,0
+SEC,18,N,,0
+SEC,18,Q,,0
+SEC,18,C,,0
+SEC,19,R,,0
+SEC,19,K,,0
+SEC,19,H,,0
+SEC,19,D,0.29045178664141685,29
+SEC,19,E,,0
+SEC,19,W,,0
+SEC,19,F,,0
+SEC,19,Y,-0.014108568726276778,44
+SEC,19,A,,0
+SEC,19,G,,0
+SEC,19,I,,0
+SEC,19,L,,0
+SEC,19,M,,0
+SEC,19,P,,0
+SEC,19,V,,0
+SEC,19,S,,0
+SEC,19,T,,0
+SEC,19,N,,0
+SEC,19,Q,,0
+SEC,19,C,,0
+SEC,20,R,,0
+SEC,20,K,,0
+SEC,20,H,,0
+SEC,20,D,,0
+SEC,20,E,,0
+SEC,20,W,,0
+SEC,20,F,,0
+SEC,20,Y,-0.02423222237748314,29
+SEC,20,A,,0
+SEC,20,G,,0
+SEC,20,I,,0
+SEC,20,L,,0
+SEC,20,M,,0
+SEC,20,P,,0
+SEC,20,V,,0
+SEC,20,S,,0
+SEC,20,T,,0
+SEC,20,N,,0
+SEC,20,Q,,0
+SEC,20,C,,0
+SEC,21,R,,0
+SEC,21,K,,0
+SEC,21,H,,0
+SEC,21,D,,0
+SEC,21,E,,0
+SEC,21,W,,0
+SEC,21,F,,0
+SEC,21,Y,,0
+SEC,21,A,,0
+SEC,21,G,,0
+SEC,21,I,,0
+SEC,21,L,,0
+SEC,21,M,,0
+SEC,21,P,,0
+SEC,21,V,,0
+SEC,21,S,,0
+SEC,21,T,,0
+SEC,21,N,,0
+SEC,21,Q,,0
+SEC,21,C,,0
+SEC,22,R,,0
+SEC,22,K,,0
+SEC,22,H,,0
+SEC,22,D,,0
+SEC,22,E,,0
+SEC,22,W,,0
+SEC,22,F,,0
+SEC,22,Y,,0
+SEC,22,A,,0
+SEC,22,G,,0
+SEC,22,I,,0
+SEC,22,L,,0
+SEC,22,M,,0
+SEC,22,P,,0
+SEC,22,V,,0
+SEC,22,S,,0
+SEC,22,T,,0
+SEC,22,N,,0
+SEC,22,Q,,0
+SEC,22,C,,0
+SEC,23,R,,0
+SEC,23,K,,0
+SEC,23,H,,0
+SEC,23,D,,0
+SEC,23,E,,0
+SEC,23,W,,0
+SEC,23,F,,0
+SEC,23,Y,,0
+SEC,23,A,,0
+SEC,23,G,,0
+SEC,23,I,,0
+SEC,23,L,,0
+SEC,23,M,,0
+SEC,23,P,,0
+SEC,23,V,,0
+SEC,23,S,,0
+SEC,23,T,,0
+SEC,23,N,,0
+SEC,23,Q,,0
+SEC,23,C,,0
+SEC,24,R,,0
+SEC,24,K,,0
+SEC,24,H,,0
+SEC,24,D,,0
+SEC,24,E,,0
+SEC,24,W,,0
+SEC,24,F,,0
+SEC,24,Y,,0
+SEC,24,A,,0
+SEC,24,G,,0
+SEC,24,I,,0
+SEC,24,L,,0
+SEC,24,M,,0
+SEC,24,P,,0
+SEC,24,V,,0
+SEC,24,S,,0
+SEC,24,T,,0
+SEC,24,N,,0
+SEC,24,Q,,0
+SEC,24,C,,0
+SEC,25,R,,0
+SEC,25,K,,0
+SEC,25,H,,0
+SEC,25,D,,0
+SEC,25,E,,0
+SEC,25,W,,0
+SEC,25,F,,0
+SEC,25,Y,,0
+SEC,25,A,,0
+SEC,25,G,,0
+SEC,25,I,,0
+SEC,25,L,,0
+SEC,25,M,,0
+SEC,25,P,,0
+SEC,25,V,,0
+SEC,25,S,,0
+SEC,25,T,,0
+SEC,25,N,,0
+SEC,25,Q,,0
+SEC,25,C,,0

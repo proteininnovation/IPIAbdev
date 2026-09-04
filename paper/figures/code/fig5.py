@@ -19,11 +19,11 @@ Data:
   IPI SEC  data/ipi_sec_5000.xlsx              (CDR3, sec_filter)
   DS1      tests/DS1.xlsx  (BARCODE, HSEQ, CDR3, psr_filter) - downloaded from Zenodo
            (Chen 2024, record 14735846) via utils/download_ds1_dataset.py; HCDR3 from
-           ANARCI IMGT 105-117, fixed 60k subsample (seed 42).
+           ANARCI IMGT 105-117; the full eligible public cohort is plotted.
 CDR H3 net charge uses liabilities.charge_value (ProteinAnalysis.charge_at_pH 7.4),
 the exact function the original figure used.
 """
-import sys, os, warnings
+import sys, os, re, warnings
 import numpy as np, pandas as pd
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -65,7 +65,7 @@ def load_sec():
     return add_features(d), "sec_filter"
 
 
-def load_ds1(n=60000, seed=42):
+def load_ds1():
     if not os.path.exists(DS1_XLSX):
         raise SystemExit(
             f"DS1 not found: {DS1_XLSX}\n"
@@ -74,9 +74,7 @@ def load_ds1(n=60000, seed=42):
     # dropped empty-CDR3 rows, so there is no motif re-derivation and no silent drop here.
     d = pd.read_excel(DS1_XLSX).dropna(subset=["psr_filter", "CDR3"])
     n_full = len(d)
-    if n_full > n:
-        d = d.sample(n, random_state=seed)          # density-faithful subsample
-    print(f"  DS1: {n_full:,} loaded -> {len(d):,} used (subsample n={n}, seed={seed})")
+    print(f"  DS1: {n_full:,} loaded; full cohort used")
     return add_features(d), "psr_filter"
 
 
@@ -165,6 +163,46 @@ CORR_SPEC = [
     ("puriftitermgl",        "Titer"),
 ]
 sec_raw = pd.read_excel(f"{DATA}/ipi_sec_5000.xlsx")
+
+
+def _parse_numbers(value):
+    out = []
+    if not pd.isna(value):
+        for token in re.split(r"[;,]", str(value)):
+            token = token.strip()
+            if token and token.lower() != "nan":
+                try:
+                    out.append(float(token))
+                except ValueError:
+                    pass
+    return out
+
+
+def _main_peak_retention(area_value, retention_value):
+    areas = _parse_numbers(area_value)
+    retention_times = _parse_numbers(retention_value)
+    if not areas:
+        return retention_times[0] if len(retention_times) == 1 else np.nan
+    index = int(np.argmax(areas))
+    return retention_times[index] if len(retention_times) == len(areas) else np.nan
+
+
+# Use the same corrected SEC retention-time assembly as Figure 1. Values from
+# the one-row-per-antibody export are preferred, with the dashboard export as
+# fallback. Both comma- and semicolon-delimited multi-peak records are parsed.
+cohort_ids = sec_raw["BARCODE"]
+new_sec = (pd.read_excel(f"{DATA}/ipi_sec_20260420_M54-M117.xlsx")
+           .drop_duplicates("TAB ID").set_index("TAB ID"))
+new_rt = cohort_ids.map(pd.to_numeric(new_sec["Retention Time_SEC"], errors="coerce"))
+dashboard = (pd.read_csv(f"{DATA}/ipi_sec_dash_export.csv", dtype=str)
+             .drop_duplicates("TAB ID").set_index("TAB ID").reindex(cohort_ids.values))
+dashboard_rt = pd.Series(
+    [_main_peak_retention(a, r) for a, r in zip(
+        dashboard["Main Peak Area (%)"], dashboard["Main Peak Retention Time (min)"])],
+    index=sec_raw.index,
+)
+sec_raw["retention_time_mins"] = new_rt.fillna(dashboard_rt)
+print(f"  corrected SEC RT available: {sec_raw['retention_time_mins'].notna().sum():,} / {len(sec_raw):,}")
 corr_cols, corr_labels = [], []
 for col, lab in CORR_SPEC:
     if col not in sec_raw.columns:
@@ -277,7 +315,7 @@ axq.legend(fontsize=5.4, loc="lower left", handlelength=1.1, borderaxespad=0.2)
 n_psr = int(psr_curve["n"].sum()); n_ds1 = int(ds1_curve["n"].sum())
 axq.text(0.97, 0.97, f"n = {n_psr:,} / {n_ds1:,}", transform=axq.transAxes,
          ha="right", va="top", fontsize=5.2, color="#444444")
-axq.set_title("Charge → pass rate", fontsize=6.5, pad=5)
+axq.set_title("Pass rate by CDR H3 net charge", fontsize=6.5, pad=5)
 ok.panel_label(fig, axq, "q", dx=-0.052, dy=0.052, size=8)
 
 # (r) Biophysical determinant correlations (Spearman) ------------------------

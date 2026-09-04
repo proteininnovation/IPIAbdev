@@ -36,7 +36,6 @@ from matplotlib.gridspec import GridSpec
 import seaborn as sns
 from pathlib import Path
 
-sys.path.append('/Users/Hoan.Nguyen/ComBio/IPIAbDiscov/utilities/')
 import liabilities
 import utilities
 
@@ -557,7 +556,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--data_path",
         type=str,
-        default="/Users/Hoan.Nguyen/ComBio/MachineLearning",
+        default=".",
         help="Root path containing the /data/ directory",
     )
     parser.add_argument(

@@ -2,7 +2,7 @@
 Extended Data Figures 1 & 2 — 8-panel CDR H3 biophysical
 profiling.
   ED1: IPI PSR ELISA-only (denoised)   Pass/Fail = non-polyreactive / polyreactive
-  ED2: IPI SEC                         Pass/Fail = monomeric / aggregating
+  ED2: IPI SEC                         Pass/Fail = monomeric / non-monomeric
 Panels: a Arg | b Asp | c Trp(Arg=1) | d Glu | e loop length | f net charge
         | g CDR H3 pI | h heavy-chain pI
 Faithful to utils/Figure2_physicochemical.generate_extended_figure1 / generate_figure2;
@@ -56,7 +56,7 @@ PANELS = [
 def build(df, fcol, meaning, outname, cohort):
     fig = plt.figure(figsize=(ok.DOUBLE, 98 * ok.MM))
     # cohort/framing line so this reads as the full per-dataset biophysical panel
-    # (distinct from Fig. 2's cross-dataset signature; net charge + pI are new here)
+    # (distinct from Fig. 5's cross-dataset signature; net charge + pI are expanded here)
     fig.text(0.5, 0.975, cohort, ha="center", va="top", fontsize=6.2, fontweight="bold")
     gs = GridSpec(2, 4, figure=fig, left=0.06, right=0.99, top=0.90, bottom=0.16,
                   hspace=0.62, wspace=0.40)
@@ -100,12 +100,12 @@ eli = eli[eli["psr_filter"].notna()]
 print("ED1 n=", len(eli))
 build(add_features(eli), "psr_filter", ("non-polyreactive", "polyreactive"), "ED_Fig1",
       f"Full CDR H3 biophysical profile — IPI PSR-ELISA only (denoised, n={len(eli):,});  "
-      "net charge and isoelectric point extend the Fig. 2 signature")
+      "net charge and isoelectric point extend the Fig. 5 signature")
 
 # ED2 — SEC
 sec = pd.read_excel(f"{DATA}/ipi_sec_5000.xlsx"); sec = sec[sec["sec_filter"].notna()]
 print("ED2 n=", len(sec))
-build(add_features(sec), "sec_filter", ("monomeric", "aggregating"), "ED_Fig2",
+build(add_features(sec), "sec_filter", ("monomeric", "non-monomeric"), "ED_Fig2",
       f"Full CDR H3 biophysical profile — IPI SEC (n={len(sec):,});  "
-      "net charge and isoelectric point extend the Fig. 2 signature")
+      "net charge and isoelectric point extend the Fig. 5 signature")
 print("ED1/ED2 done")

@@ -57,7 +57,7 @@ warnings.filterwarnings("ignore")
 np.random.seed(42)
 
 # ─── Paths ───────────────────────────────────────────────────────────────────
-MAIN_PATH  = "/Users/Hoan.Nguyen/ComBio/MachineLearning/IPIPred/"
+MAIN_PATH  = "."
 DATA_FILE  = "data/ipi_antibodydb.xlsx"
 OUT_DIR    = Path("images/figures_natbiotech")
 OUT_DIR.mkdir(parents=True, exist_ok=True)

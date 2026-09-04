@@ -1,15 +1,16 @@
 """
 Extended Data Figure 4 (publication-quality) — full external-clinical-validation grid.
-  a  AUC-ROC heatmap     : every language model × two Jain 2017 readouts
+  a  AUC-ROC heatmap     : every language model × every assay readout
   b  Spearman ρ heatmap  : P(Pass) score vs continuous assay, with significance stars
 
 Main Figure 5b summarises external validation for the deployed model
 (Transformer + AbLang2). This ED figure preserves the full grid that was in the
 original Figure 4 (every LM × every assay) so nothing is lost.
 
-Binary AUC is calculated only for Jain 2017, using its assay-specific
-developability flags. GDPa1 and GDPa3 are retained only in the continuous
-Spearman grid because the Jain 0.27 threshold does not apply to Ginkgo assays.
+Data logic (score_col / safe_auc / safe_rho_p / heatmap_matrices / thresholds)
+is copied VERBATIM from figures_nature_v1/code/fig4.py — no thresholds or
+formulas changed. Only the within-distribution CV / cross-dataset bars are
+dropped here; those already live in the main figures.
 """
 import argparse, sys, os, warnings
 import numpy as np, pandas as pd
@@ -24,7 +25,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import okabe_style as ok
 warnings.filterwarnings("ignore")
 
-parser = argparse.ArgumentParser(description="Generate DELPHI Extended Data Figure 4.")
+parser = argparse.ArgumentParser(description="Generate updated DELPHI Extended Data Figure 4.")
 parser.add_argument("--jain", required=True)
 parser.add_argument("--gdpa1", required=True)
 parser.add_argument("--gdpa3", required=True)
@@ -38,8 +39,7 @@ ok.set_style(base_pt=6.5)
 THRESH, THRESH_ELISA = 0.27, 1.9
 HM_LM_ORDER = ['ablang', 'antiberty', 'antiberta2', 'antiberta2-cssp', 'igbert', 'onehot']
 HM_LM_DISPLAY = ['AbLang2', 'AntiBERTy', 'AntiBERTa2', 'AntiBERTa2-CSSP', 'IgBert', 'One-hot']
-AUC_DATASETS = ['Jain 2017\nPSR SMP', 'Jain 2017\nELISA']
-RHO_DATASETS = ['Jain 2017\nPSR SMP', 'Jain 2017\nELISA', 'GDPa1\nPR Ova', 'GDPa1\nPR CHO', 'GDPa3\nPR Ova', 'GDPa3\nPR CHO']
+DATASETS = ['Jain 2017\nPSR SMP', 'Jain 2017\nELISA', 'GDPa1\nPR Ova', 'GDPa1\nPR CHO', 'GDPa3\nPR Ova', 'GDPa3\nPR CHO']
 
 
 # ── data + computation (verbatim from v1 fig4.py) ─────────────────────────────
@@ -63,15 +63,17 @@ def safe_rho_p(df, sc, col):
 
 def heatmap_matrices(jain, g1, g3):
     n = len(HM_LM_ORDER)
-    auc = np.full((n, 2), np.nan); rho = np.full((n, 6), np.nan); pv = np.full((n, 6), np.nan)
+    auc = np.full((n, 6), np.nan); rho = np.full((n, 6), np.nan); pv = np.full((n, 6), np.nan)
     for i, lm in enumerate(HM_LM_ORDER):
         c = score_col(lm)
         if c in jain.columns:
             auc[i, 0] = safe_auc(jain, c, 'PSR_SMP_Score'); auc[i, 1] = safe_auc(jain, c, 'ELISA', thresh=THRESH_ELISA)
             rho[i, 0], pv[i, 0] = safe_rho_p(jain, c, 'PSR_SMP_Score'); rho[i, 1], pv[i, 1] = safe_rho_p(jain, c, 'ELISA')
         if c in g1.columns:
+            auc[i, 2] = safe_auc(g1, c, 'polyreactivity_prscore_ova_avg'); auc[i, 3] = safe_auc(g1, c, 'polyreactivity_prscore_cho_avg')
             rho[i, 2], pv[i, 2] = safe_rho_p(g1, c, 'polyreactivity_prscore_ova_avg'); rho[i, 3], pv[i, 3] = safe_rho_p(g1, c, 'polyreactivity_prscore_cho_avg')
         if c in g3.columns:
+            auc[i, 4] = safe_auc(g3, c, 'polyreactivity_prscore_ova_avg', min_fail=3); auc[i, 5] = safe_auc(g3, c, 'polyreactivity_prscore_cho_avg')
             rho[i, 4], pv[i, 4] = safe_rho_p(g3, c, 'polyreactivity_prscore_ova_avg'); rho[i, 5], pv[i, 5] = safe_rho_p(g3, c, 'polyreactivity_prscore_cho_avg')
     return auc, rho, pv
 
@@ -143,14 +145,14 @@ axa.set_position([
     compact_width,
     axa_box.height,
 ])
-draw_heatmap(axa, auc_mat, HM_LM_DISPLAY, AUC_DATASETS, "Jain 2017 clinical panel · AUC-ROC",
+draw_heatmap(axa, auc_mat[:, :2], HM_LM_DISPLAY, DATASETS[:2], "Jain 2017 clinical panel · AUC-ROC",
              vmin=0.20, vmax=0.90, vcenter=0.5, cbar_label='AUC-ROC', fmt='.3f', letter='a', col_sep=(),
              subtitle=f"Jain developability flags: PSR SMP < {THRESH}; ELISA < {THRESH_ELISA}")
 axb = fig.add_subplot(gs[1, 0])
-draw_heatmap(axb, rho_mat, HM_LM_DISPLAY, RHO_DATASETS, "External clinical validation · Spearman ρ",
+draw_heatmap(axb, rho_mat, HM_LM_DISPLAY, DATASETS, "External clinical validation · Spearman ρ",
              vmin=-0.80, vmax=0.20, vcenter=0.0, cbar_label='Spearman ρ', fmt='.2f',
              cbar_ticks=[-0.8, -0.4, 0.0, 0.2], pval=pv, letter='b',
-             subtitle="P(Pass) vs polyreactivity assay score   (*** p<0.001  ** p<0.01  * p<0.05)")
+             subtitle="P(Pass) vs assay score; nominal two-sided p, unadjusted   (*** p<0.001  ** p<0.01  * p<0.05)")
 
 ok.save_fig(fig, "ED_Fig4", OUT)   # renumbered: external grid is now Extended Data Fig. 4 (citation order)
 print("ED(external grid -> ED_Fig4) done")

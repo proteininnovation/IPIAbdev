@@ -57,7 +57,9 @@ python paper/run_reproduction_tests.py --internal --repo-root /path/to/delphi
 `data/shareable/interpretability/` contains sequence-free source tables for
 Main Figure 6 and Extended Data Figures 6-7. These public summaries reproduce
 the final figures exactly but do not allow recomputation of IG/SHAP values from
-the underlying private antibody sequences.
+the underlying private antibody sequences. The IG summaries use all 11,265 PSR
+and 5,045 SEC antibodies. The 500 rows in each amino-acid-by-position table are
+25 positions by 20 amino acids, not a 500-antibody subset.
 
 `data/shareable/manuscript_tables/` contains the final Supplementary Tables 2,
 4, 5, and 7 and Extended Data Tables 1-3. Supplementary Table 4 provides the

@@ -18,8 +18,8 @@ Style
 Usage
 -----
     python utils/Figure1_datasetcurration.py \
-        --elisa_path /Users/Hoan.Nguyen/ComBio/delphi/manuscripts/data/elisa_score_figure1.xlsx  \
-        --sec_path   /Users/Hoan.Nguyen/ComBio/delphi/manuscripts/data/sec_retention_time_figure1.xlsx \
+        --elisa_path /path/to/delphi/manuscripts/data/elisa_score_figure1.xlsx  \
+        --sec_path   /path/to/delphi/manuscripts/data/sec_retention_time_figure1.xlsx \
         --output_prefix Figure1 \
         --dpi 300
 """
@@ -41,7 +41,7 @@ from scipy.stats import spearmanr, mannwhitneyu
 warnings.filterwarnings("ignore")
 
 
-OUT_DIR = Path("/Users/Hoan.Nguyen/ComBio/delphi/manuscripts/figures_tables")
+OUT_DIR = Path("manuscripts/figures_tables")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # ─── publication-quality style constants ────────────────────────────────────

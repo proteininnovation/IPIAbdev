@@ -46,6 +46,8 @@ p_secfail_psrfail = sec_fail[psr_fail].mean()
 a = int((psr_fail & sec_fail).sum()); b = int((psr_fail & ~sec_fail).sum())
 c = int((~psr_fail & sec_fail).sum()); dd = int((~psr_fail & ~sec_fail).sum())
 OR = (a * dd) / (b * c)
+or_se = np.sqrt(1 / a + 1 / b + 1 / c + 1 / dd)
+or_ci = np.exp(np.log(OR) + np.array([-1, 1]) * 1.959963984540054 * or_se)
 _, fisher_p = fisher_exact([[a, b], [c, dd]])   # substantiates the "p < 1e-200" stated in the ED9 legend
 ch = sec.dropna(subset=["HCDR3_charge"])
 pf = (ch["psr_filter"] == 0).values; sf = (ch["sec_filter"] == 0).values
@@ -70,7 +72,8 @@ y = y.astype(float)
 y[3:] -= 0.7
 axa.barh(y, vals, height=0.62, color=cols, edgecolor="none", zorder=2)
 axa.axvline(r1["anchor_cluster_auc"], color="#555555", lw=0.7, ls="--", zorder=1)
-axa.text(r1["anchor_cluster_auc"] + 0.002, y[0] + 0.7, "within-CV\nupper bound", fontsize=4.6,
+axa.text(r1["anchor_cluster_auc"] + 0.002, y[0] + 0.7,
+         "within-library\nCDR H3-cluster CV", fontsize=4.6,
          color="#555555", va="bottom", ha="left")
 for yi, v in zip(y, vals):
     axa.text(v - 0.004, yi, f3(v), ha="right", va="center", fontsize=5.0,
@@ -83,7 +86,7 @@ axa.text(0.505, y[0] + 1.05, "Evaluation protocol (same classifier)", fontsize=5
 axa.text(0.505, y[3] + 0.55, "Per held-out VH germline", fontsize=5.2,
          color="#333333", fontweight="bold", va="bottom")
 axa.grid(axis="x", lw=0.25, alpha=0.4)
-axa.set_title("Within-CV AUC is an upper bound", fontsize=6.6,
+axa.set_title("AUC decreases when germlines are held out", fontsize=6.6,
               fontweight="bold", loc="left", pad=4)
 
 # ---- panel b: R2 co-occurrence ----
@@ -96,7 +99,7 @@ axb.set_xticks(xb); axb.set_xticklabels(["PSR\nPass", "PSR\nFail"], fontsize=5.6
 axb.set_ylim(0, 0.85); axb.set_ylabel("P(SEC fail)", fontsize=6.3)
 axb.grid(axis="y", lw=0.25, alpha=0.4)
 axb.set_title("Co-failure (n = 5,045)", fontsize=6.6, fontweight="bold", loc="left", pad=4)
-axb.text(0.5, 0.80, f"odds ratio {OR:.1f}", transform=axb.transData if False else axb.transAxes,
+axb.text(0.5, 0.82, f"odds ratio {OR:.1f}\n95% CI {or_ci[0]:.1f}-{or_ci[1]:.1f}", transform=axb.transAxes,
          ha="center", va="top", fontsize=5.2, color="#333333")
 
 # ---- panel c: R2 charge predicts both ----
@@ -108,7 +111,7 @@ for xi, v in zip(xc, [auc_psr, auc_sec]):
 axc.set_xticks(xc); axc.set_xticklabels(["PSR\nfailure", "SEC\nfailure"], fontsize=5.6)
 axc.set_ylim(0.4, 0.9); axc.set_ylabel("ROC-AUC\n(CDR H3 net charge)", fontsize=6.0)
 axc.grid(axis="y", lw=0.25, alpha=0.4)
-axc.set_title("Charge predicts both", fontsize=6.6, fontweight="bold", loc="left", pad=4)
+axc.set_title("Net charge separates both labels", fontsize=6.6, fontweight="bold", loc="left", pad=4)
 
 for ax, L, dx in [(axa, "a", -0.155), (axb, "b", -0.075), (axc, "c", -0.075)]:
     ok.panel_label(fig, ax, L, dx=dx, dy=0.035, size=9)

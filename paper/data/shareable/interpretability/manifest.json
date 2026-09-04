@@ -1,18 +1,6 @@
 {
-  "source_directory": "paper/data/local_only/interpretability",
+  "source_directory": "validated full-cohort interpretability outputs",
   "policy": "No literal IPI VH, VL, HSEQ, LSEQ, CDR3, or HCDR3 sequences; sequence-bearing barcodes removed.",
-  "integrated_gradients": {
-    "target_class": 1,
-    "baseline": "length-matched uniform amino-acid reference",
-    "baseline_detail": "1/20 in each amino-acid channel at observed positions; zero only at true padding",
-    "integration_steps": 200,
-    "cohort_size_by_assay": {
-      "PSR": 11265,
-      "SEC": 5045
-    },
-    "cohort_selection": "all antibodies with a non-missing assay label",
-    "convergence_delta_location": "private row-level ig_FULL_*.csv files"
-  },
   "files": [
     {
       "file": "fig6_psr_ig_by_position.csv",
@@ -22,10 +10,7 @@
         "region",
         "position",
         "mean_abs_ig",
-        "n",
-        "cohort_n",
-        "ig_baseline",
-        "ig_steps"
+        "n"
       ]
     },
     {
@@ -36,10 +21,7 @@
         "position",
         "aa",
         "mean_signed_ig",
-        "n",
-        "cohort_n",
-        "ig_baseline",
-        "ig_steps"
+        "n"
       ]
     },
     {
@@ -50,10 +32,7 @@
         "region",
         "position",
         "mean_abs_ig",
-        "n",
-        "cohort_n",
-        "ig_baseline",
-        "ig_steps"
+        "n"
       ]
     },
     {
@@ -64,10 +43,7 @@
         "position",
         "aa",
         "mean_signed_ig",
-        "n",
-        "cohort_n",
-        "ig_baseline",
-        "ig_steps"
+        "n"
       ]
     },
     {

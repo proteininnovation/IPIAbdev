@@ -57,7 +57,7 @@ warnings.filterwarnings("ignore")
 np.random.seed(42)
 
 # ─── Paths ───────────────────────────────────────────────────────────────────
-MAIN_PATH  = "/Users/Hoan.Nguyen/ComBio/delphi/"
+MAIN_PATH  = "."
 DATA_FILE  = "data/ipi_psr_trainset.xlsx"
 OUT_DIR    = Path("manuscripts/figures_tables/")
 OUT_DIR.mkdir(parents=True, exist_ok=True)

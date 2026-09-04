@@ -1,7 +1,7 @@
-# DELPHI paper patch test report — 27 August 2026
+# DELPHI paper patch test report: 4 September 2026
 
-Tested against a clean detached worktree of public `origin/main` commit
-`21153a2` (`Update sequence-free IG figure source data`).
+Tested in a clean clone based on public `origin/main` commit `c7a09c7`
+(`Update download_zenodo.py`) after applying the final submission update.
 
 ## Structural and privacy validation
 
@@ -27,7 +27,7 @@ Result: **7/7 commands passed**.
 |---|---|
 | Main Figure 3 | PASS; pixel-identical to final render |
 | Main Figure 4 | PASS; pixel-identical to repository baseline |
-| Main Figure 6 | PASS; pixel-identical to repository baseline |
+| Main Figure 6 | PASS; rebuilt from validated full-cohort IG summaries and pixel-identical to the journal render |
 | Extended Data Figure 3 | PASS; pixel-identical to final render |
 | Extended Data Figure 4 | PASS; pixel-identical to repository baseline |
 | Extended Data Figure 5 | PASS; pixel-identical to repository baseline |
@@ -40,3 +40,13 @@ private PSR/SEC inputs and one-hot checkpoints. Result: **1/1 passed**. The
 regenerated Extended Data Figure 8 PNG was pixel-identical to the final
 manuscript render. Private inputs and the sequence-bearing final render are not
 included in this patch.
+
+## Figure 6 correction validation
+
+After replacing the invalid 500-antibody IG inputs, Main Figure 6 was tested
+again with the public sequence-free tables. The command passed 1/1 and the
+regenerated PNG had SHA-256
+`ce461fe151b52b6f9c45e500ff9ae450315dbd868dd603ea028cd5dfd3586673`,
+identical to the journal-submission PNG. The IG summaries represent all 11,265
+PSR antibodies and all 5,045 SEC antibodies. The SHAP dependence panels use the
+documented deterministic 3,000-antibody cohorts.

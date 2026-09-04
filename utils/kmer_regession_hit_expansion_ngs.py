@@ -363,7 +363,7 @@ def generate_evaluation_plots(df, score_col, training_mode, output_folder, model
 # ====================== USER CONFIG ======================
 if __name__ == "__main__":
 
-    INPUT_FILE = "/Users/Hoan.Nguyen/ComBio/NGS/Projects/AntibodyDiscovery/Miseq108/processed/mPTPRO_440-827_AH_Block198_clones.csv"
+    INPUT_FILE = os.environ.get("DELPHI_NGS_INPUT_FILE", "input.csv")
 
     USE_BLOSUM_IN_MODEL = False
     TRAINING_MODE = "binary_strong"
@@ -376,10 +376,13 @@ if __name__ == "__main__":
     LABEL_DENDROGRAM_WITH_CDR3 = True
 
     # ================== CUSTOM OUTPUT FOLDER ==================
-    OUTPUT_FOLDER = "/Users/Hoan.Nguyen/ComBio/NGS/Projects/AntibodyDiscovery/Miseq108"          
+    OUTPUT_FOLDER = os.environ.get("DELPHI_NGS_OUTPUT_DIR", "ngs_outputs")
     # ========================================================
 
-    PREVIOUS_FILES = ["/Users/Hoan.Nguyen/ComBio/AntigenDB/datasources/ipi_data/processed/ipi_antibodydb_july2025.csv"]
+    PREVIOUS_FILES = [
+        path for path in os.environ.get("DELPHI_PREVIOUS_FILES", "previous_antibodies.csv").split(os.pathsep)
+        if path
+    ]
     PREVIOUS_CDR3_COLUMN = "CDR3"
     facs_col = 'count mPTPRO_440-827_AH__Block198__Round5__F_P__4nM_Block198.csv'
     macs_col = 'count mPTPRO_440-827_AH__Block198__Round3__M_P__100nM_Block198.csv'

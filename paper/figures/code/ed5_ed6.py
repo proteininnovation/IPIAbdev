@@ -66,7 +66,9 @@ def shap_beeswarm(ax, df, n_top=20):
 
 
 def ig_beeswarm(ax, df, n_top=22):
-    df = df.copy(); df["key"] = df["region"].str.replace("_framework", "") + " " + df["aa"]
+    df = df.copy()
+    region = df["region"].str.replace("_framework", "", regex=False).replace({"HCDR3": "CDR3"})
+    df["key"] = region + " " + df["aa"]
     order = df.groupby("key")["ig_value"].apply(lambda s: s.abs().mean()).sort_values()
     order = order.index.tolist()[-n_top:]
     for yi, k in enumerate(order):

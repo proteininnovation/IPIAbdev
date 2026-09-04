@@ -16,7 +16,7 @@ double-column figure specifications:
 
 Usage
 -----
-    python utils/Figure2_physicochemical.py --data_path /Users/Hoan.Nguyen/ComBio/delphi/data --dpi 300
+    python utils/Figure2_physicochemical.py --data_path /path/to/delphi --dpi 300
 
 Or import in a notebook:
     from ipiabdev_figures import generate_all_figures
@@ -42,7 +42,7 @@ import utilities
 warnings.filterwarnings("ignore")
 
 # Output directory
-OUT_DIR = Path("/Users/Hoan.Nguyen/ComBio/delphi/manuscripts/figures_tables")
+OUT_DIR = Path("manuscripts/figures_tables")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # ─── publication-quality style constants ────────────────────────────────────
@@ -576,7 +576,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--data_path",
         type=str,
-        default="/Users/Hoan.Nguyen/ComBio/delphi",
+        default=".",
         help="Root path containing the /data/ directory",
     )
     parser.add_argument(

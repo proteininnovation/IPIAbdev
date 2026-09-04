@@ -14,14 +14,13 @@ Extended Data Figures 6-7 without distributing literal IPI antibody sequences.
 - `interp_*_beeswarm_*.csv` retains the numerical beeswarm source records but
   excludes barcodes from Transformer-derived tables.
 
-The Transformer IG source tables use target class 1, 200 integration steps,
-and a length-matched uniform amino-acid reference (1/20 at every observed
-residue position; zero only at true padding). They contain all labeled
-antibodies: 11,265 for PSR and 5,045 for SEC. The private row-level files also
-record Captum convergence deltas.
-
 The underlying attribution calculations cannot be recomputed without the
 private IPI sequences. The files here reproduce the published visual summaries;
 they do not expose or permit reconstruction of individual IPI sequences.
+
+The IG summaries were generated from all 11,265 PSR antibodies and all 5,045
+SEC antibodies. Each `fig6_*_ig_by_aa_position.csv` file has 500 aggregate rows
+because it reports 25 positions by 20 amino acids. The 500 rows do not represent
+a 500-antibody subset.
 
 `manifest.json` records the exported schemas and sequence-leakage audit result.

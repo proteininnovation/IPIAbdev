@@ -71,7 +71,9 @@ python paper/run_reproduction_tests.py \
 The source tables are in `paper/data/shareable/interpretability/`. They retain
 only the attribution and aggregation fields required for the published plots;
 they do not contain VH, VL, HCDR3/CDR3, or other recoverable antibody sequence
-fields. Extended Data Figure 8 includes CDR3-loop ΔP(Pass) mutagenesis and
+fields. The IG summaries use all 11,265 PSR and 5,045 SEC antibodies. The 500
+rows in each amino-acid-by-position table are aggregate cells comprising 25
+positions by 20 amino acids, not a 500-antibody subset. Extended Data Figure 8 includes CDR3-loop ΔP(Pass) mutagenesis and
 requires private sequence-level inputs, so it is excluded from the public
 reproduction suite.
 

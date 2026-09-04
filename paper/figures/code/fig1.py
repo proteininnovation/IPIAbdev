@@ -14,7 +14,7 @@ Data (local): data/ipi_psr_trainset.xlsx, data/elisa_score_figure1.xlsx,
               data/sec_retention_time_figure1.xlsx
 All numbers come from the data files or the curated dataset constants below.
 """
-import sys, os, warnings
+import sys, os, re, warnings
 import numpy as np, pandas as pd
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -265,13 +265,13 @@ def load_elisa():
 
 def _sec_main_peak(area_str, rt_str):
     """(% monomer, retention time) of the main SEC peak. A run may report several peaks in
-    one cell (area and RT comma-separated and positionally matched, e.g. area '10.22, 89.78'
-    with RT '2.06, 3.141'); the main peak is the largest by area, and we take its area
+    one cell (area and RT comma- or semicolon-separated and positionally matched, e.g.
+    area '10.22, 89.78' with RT '2.06, 3.141'); the main peak is the largest by area, and we take its area
     (= % monomer) and its retention time. Single-value cells are that peak; empty area -> NaN."""
     def parse(s):
         out = []
         if not pd.isna(s):
-            for x in str(s).split(","):
+            for x in re.split(r"[;,]", str(s)):
                 x = x.strip()
                 if x and x.lower() != "nan":
                     try: out.append(float(x))
@@ -289,7 +289,7 @@ def load_sec():
     """SEC for the 5,045 cohort. Labels are the original `sec_filter` (aligned with the trained
     SEC models and every other SEC figure). RT and % monomer VALUES come from the 20260420 SEC
     export where it covers an antibody, else from the Dash export (largest-area peak of its
-    comma-separated multi-peak cells). The values only refine the panels; they do not change
+    comma- or semicolon-separated multi-peak cells). The values only refine the panels; they do not change
     the labels (see FIGURE_AUDIT R7: Path B)."""
     coh = pd.read_excel(f"{DATA}/ipi_sec_5000.xlsx")[["BARCODE", "sec_filter"]]
     coh["sec_filter"] = pd.to_numeric(coh["sec_filter"], errors="coerce")
@@ -338,7 +338,7 @@ gs = GridSpec(3, 3, figure=fig,
               height_ratios=[1.42, 1.0, 1.0],
               width_ratios=[1.55, 1.18, 1.05],
               left=0.052, right=0.985, top=0.955, bottom=0.075,
-              hspace=0.66, wspace=0.50)
+              hspace=0.32, wspace=0.50)
 
 # a: flowchart (spans all columns, row 0)
 axA = fig.add_subplot(gs[0, :]); draw_flowchart(axA)
@@ -349,35 +349,45 @@ fig.text(0.052, 0.985, "DELPHI developability-prediction platform",
 # b: table
 axB = fig.add_subplot(gs[1, 0]); draw_table(axB)
 axB.set_title("Curated developability datasets", fontsize=7, fontweight="bold",
-              loc="left", pad=4)
+              loc="left", pad=18)
 
 # c: CDR H3 diversity (clusters per sequence)
 axC = fig.add_subplot(gs[1, 1])
 cdiv = [
-    ("IPI PSR\ntrain", 7263 / 11265, ok.OI_GREEN),
-    ("IPI SEC\ntrain", 3272 / 5045, ok.OI_GREEN),
-    ("DS1\n(natural)", 6311 / 246293, ok.OI_PURPLE),
+    ("IPI PSR\ntrain", 7263 / 11265, ok.OI_BLUE),
+    ("IPI SEC\ntrain", 3272 / 5045, ok.OI_BLUE),
+    ("DS1\n(natural)", 6311 / 246293, ok.OI_ORANGE),
 ]
 xs = np.arange(len(cdiv))
 vals = [v for _, v, _ in cdiv]
 cols = [c for _, _, c in cdiv]
 axC.bar(xs, vals, color=cols, width=0.66, edgecolor="black", linewidth=0.5)
 for x, v in zip(xs, vals):
-    axC.text(x, v + 0.012, f"{v:.2f}" if v >= 0.1 else f"{v:.3f}",
-             ha="center", va="bottom", fontsize=5.6)
+    # Keep the DS1 value clear of the vertical comparison arrow.
+    label_x = x - 0.04 if x == 2 else x
+    label_ha = "right" if x == 2 else "center"
+    axC.text(label_x, v + 0.012, f"{v:.2f}" if v >= 0.1 else f"{v:.3f}",
+             ha=label_ha, va="bottom", fontsize=5.6)
 axC.set_xticks(xs); axC.set_xticklabels([l for l, _, _ in cdiv], fontsize=5.8)
 axC.set_ylabel("CDR H3 clusters / sequence", fontsize=6.6)
 axC.set_ylim(0, 0.82)
-axC.set_title("CDR H3 sequence diversity", fontsize=7, fontweight="bold", loc="left", pad=4)
+axC.set_xlim(-0.50, 2.85)
+axC.set_title("CDR H3 sequence diversity", fontsize=7, fontweight="bold", loc="left", pad=18)
 gap = (7263 / 11265) / (6311 / 246293)
-axC.annotate("", xy=(0.30, 0.645), xytext=(1.92, 0.06),
-             arrowprops=dict(arrowstyle="<->", color="#444444", lw=0.7))
+# L-shaped guide used in the original full figure: compare the designed-library
+# level with DS1 without drawing a diagonal line across the bars.
+axC.plot([0.00, 2.00], [0.80, 0.80], color="#444444", lw=0.7, clip_on=False)
+axC.annotate("", xy=(0.00, vals[0] + 0.055), xytext=(0.00, 0.80),
+             arrowprops=dict(arrowstyle="->", color="#444444", lw=0.7))
+axC.annotate("", xy=(2.00, 0.055), xytext=(2.00, 0.80),
+             arrowprops=dict(arrowstyle="->", color="#444444", lw=0.7))
 # annotation parked in the white space above the tiny DS1 bar
-axC.text(1.98, 0.40, f"~{gap:.0f}× more\ndiverse per\nsequence",
-         ha="center", va="center", fontsize=5.3, color="#333333", linespacing=1.1)
-axC.legend(handles=[Line2D([0], [0], marker="s", color="w", markerfacecolor=ok.OI_GREEN, markersize=6, label="designed (IPI)"),
-                    Line2D([0], [0], marker="s", color="w", markerfacecolor=ok.OI_PURPLE, markersize=6, label="natural (DS1)")],
-           loc="upper right", fontsize=5.3, handletextpad=0.3, labelspacing=0.25, borderpad=0.2)
+axC.text(2.12, 0.42, f"~{gap:.0f}× more\ndiverse per\nsequence",
+         ha="left", va="center", fontsize=5.3, color="#333333", linespacing=1.1)
+axC.legend(handles=[Line2D([0], [0], marker="s", color="w", markerfacecolor=ok.OI_BLUE, markersize=6, label="designed (IPI)"),
+                    Line2D([0], [0], marker="s", color="w", markerfacecolor=ok.OI_ORANGE, markersize=6, label="natural (DS1)")],
+           loc="lower left", bbox_to_anchor=(0.00, 1.01), ncol=2, fontsize=5.3,
+           handletextpad=0.3, columnspacing=0.7, borderpad=0.2, borderaxespad=0.0)
 
 # d: PSR pass rate by VH germline
 axD = fig.add_subplot(gs[1, 2])
@@ -385,7 +395,7 @@ gl = germ.iloc[::-1]            # ascending so highest is at top
 ys = np.arange(len(gl))
 rates = gl["rate"].values * 100
 ns = gl["n"].values
-bar_cols = NEUTRAL
+bar_cols = [ok.OI_ORANGE if rate < overall_rate * 100 else ok.OI_BLUE for rate in rates]
 axD.barh(ys, rates, color=bar_cols, height=0.7, edgecolor="black", linewidth=0.4)
 for y, r, n in zip(ys, rates, ns):
     axD.text(r + 1.8, y, f"n={int(n)}", va="center", ha="left", fontsize=4.7, color="#333333")
@@ -397,7 +407,7 @@ axD.set_yticks(ys); axD.set_yticklabels(gl.index, fontsize=5.2)
 axD.set_xlabel("PSR pass rate (%)", fontsize=6.6)
 axD.set_xlim(0, 120)
 axD.set_xticks([0, 25, 50, 75, 100])
-axD.set_title("PSR pass rate by VH germline", fontsize=7, fontweight="bold", loc="left", pad=4)
+axD.set_title("PSR pass rate by VH germline", fontsize=7, fontweight="bold", loc="left", pad=18)
 
 # e-h: bottom row of readout panels, side by side across the full width of row 2
 gbot = GridSpecFromSubplotSpec(1, 4, subplot_spec=gs[2, :],
@@ -453,7 +463,7 @@ axH.set_xlabel(""); axH.set_ylabel("Main-peak area (% monomer)", fontsize=6.4)
 axH.set_ylim(38, 101)
 axH.set_title("IPI SEC monomer", fontsize=6.8, fontweight="bold", loc="left", pad=4)
 
-ok.panel_label(fig, axB, "b"); ok.panel_label(fig, axC, "c"); ok.panel_label(fig, axD, "d")
+ok.panel_label(fig, axB, "b", dy=0.052); ok.panel_label(fig, axC, "c", dy=0.052); ok.panel_label(fig, axD, "d", dy=0.052)
 ok.panel_label(fig, axE, "e"); ok.panel_label(fig, axF, "f"); ok.panel_label(fig, axG, "g")
 ok.panel_label(fig, axH, "h")
 ok.save_fig(fig, "Figure1", OUT)

@@ -13,4 +13,5 @@
 10. Update the root manuscript-code availability statement only after the public branch contains the selected scripts and approved source data.
 11. Add `data/shareable/DELPHI_Extended_Data_Figure_3_Source_Data.xlsx`; it is the sequence-free canonical 25-model source used by `ed3.py`.
 12. Delete the obsolete `figures/output/ED_Fig8.pdf` and `figures/output/ED_Fig8.png`. Do not replace them with the final render because it displays selected WT CDR3-loop residues.
-13. Run `python paper/run_reproduction_tests.py --public`; the expected result for this patch is 7/7 commands passed with all regenerated PNGs pixel-identical to their baselines.
+13. Run `python paper/run_reproduction_tests.py --public`; all commands should pass. Main Figure 6 must match SHA-256 `ce461fe151b52b6f9c45e500ff9ae450315dbd868dd603ea028cd5dfd3586673`.
+14. Confirm that the Figure 6 IG summaries report the full PSR cohort (n = 11,265) and full SEC cohort (n = 5,045). The 500 rows in each amino-acid-by-position table are aggregate cells, not antibodies.

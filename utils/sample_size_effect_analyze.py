@@ -20,7 +20,7 @@ from scipy.stats import ttest_ind, spearmanr
 from pathlib import Path
 
 # ── User-configurable parameters ─────────────────────────────────────────────
-csv_file = "/Users/Hoan.Nguyen/ComBio/IPIAbMLPred/manuscripts/data/sample_size/learning_curve_ipi_psr_trainset_transformer_lm_ablang_psr_filter_sample_size_100_200.csv"
+csv_file = str(Path("data") / "sample_size" / "learning_curve_ipi_psr_trainset_transformer_lm_ablang_psr_filter_sample_size_100_200.csv")
 smoothing_window = 5
 low_threshold    = 1000
 mid_threshold    = 5000
@@ -277,7 +277,7 @@ from scipy.stats import ttest_ind, spearmanr
 from pathlib import Path
 
 # ── User-configurable parameters ─────────────────────────────────────────────
-csv_file = "/Users/Hoan.Nguyen/ComBio/IPIAbMLPred/manuscripts/data/sample_size/learning_curve_ipi_psr_trainset_transformer_lm_ablang_psr_filter_sample_size_100_200.csv"
+csv_file = str(Path("data") / "sample_size" / "learning_curve_ipi_psr_trainset_transformer_lm_ablang_psr_filter_sample_size_100_200.csv")
 smoothing_window = 5
 low_threshold    = 1000
 mid_threshold    = 5000

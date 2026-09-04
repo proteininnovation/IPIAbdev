@@ -6,10 +6,10 @@
 QUICK START
 ───────────
   python utils/Figure4.py \
-      --excel  /Users/Hoan.Nguyen/ComBio/delphi/data/Figure4_data.xlsx \
-      --jain   /Users/Hoan.Nguyen/ComBio/delphi/data/Jain2017_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx \
-      --gdpa1  /Users/Hoan.Nguyen/ComBio/delphi/data/GDPa1_v1.3_20251027_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx \
-      --gdpa3  /Users/Hoan.Nguyen/ComBio/delphi/data/GDPa3_20260106_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx \
+      --excel  /path/to/delphi/data/Figure4_data.xlsx \
+      --jain   /path/to/delphi/data/Jain2017_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx \
+      --gdpa1  /path/to/delphi/data/GDPa1_v1.3_20251027_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx \
+      --gdpa3  /path/to/delphi/data/GDPa3_20260106_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx \
       --out    Figure4 \
       --dpi    300
 
@@ -102,10 +102,10 @@ USAGE
 
   # Full explicit paths
   python utils/Figure4.py \\
-      --excel  /Users/Hoan.Nguyen/ComBio/delphi/manuscripts/figures_tables/Figure4_data.xlsx \\
-      --jain   /Users/Hoan.Nguyen/ComBio/delphi/manuscripts/data/public_clinical/Jain2017_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx \\
-      --gdpa1  /Users/Hoan.Nguyen/ComBio/delphi/manuscripts/data/public_clinical/GDPa1_v1.3_20251027_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx \\
-      --gdpa3  /Users/Hoan.Nguyen/ComBio/delphi/manuscripts/data/public_clinical/GDPa3_20260106_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx \\
+      --excel  /path/to/delphi/manuscripts/figures_tables/Figure4_data.xlsx \\
+      --jain   /path/to/delphi/manuscripts/data/public_clinical/Jain2017_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx \\
+      --gdpa1  /path/to/delphi/manuscripts/data/public_clinical/GDPa1_v1.3_20251027_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx \\
+      --gdpa3  /path/to/delphi/manuscripts/data/public_clinical/GDPa3_20260106_pred_psr_filter_all_transformer_lm_ipi_psr_trainset.xlsx \\
       --out    Figure4 \\
       --dpi    300
 
